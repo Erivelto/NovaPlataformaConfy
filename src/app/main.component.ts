@@ -8,12 +8,16 @@ import { RouterModule, RouterOutlet } from '@angular/router';
   standalone: true,
   imports: [CommonModule, NzLayoutModule, RouterModule, RouterOutlet],
   template: `
-    <nz-content style="padding:16px">
+    <nz-content class="app-content">
       <div class="main-content">
         <router-outlet></router-outlet>
       </div>
     </nz-content>
   `,
-  styles: [`.main-content{padding:1rem}`]
+  styles: [
+    `.app-content{padding:12px}`,
+    `.main-content{padding:0}`,
+    `@media(max-width:768px){.app-content{padding:8px}}`
+  ]
 })
 export class MainComponent {}

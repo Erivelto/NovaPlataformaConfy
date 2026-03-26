@@ -13,7 +13,7 @@ import { LoginService } from './services/login.service';
   standalone: true,
   imports: [CommonModule, RouterModule, NzLayoutModule, NzMenuModule, NzIconModule, NzAvatarModule, NzToolTipModule],
   template: `
-    <nz-sider nzCollapsible [nzCollapsed]="collapsed" (nzCollapsedChange)="onCollapsedChange($event)" [nzCollapsedWidth]="80" style="padding:8px">
+    <nz-sider nzCollapsible [nzCollapsed]="collapsed" (nzCollapsedChange)="onCollapsedChange($event)" [nzCollapsedWidth]="80" [nzTrigger]="inDrawer ? null : undefined" style="padding:8px">
       <div class="user-panel" [class.collapsed]="collapsed">
         <ng-container *ngIf="userAvatar; else defaultAvatar">
           <nz-avatar [nzSrc]="userAvatar" nzSize="large"></nz-avatar>
@@ -26,28 +26,28 @@ import { LoginService } from './services/login.service';
           <div class="user-role">{{userRole}}</div>
         </div>
       </div>
-      <ul nz-menu nzMode="inline" [nzInlineCollapsed]="collapsed">
-        <li nz-menu-item (click)="go('/dashboard')" [nzSelected]="isActive('/dashboard')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Dashboard' : ''" nzTooltipPlacement="right">
+      <ul nz-menu nzMode="inline" [nzInlineCollapsed]="collapsed" class="sidebar-menu">
+        <li nz-menu-item (click)="navigate('/dashboard')" [nzSelected]="isActive('/dashboard')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Dashboard' : ''" nzTooltipPlacement="right">
           <i nz-icon nzType="home"></i>
           <span>Dashboard</span>
         </li>
-        <li nz-menu-item (click)="go('/meus-dados')" [nzSelected]="isActive('/meus-dados')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Meus Dados' : ''" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigate('/meus-dados')" [nzSelected]="isActive('/meus-dados')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Meus Dados' : ''" nzTooltipPlacement="right">
           <i nz-icon nzType="idcard"></i>
           <span>Meus Dados</span>
         </li>
-        <li nz-menu-item (click)="go('/meu-contrato')" [nzSelected]="isActive('/meu-contrato')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Meu Contrato' : ''" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigate('/meu-contrato')" [nzSelected]="isActive('/meu-contrato')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Meu Contrato' : ''" nzTooltipPlacement="right">
           <i nz-icon nzType="file-protect"></i>
           <span>Meu Contrato</span>
         </li>
-        <li nz-menu-item (click)="go('/solicitacao-nfe')" [nzSelected]="isActive('/solicitacao-nfe')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Solicitação Emissão Nfe' : ''" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigate('/solicitacao-nfe')" [nzSelected]="isActive('/solicitacao-nfe')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Solicitação Emissão Nfe' : ''" nzTooltipPlacement="right">
           <i nz-icon nzType="file-add"></i>
           <span>Solicitação Emissão Nfe</span>
         </li>
-        <li nz-menu-item (click)="go('/notas-fiscais')" [nzSelected]="isActive('/notas-fiscais')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Notas Fiscais' : ''" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigate('/notas-fiscais')" [nzSelected]="isActive('/notas-fiscais')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Notas Fiscais' : ''" nzTooltipPlacement="right">
           <i nz-icon nzType="file-text"></i>
           <span>Notas Fiscais</span>
         </li>
-        <li nz-menu-item (click)="go('/receita-imposto')" [nzSelected]="isActive('/receita-imposto')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Receita/Imposto' : ''" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigate('/receita-imposto')" [nzSelected]="isActive('/receita-imposto')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Receita/Imposto' : ''" nzTooltipPlacement="right">
           <i nz-icon nzType="bar-chart"></i>
           <span>Impostos</span>
         </li>
@@ -60,12 +60,18 @@ import { LoginService } from './services/login.service';
     `.user-info{display:flex;flex-direction:column;overflow:hidden}`,
     `.user-name{font-weight:700;color:var(--primary-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
     `.user-role{font-size:0.85rem;color:rgba(0,0,0,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
-    `.avatar-initials{background:linear-gradient(135deg,#0a66c2,#5fb1ff);color:#fff;font-weight:700}`
+    `.avatar-initials{background:linear-gradient(135deg,#0a66c2,#5fb1ff);color:#fff;font-weight:700}`,
+    `.sidebar-menu .ant-menu-item{border-radius:8px;margin:2px 0;transition:all .15s ease}`,
+    `.sidebar-menu .ant-menu-item:active{transform:scale(0.97)}`
   ],
 })
 export class SidebarComponent implements OnInit {
   @Input() collapsed = false;
   @Output() collapsedChange = new EventEmitter<boolean>();
+  @Output() navigated = new EventEmitter<void>();
+
+  /** When true, hides the nz-sider collapse trigger (used inside drawer) */
+  get inDrawer(): boolean { return !this.collapsed; }
 
   userName = 'Usuário';
   userRole = '';
@@ -87,8 +93,9 @@ export class SidebarComponent implements OnInit {
     }
   }
 
-  go(path: string): void {
+  navigate(path: string): void {
     this.router.navigate([path]);
+    this.navigated.emit();
   }
 
   isActive(path: string): boolean {

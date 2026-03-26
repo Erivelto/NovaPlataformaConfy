@@ -102,40 +102,66 @@
 @media (max-width: 768px) {
 	:root { --btn-radius: 6px; }
 
-	/* Reduce global paddings */
+	/* Content full width */
 	.layout, .content-area, .main { padding: 0 !important; }
-
-	/* Header compact */
-	.app-header { padding: 0 8px !important; }
-	.app-header .logo { height: 28px !important; }
-	.app-header .title { font-size: 1rem !important; }
-
-	/* Sidebar compact: collapse by default visual */
-	.sidebar { width: 72px !important; padding: 6px !important; }
-	.sidebar.collapsed { width: 56px !important; }
 
 	/* Page title compact */
 	.page-title-heading { font-size: 1rem !important; }
-	.page-title-crest{ height:28px;width:4px }
+	.page-title-crest { height: 28px; width: 4px; }
 
-	/* Users table: stack rows into card-like blocks */
-	.users-page table, .users-page thead, .users-page tbody, .users-page th, .users-page td, .users-page tr { display:block !important; }
-	.users-page thead { display:none !important; }
-	.users-page tr { margin-bottom:12px !important; padding:8px; background: #fff; border-radius:8px; box-shadow:none }
-	.users-page td { padding:6px 0 !important; border:none !important; }
-	.users-page td:first-child { font-weight:600 }
-	.users-page .actions-cell { display:flex; flex-direction:column; gap:8px }
-	.users-page .actions-cell button { width:100%; display:block }
+	/* Tables: card style on mobile */
+	.users-page table, .users-page thead, .users-page tbody, .users-page th, .users-page td, .users-page tr { display: block !important; }
+	.users-page thead { display: none !important; }
+	.users-page tr { margin-bottom: 12px !important; padding: 8px; background: #fff; border-radius: 8px; }
+	.users-page td { padding: 6px 0 !important; border: none !important; }
+	.users-page td:first-child { font-weight: 600; }
+	.users-page .actions-cell { display: flex; flex-direction: column; gap: 8px; }
+	.users-page .actions-cell button { width: 100%; display: block; }
 
-	/* Make search full width in title slot */
-	.page-title .ant-input { width: 160px; }
-	.users-page .ant-input { width: 100% !important; }
+	/* Full width search */
+	.page-title .ant-input { width: 100% !important; }
+
+	/* Cards full width */
+	nz-card, .ant-card { margin: 0 !important; }
+
+	/* NZ table horizontal scroll */
+	.ant-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
 
-/* Ensure flat look on mobile */
+/* Small phones */
 @media (max-width: 420px) {
-	.app-header .title { display:none }
-	.app-header .logo { margin-left:6px }
+	.app-header .title { display: none; }
+}
+
+/* Mobile drawer styling */
+.mobile-nav-drawer .ant-drawer-body {
+	padding: 0 !important;
+	background: #fff;
+}
+.mobile-nav-drawer .ant-drawer-header {
+	display: none;
+}
+.mobile-nav-drawer .ant-layout-sider {
+	background: #fff !important;
+	border-right: none !important;
+	min-height: 100%;
+}
+.mobile-nav-drawer .ant-layout-sider-trigger {
+	display: none !important;
+}
+.mobile-nav-drawer .ant-menu-item {
+	height: 48px !important;
+	line-height: 48px !important;
+	font-size: 15px;
+	border-radius: 8px;
+	margin: 2px 8px !important;
+}
+.mobile-nav-drawer .ant-menu-item .anticon {
+	font-size: 18px;
+}
+.mobile-nav-drawer .user-panel {
+	margin: 8px;
+	padding: 12px;
 }
 
 /* Remove shadows globally for a flatter UI */
