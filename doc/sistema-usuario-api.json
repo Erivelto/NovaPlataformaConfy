@@ -1,0 +1,41 @@
+{
+  "name": "SistemaUsuario",
+  "baseUrl": "/api/SistemaUsuario",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/SistemaUsuario",
+      "description": "Listar todos os sistema usuários"
+    },
+    {
+      "method": "POST",
+      "path": "/api/SistemaUsuario",
+      "description": "Criar novo sistema usuário"
+    },
+    {
+      "method": "GET",
+      "path": "/api/SistemaUsuario/{id}",
+      "description": "Obter sistema usuário por ID"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/SistemaUsuario/{id}",
+      "description": "Atualizar sistema usuário"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/SistemaUsuario/{id}",
+      "description": "Deletar sistema usuário"
+    },
+    {
+      "method": "GET",
+      "path": "/api/SistemaUsuario/apelido/{apelido}",
+      "description": "Buscar por apelido"
+    },
+    {
+      "method": "GET",
+      "path": "/api/SistemaUsuario/status/{status}",
+      "description": "Listar por status"
+    }
+  ]
+}

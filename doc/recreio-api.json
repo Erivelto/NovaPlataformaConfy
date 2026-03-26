@@ -1,0 +1,41 @@
+{
+  "name": "Recreio",
+  "baseUrl": "/api/Recreio",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/Recreio",
+      "description": "Listar todas as recreações"
+    },
+    {
+      "method": "POST",
+      "path": "/api/Recreio",
+      "description": "Criar nova recreação"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Recreio/{id}",
+      "description": "Obter recreação por ID"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/Recreio/{id}",
+      "description": "Atualizar recreação"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/Recreio/{id}",
+      "description": "Deletar recreação"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Recreio/status/{status}",
+      "description": "Listar por status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Recreio/ano/{ano}/semestre/{semestre}",
+      "description": "Listar por ano e semestre"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "name": "Login",
+  "baseUrl": "/api/Login",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/Login",
+      "description": "Listar todos os logins"
+    },
+    {
+      "method": "POST",
+      "path": "/api/Login",
+      "description": "Criar novo login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Login/{id}",
+      "description": "Obter login por ID"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/Login/{id}",
+      "description": "Atualizar login"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/Login/{id}",
+      "description": "Deletar login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Login/user/{user}",
+      "description": "Buscar login por usuário"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Login/unidade/{idUnidade}",
+      "description": "Listar logins por unidade"
+    },
+    {
+      "method": "POST",
+      "path": "/api/Login/auth",
+      "description": "Autenticar usuário"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "name": "Usuario",
+  "baseUrl": "/api/Usuario",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/Usuario",
+      "description": "Listar todos os usuários"
+    },
+    {
+      "method": "POST",
+      "path": "/api/Usuario",
+      "description": "Criar novo usuário"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Usuario/{id}",
+      "description": "Obter usuário por ID"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/Usuario/{id}",
+      "description": "Atualizar usuário"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/Usuario/{id}",
+      "description": "Deletar usuário"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Usuario/unidade/{idUnidade}",
+      "description": "Listar usuários por unidade"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Usuario/status/{idStatus}",
+      "description": "Listar usuários por status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Usuario/cpf/{cpf}",
+      "description": "Buscar usuário por CPF"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Usuario/eol/{eol}",
+      "description": "Buscar usuário por EOL"
+    }
+  ]
+}

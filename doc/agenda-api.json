@@ -1,0 +1,41 @@
+{
+  "name": "Agenda",
+  "baseUrl": "/api/Agenda",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/Agenda",
+      "description": "Listar todas as agendas"
+    },
+    {
+      "method": "POST",
+      "path": "/api/Agenda",
+      "description": "Criar nova agenda"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Agenda/{id}",
+      "description": "Obter agenda por ID"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/Agenda/{id}",
+      "description": "Atualizar agenda"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/Agenda/{id}",
+      "description": "Deletar agenda"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Agenda/analista/{idAnalista}",
+      "description": "Listar agendas por analista"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Agenda/status/{status}",
+      "description": "Listar agendas por status"
+    }
+  ]
+}

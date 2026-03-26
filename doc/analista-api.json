@@ -1,0 +1,41 @@
+{
+  "name": "Analista",
+  "baseUrl": "/api/Analista",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/Analista",
+      "description": "Listar todos os analistas"
+    },
+    {
+      "method": "POST",
+      "path": "/api/Analista",
+      "description": "Criar novo analista"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Analista/{id}",
+      "description": "Obter analista por ID"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/Analista/{id}",
+      "description": "Atualizar analista"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/Analista/{id}",
+      "description": "Deletar analista"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Analista/status/{status}",
+      "description": "Listar analistas por status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Analista/cpf/{cpf}",
+      "description": "Buscar analista por CPF"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{ 
+  "name": "Clients API (proxy to json-server)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "clients",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [300, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Build target URL + method based on incoming request\nconst inJson = items[0].json;\nconst method = (inJson._request && inJson._request.method) || (inJson.method) || 'GET';\nlet id = null;\nif(inJson.query && inJson.query.id) id = inJson.query.id;\nif(inJson.body && inJson.body.id) id = inJson.body.id;\nconst base = 'http://json-server:3000/clients';\nlet targetUrl = base;\nif(method === 'GET' && id) targetUrl = `${base}/${id}`;\nif(method === 'DELETE' && id) targetUrl = `${base}/${id}`;\nif(method === 'POST') targetUrl = base;\n// prepare body for POST\nconst body = inJson.body || {};\nitems[0].json.targetUrl = targetUrl;\nitems[0].json.targetMethod = method;\nitems[0].json.body = body;\nreturn items;"
+      },
+      "name": "Prepare Request",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json[\"targetUrl\"] }}",
+        "method": "={{ $json[\"targetMethod\"] }}",
+        "responseFormat": "json",
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ $json[\"body\"] }}"
+      },
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [740, 300]
+    },
+    {
+      "parameters": {
+        "responseCode": 200,
+        "responseMode": "lastNode",
+        "responseData": "={{ $node[\"HTTP Request\"].json }}"
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

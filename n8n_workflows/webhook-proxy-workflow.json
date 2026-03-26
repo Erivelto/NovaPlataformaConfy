@@ -1,0 +1,67 @@
+{
+  "name": "Webhook -> HTTP Proxy",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "api/proxy",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json[\"targetUrl\"] }}",
+        "method": "={{ $json[\"method\"] || 'GET' }}",
+        "responseFormat": "json",
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ $json[\"body\"] || {} }}"
+      },
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "responseCode": 200,
+        "responseMode": "lastNode",
+        "responseData": "={{ $node[\"HTTP Request\"].json }}"
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

@@ -1,0 +1,41 @@
+{
+  "name": "UsuarioDocumentacao",
+  "baseUrl": "/api/UsuarioDocumentacao",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/UsuarioDocumentacao",
+      "description": "Listar todas as documentações"
+    },
+    {
+      "method": "POST",
+      "path": "/api/UsuarioDocumentacao",
+      "description": "Criar nova documentação"
+    },
+    {
+      "method": "GET",
+      "path": "/api/UsuarioDocumentacao/{id}",
+      "description": "Obter documentação por ID"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/UsuarioDocumentacao/{id}",
+      "description": "Atualizar documentação"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/UsuarioDocumentacao/{id}",
+      "description": "Deletar documentação"
+    },
+    {
+      "method": "GET",
+      "path": "/api/UsuarioDocumentacao/usuario/{idUsuario}",
+      "description": "Listar documentações por usuário"
+    },
+    {
+      "method": "GET",
+      "path": "/api/UsuarioDocumentacao/vencidos",
+      "description": "Listar documentações vencidas"
+    }
+  ]
+}

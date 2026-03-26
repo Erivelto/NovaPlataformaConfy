@@ -1,0 +1,155 @@
+/* You can add global styles to this file, and also import other style files */
+
+/* NG-ZORRO theme */
+@import "../node_modules/ng-zorro-antd/ng-zorro-antd.min.css";
+
+/* Primary color variable for custom overrides */
+ :root {
+	 --primary-color: #0b3d91;
+	 /* darker gradient stop */
+	 --primary-light: #1565c0;
+	 /* NG-ZORRO primary token fallback */
+	 --ant-primary-color: #0b3d91;
+	/* button radius */
+	--btn-radius: 8px;
+ }
+
+/* Toolbar title color */
+.title {
+	color: var(--primary-color);
+}
+
+/* Make NG-ZORRO primary buttons use our primary variable */
+.ant-btn {
+	border-radius: var(--btn-radius) !important;
+}
+
+.ant-btn-primary {
+	background: linear-gradient(90deg, var(--primary-color), var(--primary-light)) !important;
+	border: none !important;
+	color: #fff !important;
+	box-shadow: none !important;
+	transition: transform .08s ease, filter .08s ease;
+}
+
+.ant-btn-primary:hover {
+	filter: brightness(0.94);
+	transform: translateY(-1px);
+}
+
+/* Style for the sider collapse trigger (menu slider) */
+.ant-layout-sider-trigger,
+.ant-layout-sider-zero-width-trigger {
+	background: linear-gradient(90deg, var(--primary-color), var(--primary-light)) !important;
+	border-radius: var(--btn-radius) !important;
+	color: #fff !important;
+	width: 40px !important;
+	height: 40px !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	box-shadow: none !important;
+	transition: transform .08s ease, filter .08s ease !important;
+	border: none !important;
+}
+
+.ant-layout-sider-trigger:hover,
+.ant-layout-sider-zero-width-trigger:hover {
+	filter: brightness(0.94) !important;
+	transform: translateY(-1px) !important;
+}
+
+.ant-layout-sider-trigger .anticon,
+.ant-layout-sider-zero-width-trigger .anticon {
+	color: #fff !important;
+	font-size: 16px !important;
+}
+
+/* Customize the sider background to match primary theme */
+.ant-layout-sider {
+	position: relative;
+	min-width: 0;
+    /* remove background to allow transparent or parent-controlled backgrounds */
+    background: none !important;
+	transition: all .2s ease !important;
+	border-right: 1px solid rgba(255,255,255,0.06) !important;
+	color: #fff;
+}
+
+.ant-layout-sider.ant-layout-sider-collapsed {
+    background: none !important;
+}
+
+/* Fix for sider children spacing when using custom header/logo sizes */
+.ant-layout-sider-children {
+	height: 100%;
+	margin-top: -22.1px;
+	padding-top: .1px;
+}
+
+/* Table responsive tweaks and action spacing */
+.users-page nz-table {
+	width: 100%;
+}
+.users-page .ant-table-thead > tr > th, .users-page .ant-table-tbody > tr > td {
+	vertical-align: middle;
+}
+.users-page .ant-pagination {
+	margin: 0;
+}
+
+/* --- Mobile adjustments --- */
+@media (max-width: 768px) {
+	:root { --btn-radius: 6px; }
+
+	/* Reduce global paddings */
+	.layout, .content-area, .main { padding: 0 !important; }
+
+	/* Header compact */
+	.app-header { padding: 0 8px !important; }
+	.app-header .logo { height: 28px !important; }
+	.app-header .title { font-size: 1rem !important; }
+
+	/* Sidebar compact: collapse by default visual */
+	.sidebar { width: 72px !important; padding: 6px !important; }
+	.sidebar.collapsed { width: 56px !important; }
+
+	/* Page title compact */
+	.page-title-heading { font-size: 1rem !important; }
+	.page-title-crest{ height:28px;width:4px }
+
+	/* Users table: stack rows into card-like blocks */
+	.users-page table, .users-page thead, .users-page tbody, .users-page th, .users-page td, .users-page tr { display:block !important; }
+	.users-page thead { display:none !important; }
+	.users-page tr { margin-bottom:12px !important; padding:8px; background: #fff; border-radius:8px; box-shadow:none }
+	.users-page td { padding:6px 0 !important; border:none !important; }
+	.users-page td:first-child { font-weight:600 }
+	.users-page .actions-cell { display:flex; flex-direction:column; gap:8px }
+	.users-page .actions-cell button { width:100%; display:block }
+
+	/* Make search full width in title slot */
+	.page-title .ant-input { width: 160px; }
+	.users-page .ant-input { width: 100% !important; }
+}
+
+/* Ensure flat look on mobile */
+@media (max-width: 420px) {
+	.app-header .title { display:none }
+	.app-header .logo { margin-left:6px }
+}
+
+/* Remove shadows globally for a flatter UI */
+.ant-btn, .ant-btn-primary, .ant-card, .ant-table, .ant-dropdown, .ant-modal, .ant-layout-sider-trigger, .ant-layout-sider-zero-width-trigger {
+	box-shadow: none !important;
+}
+
+.ant-card {
+	border-radius: 8px;
+}
+
+/* Ensure tags have a minimum width and are center-aligned */
+.ant-tag {
+
+	min-width: 62px;
+	text-align: center;
+}

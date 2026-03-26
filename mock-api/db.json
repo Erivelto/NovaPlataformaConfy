@@ -1,0 +1,7 @@
+{
+  "clients": [
+    { "id": 1, "name": "Empresa A", "email": "contato@empresaa.com", "phone": "(11) 99999-0001" },
+    { "id": 2, "name": "Empresa B", "email": "financeiro@empresab.com", "phone": "(11) 99999-0002" },
+    { "id": 3, "name": "Empresa C", "email": "suporte@empresac.com", "phone": "(11) 99999-0003" }
+  ]
+}

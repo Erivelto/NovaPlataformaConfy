@@ -1,0 +1,25 @@
+version: '3.7'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=changeme
+    volumes:
+      - ./n8n:/home/node/.n8n
+    restart: unless-stopped
+  json-server:
+    image: node:18-alpine
+    working_dir: /data
+    command: sh -lc "npx json-server --watch /data/db.json --host 0.0.0.0 --port 3000"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./mock-api:/data
+    restart: unless-stopped

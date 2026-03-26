@@ -1,0 +1,41 @@
+{
+  "name": "Unidade",
+  "baseUrl": "/api/Unidade",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/Unidade",
+      "description": "Listar todas as unidades"
+    },
+    {
+      "method": "POST",
+      "path": "/api/Unidade",
+      "description": "Criar nova unidade"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Unidade/{id}",
+      "description": "Obter unidade por ID"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/Unidade/{id}",
+      "description": "Atualizar unidade"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/Unidade/{id}",
+      "description": "Deletar unidade"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Unidade/ativas",
+      "description": "Listar unidades ativas"
+    },
+    {
+      "method": "GET",
+      "path": "/api/Unidade/cnpj/{cnpj}",
+      "description": "Buscar unidade por CNPJ"
+    }
+  ]
+}

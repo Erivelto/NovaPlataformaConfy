@@ -1,0 +1,28 @@
+<nz-card>
+  <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:12px">
+    <input nz-input placeholder="Nome" [(ngModel)]="newClient.name" style="width:220px" />
+    <input nz-input placeholder="E-mail" [(ngModel)]="newClient.email" style="width:220px" />
+    <input nz-input placeholder="Telefone" [(ngModel)]="newClient.phone" style="width:160px" />
+    <button nz-button nzType="primary" (click)="create()">Adicionar</button>
+  </div>
+  <nz-table [nzData]="clients" [nzLoading]="loading">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>E-mail</th>
+        <th>Telefone</th>
+        <th style="width:120px">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let c of clients">
+        <td>{{ c.name }}</td>
+        <td>{{ c.email }}</td>
+        <td>{{ c.phone }}</td>
+        <td>
+          <button nz-button nzType="default" (click)="deleteClient(c.id)">Remover</button>
+        </td>
+      </tr>
+    </tbody>
+  </nz-table>
+</nz-card>
