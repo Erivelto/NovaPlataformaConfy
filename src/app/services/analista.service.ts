@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Analista {
   id?: number;
@@ -13,7 +14,7 @@ export interface Analista {
 
 @Injectable({ providedIn: 'root' })
 export class AnalistaService {
-  private apiUrl = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api/Analista';
+  private apiUrl = `${environment.apiUrl}/Analista`;
 
   constructor(private http: HttpClient) {}
 

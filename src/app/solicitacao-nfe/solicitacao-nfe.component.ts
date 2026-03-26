@@ -23,6 +23,7 @@ import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { PageTitleComponent } from '../page-title.component';
 import { Router } from '@angular/router';
 import { LoginService } from '../services/login.service';
+import { environment } from '../../environments/environment';
 
 interface EmissaoNfe {
   Codigo?: number;
@@ -115,6 +116,7 @@ interface Tomador {
           [nzPageSize]="5">
           <thead>
             <tr>
+              <th>Código</th>
               <th>Descrição</th>
               <th>Data</th>
               <th>Valor</th>
@@ -125,6 +127,7 @@ interface Tomador {
           </thead>
           <tbody>
             <tr *ngFor="let item of rows; trackBy: trackByRow">
+              <td>{{ item.codigo }}</td>
               <td>{{ item.descricao }}</td>
               <td>{{ item.data | date:'dd/MM/yyyy' }}</td>
               <td>{{ item.valor | currency:'BRL':'symbol':'1.2-2' }}</td>
@@ -498,7 +501,7 @@ interface Tomador {
   `]
 })
 export class SolicitacaoNfeComponent implements OnInit {
-  private readonly apiBase = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api';
+  private readonly apiBase = environment.apiUrl;
 
   loading = true;
   erro = '';

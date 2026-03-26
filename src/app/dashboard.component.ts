@@ -12,6 +12,7 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { PageTitleComponent } from './page-title.component';
 import { LoginService, UsuarioLogado } from './services/login.service';
 import { Router } from '@angular/router';
+import { environment } from '../environments/environment';
 
 interface NotaFiscal {
   numeroNFE: number;
@@ -146,7 +147,7 @@ interface NotaFiscal {
   ]
 })
 export class DashboardComponent implements OnInit {
-  private readonly apiBase = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api';
+  private readonly apiBase = environment.apiUrl;
 
   usuario: UsuarioLogado | null = null;
   userInitials = 'U';

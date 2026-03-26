@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface SistemaUsuario {
   id?: number;
@@ -11,7 +12,7 @@ export interface SistemaUsuario {
 
 @Injectable({ providedIn: 'root' })
 export class SistemaUsuarioService {
-  private apiUrl = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api/SistemaUsuario';
+  private apiUrl = `${environment.apiUrl}/SistemaUsuario`;
 
   constructor(private http: HttpClient) {}
 

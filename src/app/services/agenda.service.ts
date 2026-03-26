@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Agenda {
   id?: number;
@@ -14,7 +15,7 @@ export interface Agenda {
 
 @Injectable({ providedIn: 'root' })
 export class AgendaService {
-  private apiUrl = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api/Agenda';
+  private apiUrl = `${environment.apiUrl}/Agenda`;
 
   constructor(private http: HttpClient) {}
 

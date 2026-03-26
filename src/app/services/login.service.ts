@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface LoginRequest {
   username: string;
@@ -52,7 +53,7 @@ export interface UsuarioLogado {
 
 @Injectable({ providedIn: 'root' })
 export class LoginService {
-  private authUrl = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api/Autenticacao/Login';
+  private authUrl = `${environment.apiUrl}/Autenticacao/Login`;
 
   constructor(private http: HttpClient) {}
 

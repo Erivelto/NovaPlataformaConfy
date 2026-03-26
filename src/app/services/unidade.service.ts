@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Unidade {
   id?: number;
@@ -13,7 +14,7 @@ export interface Unidade {
 
 @Injectable({ providedIn: 'root' })
 export class UnidadeService {
-  private apiUrl = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api/Unidade';
+  private apiUrl = `${environment.apiUrl}/Unidade`;
 
   constructor(private http: HttpClient) {}
 

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Recreio {
   id?: number;
@@ -13,7 +14,7 @@ export interface Recreio {
 
 @Injectable({ providedIn: 'root' })
 export class RecreioService {
-  private apiUrl = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api/Recreio';
+  private apiUrl = `${environment.apiUrl}/Recreio`;
 
   constructor(private http: HttpClient) {}
 

@@ -13,6 +13,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { PageTitleComponent } from '../page-title.component';
 import { Router } from '@angular/router';
 import { LoginService } from '../services/login.service';
+import { environment } from '../../environments/environment';
 
 interface NotaFiscal {
   numeroNFE: number;
@@ -164,7 +165,7 @@ interface NotaFiscal {
   `]
 })
 export class NotasFiscaisComponent implements OnInit {
-  private readonly apiBase = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api';
+  private readonly apiBase = environment.apiUrl;
 
   loading = true;
   erro = '';

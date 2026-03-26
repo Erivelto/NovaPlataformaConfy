@@ -1,0 +1,42 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci --legacy-peer-deps
+    build:
+      commands:
+        - npx ng build --configuration production
+  artifacts:
+    baseDirectory: dist/novoangularbackv2/browser
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .angular/cache/**/*
+  customHeaders:
+    - pattern: '**/*.js'
+      headers:
+        - key: Cache-Control
+          value: 'public, max-age=31536000, immutable'
+    - pattern: '**/*.css'
+      headers:
+        - key: Cache-Control
+          value: 'public, max-age=31536000, immutable'
+    - pattern: '**/*.{png,jpg,jpeg,gif,ico,svg,webp,woff,woff2}'
+      headers:
+        - key: Cache-Control
+          value: 'public, max-age=31536000, immutable'
+    - pattern: '/index.html'
+      headers:
+        - key: Cache-Control
+          value: 'no-cache, no-store, must-revalidate'
+        - key: X-Frame-Options
+          value: 'SAMEORIGIN'
+        - key: X-Content-Type-Options
+          value: 'nosniff'
+        - key: X-XSS-Protection
+          value: '1; mode=block'
+        - key: Referrer-Policy
+          value: 'strict-origin-when-cross-origin'
