@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.gitignore
+.vscode
+.angular
+n8n/database.sqlite*
+n8n/crash.journal
+n8n/config
+deploy/.env
