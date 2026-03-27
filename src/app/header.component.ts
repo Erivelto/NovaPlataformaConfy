@@ -66,9 +66,9 @@ export class HeaderComponent implements OnInit {
   ngOnInit(): void {
     const usuario = this.loginService.obterUsuario();
     if (usuario) {
-      this.userName = usuario.nome;
+      this.userName = usuario.email ? usuario.email.split('@')[0] : usuario.nome;
       this.userEmail = usuario.email;
-      this.userInitials = usuario.nome
+      this.userInitials = this.userName
         .split(' ')
         .slice(0, 2)
         .map(p => p[0]?.toUpperCase() ?? '')

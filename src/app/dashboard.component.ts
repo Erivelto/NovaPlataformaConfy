@@ -37,9 +37,8 @@ interface NotaFiscal {
       <!-- Boas-vindas -->
       <nz-card class="welcome-card" *ngIf="usuario">
         <div class="welcome-inner">
-          <nz-avatar [nzText]="userInitials" nzSize="large" class="welcome-avatar"></nz-avatar>
           <div class="welcome-text">
-            <div class="welcome-greeting">{{ saudacao }}, <strong>{{ usuario.nome }}</strong>! 👋</div>
+            <div class="welcome-greeting">{{ saudacao }}, <strong>{{ emailPrefix }}</strong>! 👋</div>
             <div class="welcome-meta">
               <span *ngIf="usuario.email"><i nz-icon nzType="mail"></i> {{ usuario.email }}</span>
               <span><i nz-icon nzType="clock-circle"></i> Acesso em {{ dataAcesso }}</span>
@@ -152,6 +151,7 @@ export class DashboardComponent implements OnInit {
   usuario: UsuarioLogado | null = null;
   userInitials = 'U';
   saudacao = 'Olá';
+  emailPrefix = '';
   dataAcesso = '';
 
   loadingNotas = true;
@@ -182,6 +182,7 @@ export class DashboardComponent implements OnInit {
     this.usuario = this.loginService.obterUsuario();
     if (this.usuario) {
       this.userInitials = this.usuario.nome.split(' ').slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('');
+      this.emailPrefix = this.usuario.email ? this.usuario.email.split('@')[0] : this.usuario.nome;
     }
     const hora = new Date().getHours();
     this.saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';

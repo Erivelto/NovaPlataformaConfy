@@ -15,16 +15,6 @@ import { LoginService } from './services/login.service';
   template: `
     <nz-sider nzCollapsible [nzCollapsed]="collapsed" (nzCollapsedChange)="onCollapsedChange($event)" [nzCollapsedWidth]="80" [nzTrigger]="inDrawer ? null : undefined" style="padding:8px">
       <div class="user-panel" [class.collapsed]="collapsed">
-        <ng-container *ngIf="userAvatar; else defaultAvatar">
-          <nz-avatar [nzSrc]="userAvatar" nzSize="large"></nz-avatar>
-        </ng-container>
-        <ng-template #defaultAvatar>
-          <nz-avatar [nzText]="userInitials" nzSize="large" class="avatar-initials"></nz-avatar>
-        </ng-template>
-        <div class="user-info" *ngIf="!collapsed">
-          <div class="user-name">{{userName}}</div>
-          <div class="user-role">{{userRole}}</div>
-        </div>
       </div>
       <ul nz-menu nzMode="inline" [nzInlineCollapsed]="collapsed" class="sidebar-menu">
         <li nz-menu-item (click)="navigate('/dashboard')" [nzSelected]="isActive('/dashboard')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Dashboard' : ''" nzTooltipPlacement="right">
