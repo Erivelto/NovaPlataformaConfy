@@ -63,6 +63,7 @@ export class LoginService {
 
   salvarSessao(res: LoginResponse): void {
     localStorage.setItem('auth_token', res.token);
+    localStorage.setItem('auth_login_time', Date.now().toString());
     const usuario = this.extrairUsuario(res);
     localStorage.setItem('auth_usuario', JSON.stringify(usuario));
     if (res.pessoas && res.pessoas.length > 0) {
@@ -116,9 +117,28 @@ export class LoginService {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_usuario');
     localStorage.removeItem('auth_pessoa');
+    localStorage.removeItem('auth_login_time');
   }
 
   estaAutenticado(): boolean {
-    return !!this.obterToken();
+    const token = this.obterToken();
+    if (!token) return false;
+
+    // Check JWT exp claim
+    const claims = this.decodeToken(token);
+    if (claims?.exp) {
+      const expiresAt = claims.exp * 1000;
+      if (Date.now() >= expiresAt) return false;
+    }
+
+    // Fallback: check 1 hour since login
+    const loginTime = localStorage.getItem('auth_login_time');
+    if (loginTime) {
+      const elapsed = Date.now() - Number(loginTime);
+      const ONE_HOUR = 60 * 60 * 1000;
+      if (elapsed >= ONE_HOUR) return false;
+    }
+
+    return true;
   }
 }
