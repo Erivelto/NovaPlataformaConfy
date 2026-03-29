@@ -192,7 +192,7 @@ interface Tomador {
               style="margin-bottom:12px">
             </nz-alert>
             <ng-container *ngIf="!loadingTomadores">
-              <nz-radio-group [(ngModel)]="wizardForm.codigoTomador" style="width:100%; display:block">
+              <nz-radio-group [(ngModel)]="wizardForm.codigoTomador" (ngModelChange)="onTomadorChange($event)" style="width:100%; display:block">
                 <div *ngFor="let t of tomadores" class="tomador-item"
                      [class.tomador-selected]="wizardForm.codigoTomador === (t.Codigo ?? t.codigo)"
                      (click)="selecionarTomador(t.Codigo ?? t.codigo ?? 0, (t.Razao ?? t.razao) ?? '')">
@@ -677,6 +677,15 @@ export class SolicitacaoNfeComponent implements OnInit {
   selecionarTomador(codigo: number, nome: string): void {
     this.wizardForm.codigoTomador = codigo;
     this.wizardForm.tomadorNome = nome;
+  }
+
+  onTomadorChange(codigo: number): void {
+    if (codigo === 0) {
+      this.wizardForm.tomadorNome = 'SEM TOMADOR';
+    } else {
+      const t = this.tomadores.find(tom => (tom.Codigo ?? tom.codigo) === codigo);
+      this.wizardForm.tomadorNome = t ? (t.Razao ?? t.razao ?? '') : '';
+    }
   }
 
   iniciarNovoTomador(): void {
