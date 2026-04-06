@@ -169,15 +169,15 @@ interface Tomador {
 
         <!-- Steps indicator -->
         <nz-steps [nzCurrent]="wizardStep" nzSize="small" style="margin-bottom:28px">
-          <nz-step nzTitle="Tomador"></nz-step>
+          <nz-step nzTitle="Tomador(Cliente)"></nz-step>
           <nz-step nzTitle="Descrição / Valor"></nz-step>
           <nz-step nzTitle="Data"></nz-step>
           <nz-step nzTitle="Resumo"></nz-step>
         </nz-steps>
 
-        <!-- STEP 0: Tomador -->
+        <!-- STEP 0: Tomador(Cliente) -->
         <div *ngIf="wizardStep === 0">
-          <h3 class="step-title">Tomador NF-e</h3>
+          <h3 class="step-title">Tomador(Cliente) NF-e</h3>
 
           <!-- Lista de tomadores -->
           <ng-container *ngIf="!adicionandoTomador">
@@ -211,7 +211,7 @@ interface Tomador {
               <nz-divider></nz-divider>
               <div style="text-align:center">
                 <button nz-button nzType="dashed" (click)="iniciarNovoTomador()">
-                  <i nz-icon nzType="plus"></i> Adicionar Novo Tomador
+                  <i nz-icon nzType="plus"></i> Adicionar Novo Tomador(Cliente)
                 </button>
               </div>
             </ng-container>
@@ -227,7 +227,7 @@ interface Tomador {
             </nz-alert>
 
             <div class="form-field">
-              <label class="form-label">CNPJ do Tomador <span class="req">*</span></label>
+              <label class="form-label">CNPJ do Tomador(Cliente) <span class="req">*</span></label>
               <div style="display:flex; gap:8px; align-items:flex-start">
                 <input
                   nz-input
@@ -250,7 +250,7 @@ interface Tomador {
             </div>
 
             <ng-container *ngIf="cnpjPesquisado">
-              <nz-divider nzText="Dados do Tomador" nzOrientation="left"></nz-divider>
+              <nz-divider nzText="Dados do Tomador(Cliente)" nzOrientation="left"></nz-divider>
               <div class="tomador-form-grid">
                 <div class="tomador-form-row">
                   <div class="form-field" style="flex:1">
@@ -317,7 +317,7 @@ interface Tomador {
                   <i nz-icon nzType="arrow-left"></i> Voltar
                 </button>
                 <button nz-button nzType="primary" (click)="salvarNovoTomador()" [nzLoading]="salvandoTomador">
-                  <i nz-icon nzType="save"></i> Salvar Tomador
+                  <i nz-icon nzType="save"></i> Salvar Tomador(Cliente)
                 </button>
               </div>
             </ng-container>
@@ -367,7 +367,7 @@ interface Tomador {
             </nz-date-picker>
           </div>
           <div class="form-field">
-            <label nz-checkbox [(ngModel)]="wizardForm.exterior">Tomador no exterior</label>
+            <label nz-checkbox [(ngModel)]="wizardForm.exterior">Tomador(Cliente) no exterior</label>
           </div>
           <nz-alert
             nzType="info"
@@ -390,7 +390,7 @@ interface Tomador {
           <div class="resumo-grid">
             <div class="resumo-row">
               <div class="resumo-field">
-                <label class="resumo-label"><i nz-icon nzType="user"></i> Tomador</label>
+                <label class="resumo-label"><i nz-icon nzType="user"></i> Tomador(Cliente)</label>
                 <div class="resumo-value">{{ wizardForm.tomadorNome || 'SEM TOMADOR' }}</div>
               </div>
               <div class="resumo-field resumo-field-sm">
@@ -541,8 +541,14 @@ export class SolicitacaoNfeComponent implements OnInit {
   };
 
   disabledDate = (current: Date): boolean => {
+    const now = new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    if (now.getHours() >= 19) {
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return current < tomorrow;
+    }
     return current < today;
   };
 
@@ -631,7 +637,12 @@ export class SolicitacaoNfeComponent implements OnInit {
 
   openWizard(): void {
     this.wizardStep = 0;
-    this.wizardForm = { codigoTomador: null, tomadorNome: '', descricao: '', valorStr: '', valor: null, data: new Date(), repetir: false, exterior: false };
+    const agora = new Date();
+    let dataInicial = new Date();
+    if (agora.getHours() >= 19) {
+      dataInicial.setDate(dataInicial.getDate() + 1);
+    }
+    this.wizardForm = { codigoTomador: null, tomadorNome: '', descricao: '', valorStr: '', valor: null, data: dataInicial, repetir: false, exterior: false };
     this.erroWizard = '';
     this.adicionandoTomador = false;
     this.loadingTomadores = true;

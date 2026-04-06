@@ -130,7 +130,7 @@ interface NotaFiscal {
                 </div>
               </div>
               <div class="detalhe-field" style="flex:2">
-                <label class="detalhe-label"><i nz-icon nzType="user"></i> Tomador</label>
+                <label class="detalhe-label"><i nz-icon nzType="user"></i> Tomador(Cliente)</label>
                 <div class="detalhe-value">{{ notaSelecionada.tomador || '—' }}</div>
               </div>
             </div>
