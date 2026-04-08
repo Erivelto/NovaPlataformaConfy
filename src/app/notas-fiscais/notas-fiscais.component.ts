@@ -58,7 +58,7 @@ interface NotaFiscal {
 
         <div style="margin-bottom:12px; text-align:right;">
           <button nz-button nzType="primary" (click)="abrirAdicionarModal()">
-            <i nz-icon nzType="plus"></i> Adicionar Total NF
+            <i nz-icon nzType="plus"></i> Adic. Total NF
           </button>
         </div>
 
@@ -159,7 +159,7 @@ interface NotaFiscal {
     <!-- Modal Adic. Total NF -->
     <nz-modal
       [(nzVisible)]="adicionarVisible"
-      nzTitle="Adicionar Total NF"
+      nzTitle="Adic. Total NF"
       [nzWidth]="440"
       [nzFooter]="footerAdicionar"
       (nzOnCancel)="fecharAdicionarModal()">
