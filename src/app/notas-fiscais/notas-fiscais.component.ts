@@ -58,7 +58,7 @@ interface NotaFiscal {
 
         <div style="margin-bottom:12px; text-align:right;">
           <button nz-button nzType="primary" (click)="abrirAdicionarModal()">
-            <i nz-icon nzType="plus"></i> Adic. Total NF
+            <i nz-icon nzType="plus"></i> Adicionar Total NF
           </button>
         </div>
 
@@ -263,7 +263,6 @@ export class NotasFiscaisComponent implements OnInit {
       ? new HttpHeaders({ Authorization: `Bearer ${token}` })
       : new HttpHeaders();
   }
-
   carregar(): void {
     this.loading = true;
     this.erro = '';
