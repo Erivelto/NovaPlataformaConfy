@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { RouterModule } from '@angular/router';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -9,10 +10,18 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzAlertModule } from 'ng-zorro-antd/alert';
+import { NzButtonModule } from 'ng-zorro-antd/button';
 import { PageTitleComponent } from './page-title.component';
 import { LoginService, UsuarioLogado } from './services/login.service';
 import { Router } from '@angular/router';
 import { environment } from '../environments/environment';
+
+interface DasItem {
+  nomeArquivo: string;
+  periodo: string;
+  valorTributo: string;
+}
 
 interface NotaFiscal {
   numeroNFE: number;
@@ -29,10 +38,20 @@ interface NotaFiscal {
   selector: 'app-dashboard',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, NzCardModule, NzGridModule, NzTableModule, NzTagModule, NzIconModule, NzAvatarModule, NzSkeletonModule, NzDividerModule, PageTitleComponent],
+  imports: [CommonModule, RouterModule, NzCardModule, NzGridModule, NzTableModule, NzTagModule, NzIconModule, NzAvatarModule, NzSkeletonModule, NzDividerModule, NzAlertModule, NzButtonModule, PageTitleComponent],
   template: `
     <div class="dashboard">
       <app-page-title title="Painel" subtitle="Visão geral das suas notas fiscais"></app-page-title>
+
+      <!-- Alerta DAS pendente -->
+      <div *ngIf="temDasPendente" class="das-alert" (click)="irParaImpostos()">
+        <div class="das-alert-icon"><i nz-icon nzType="warning" nzTheme="fill"></i></div>
+        <div class="das-alert-body">
+          <div class="das-alert-title">Você possui DAS pendente para pagamento!</div>
+          <div class="das-alert-sub">Clique aqui para acessar a tela de Impostos e Obrigações e efetuar o pagamento.</div>
+        </div>
+        <div class="das-alert-arrow"><i nz-icon nzType="right"></i></div>
+      </div>
 
       <!-- Boas-vindas -->
       <nz-card class="welcome-card" *ngIf="usuario">
@@ -122,7 +141,13 @@ interface NotaFiscal {
     </div>
   `,
   styles: [
-    `.dashboard{padding:8px 4px}`,
+    `.das-alert{display:flex;align-items:center;gap:14px;margin:14px 0 4px;padding:14px 18px;background:linear-gradient(135deg,#fff7e6,#fff1d6);border:1.5px solid #ffa940;border-radius:10px;cursor:pointer;transition:box-shadow .2s,transform .15s}`,
+    `.das-alert:hover{box-shadow:0 4px 16px rgba(255,169,64,.35);transform:translateY(-1px)}`,
+    `.das-alert-icon{font-size:28px;color:#fa8c16;flex-shrink:0}`,
+    `.das-alert-body{flex:1}`,
+    `.das-alert-title{font-weight:700;font-size:1rem;color:#d46b08;margin-bottom:3px}`,
+    `.das-alert-sub{color:rgba(0,0,0,0.55);font-size:0.875rem}`,
+    `.das-alert-arrow{color:#fa8c16;font-size:18px;flex-shrink:0}`,
     `.welcome-card{margin-bottom:14px;border-radius:12px;background:linear-gradient(135deg,#f0f7ff 0%,#e8f4fd 100%);border:1px solid #c6e0f8}`,
     `.welcome-inner{display:flex;align-items:center;gap:16px}`,
     `.welcome-avatar{background:linear-gradient(135deg,#0a66c2,#5fb1ff);color:#fff;font-weight:700;font-size:1.1rem;flex-shrink:0}`,
@@ -155,6 +180,7 @@ export class DashboardComponent implements OnInit {
   dataAcesso = '';
 
   loadingNotas = true;
+  temDasPendente = false;
   showFaturamento = false;
   totalNotasEmitidas = 0;
   faturamentoMesAtual = 0;
@@ -195,6 +221,25 @@ export class DashboardComponent implements OnInit {
       return;
     }
     this.carregarNotas(pessoa.codigo);
+    this.carregarDas(pessoa.codigo);
+  }
+
+  carregarDas(codigoPessoa: number): void {
+    this.http.get<DasItem | DasItem[]>(
+      `${this.apiBase}/DAS/ObterListaEnvio/codigoPessoa/${codigoPessoa}`,
+      { headers: this.headers }
+    ).subscribe({
+      next: (res) => {
+        const lista = Array.isArray(res) ? res : [res];
+        this.temDasPendente = lista.length > 0;
+        this.cdr.markForCheck();
+      },
+      error: () => {}
+    });
+  }
+
+  irParaImpostos(): void {
+    this.router.navigate(['/receita-imposto']);
   }
 
   carregarNotas(codigoPessoa: number): void {
