@@ -8,6 +8,8 @@ import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzMessageModule } from 'ng-zorro-antd/message';
 import { PageTitleComponent } from '../page-title.component';
 import { LoginService } from '../services/login.service';
 import { Router } from '@angular/router';
@@ -49,7 +51,7 @@ interface DasItem {
     CommonModule,
     NzCardModule, NzTableModule, NzTagModule,
     NzAlertModule, NzIconModule, NzButtonModule,
-    NzSkeletonModule,
+    NzSkeletonModule, NzMessageModule,
     PageTitleComponent
   ],
   template: `
@@ -100,12 +102,18 @@ interface DasItem {
               <td>{{ parseBrl(item.valorTributado) | currency:'BRL':'symbol':'1.2-2' }}</td>
               <td>{{ item.valorTributo }}</td>
               <td nzAlign="center">
-                <nz-tag [nzColor]="statusDas() === 'Disponível' ? 'green' : 'red'">{{ statusDas() }}</nz-tag>
+                <nz-tag *ngIf="item.status !== 'Pago'" [nzColor]="statusDas() === 'Disponível' ? 'green' : 'red'">{{ statusDas() }}</nz-tag>
               </td>
               <td nzAlign="center">
-                <button nz-button nzType="primary" nzSize="small" (click)="gerarBoleto(item)">
+                <button *ngIf="item.status !== 'Pago'" nz-button nzType="primary" nzSize="small" (click)="gerarBoleto(item)" style="margin-right:8px">
                   <i nz-icon nzType="file-text"></i> Gerar Boleto
                 </button>
+                <button *ngIf="item.status !== 'Pago'" nz-button nzType="default" nzSize="small"
+                  [nzLoading]="salvando.has(item.codigo)"
+                  (click)="marcarComoPaga(item)">
+                  <i nz-icon nzType="check-circle"></i> Marca como paga
+                </button>
+                <nz-tag *ngIf="item.status === 'Pago'" nzColor="green">Pago</nz-tag>
               </td>
             </tr>
             <tr *ngIf="lista.length === 0">
@@ -192,6 +200,7 @@ interface DasItem {
   `]
 })
 export class ReceitaImpostoComponent implements OnInit {
+  private readonly dasApiUrl = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api/DAS';
   private readonly apiBase = environment.apiUrl;
 
   lista: DasItem[] = [];
@@ -199,6 +208,7 @@ export class ReceitaImpostoComponent implements OnInit {
   listaInss: InssItem[] = [];
   loading = true;
   erro = '';
+  salvando = new Set<number>();
 
   private codigoPessoa = 0;
 
@@ -206,7 +216,8 @@ export class ReceitaImpostoComponent implements OnInit {
     private http: HttpClient,
     private loginService: LoginService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private message: NzMessageService
   ) {}
 
   ngOnInit(): void {
@@ -279,5 +290,25 @@ export class ReceitaImpostoComponent implements OnInit {
   gerarBoleto(item: DasItem): void {
     const url = `https://armazenamento.contfy.com.br/Arquivos/Resultado?diretorioCompleto=${item.codigoPessoa}&nomeArquivo=${item.nomeArquivo}`;
     window.open(url, '_blank');
+  }
+
+  marcarComoPaga(item: DasItem): void {
+    if (this.salvando.has(item.codigo)) return;
+    this.salvando.add(item.codigo);
+    const payload: DasItem = { ...item, status: 'Pago' };
+    this.http.put<DasItem>(this.dasApiUrl, payload, { headers: this.headers })
+      .subscribe({
+        next: () => {
+          item.status = 'Pago';
+          this.salvando.delete(item.codigo);
+          this.message.success('DAS marcado como pago com sucesso.');
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.salvando.delete(item.codigo);
+          this.message.error(`Erro ao marcar como pago (${err.status}). Tente novamente.`);
+          this.cdr.markForCheck();
+        }
+      });
   }
 }

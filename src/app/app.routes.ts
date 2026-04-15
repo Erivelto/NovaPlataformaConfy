@@ -17,7 +17,8 @@ export const routes: Routes = [
 			{ path: 'meu-contrato', loadComponent: () => import('./meu-contrato/meu-contrato.component').then(m => m.MeuContratoComponent) },
 			{ path: 'solicitacao-nfe', loadComponent: () => import('./solicitacao-nfe/solicitacao-nfe.component').then(m => m.SolicitacaoNfeComponent) },
 			{ path: 'notas-fiscais', loadComponent: () => import('./notas-fiscais/notas-fiscais.component').then(m => m.NotasFiscaisComponent) },
-			{ path: 'receita-imposto', loadComponent: () => import('./receita-imposto/receita-imposto.component').then(m => m.ReceitaImpostoComponent) }
+			{ path: 'receita-imposto', loadComponent: () => import('./receita-imposto/receita-imposto.component').then(m => m.ReceitaImpostoComponent) },
+			{ path: 'mensalidade', loadComponent: () => import('./mensalidade/mensalidade.component').then(m => m.MensalidadeComponent) }
 		]
 	},
 	{ path: '**', redirectTo: '' }

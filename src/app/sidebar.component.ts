@@ -41,6 +41,10 @@ import { LoginService } from './services/login.service';
           <i nz-icon nzType="bar-chart"></i>
           <span>Impostos</span>
         </li>
+        <li nz-menu-item (click)="navigate('/mensalidade')" [nzSelected]="isActive('/mensalidade')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Mensalidade' : ''" nzTooltipPlacement="right">
+          <i nz-icon nzType="credit-card"></i>
+          <span>Mensalidade</span>
+        </li>
       </ul>
     </nz-sider>
   `,
