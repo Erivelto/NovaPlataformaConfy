@@ -341,15 +341,26 @@ interface Tomador {
             </textarea>
             <div class="char-count">{{ wizardForm.descricao.length }}/1000</div>
           </div>
-          <div class="form-field">
-            <label class="form-label">Valor (R$) <span class="req">*</span></label>
-            <input
-              nz-input
-              [value]="wizardForm.valorStr"
-              (input)="onValorInput($event)"
-              placeholder="R$ 0,00"
-              style="width:220px"
-              inputmode="numeric">
+          <div style="display:flex; gap:16px; flex-wrap:wrap">
+            <div class="form-field">
+              <label class="form-label">Valor (R$) <span class="req">*</span></label>
+              <input
+                nz-input
+                [value]="wizardForm.valorStr"
+                (input)="onValorInput($event)"
+                placeholder="R$ 0,00"
+                style="width:220px"
+                inputmode="numeric">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Código Serviço/Atividade</label>
+              <input
+                nz-input
+                [(ngModel)]="wizardForm.codigoPrefeitura"
+                placeholder="Código opcional"
+                maxlength="50"
+                style="width:220px">
+            </div>
           </div>
         </div>
 
@@ -406,6 +417,10 @@ interface Tomador {
               <div class="resumo-field" style="flex:1">
                 <label class="resumo-label"><i nz-icon nzType="file-text"></i> Descrição dos Serviços</label>
                 <div class="resumo-value resumo-descricao">{{ wizardForm.descricao }}</div>
+              </div>
+              <div class="resumo-field resumo-field-sm">
+                <label class="resumo-label"><i nz-icon nzType="tags"></i> Código Serviço/Atividade</label>
+                <div class="resumo-value">{{ wizardForm.codigoPrefeitura || '-' }}</div>
               </div>
               <div class="resumo-field resumo-field-sm">
                 <label class="resumo-label"><i nz-icon nzType="global"></i> Exterior</label>
@@ -537,7 +552,8 @@ export class SolicitacaoNfeComponent implements OnInit {
     valor: null as number | null,
     data: null as Date | null,
     repetir: false,
-    exterior: false
+    exterior: false,
+    codigoPrefeitura: ''
   };
 
   disabledDate = (current: Date): boolean => {
@@ -642,7 +658,7 @@ export class SolicitacaoNfeComponent implements OnInit {
     if (agora.getHours() >= 19) {
       dataInicial.setDate(dataInicial.getDate() + 1);
     }
-    this.wizardForm = { codigoTomador: null, tomadorNome: '', descricao: '', valorStr: '', valor: null, data: dataInicial, repetir: false, exterior: false };
+    this.wizardForm = { codigoTomador: null, tomadorNome: '', descricao: '', valorStr: '', valor: null, data: dataInicial, repetir: false, exterior: false, codigoPrefeitura: '' };
     this.erroWizard = '';
     this.adicionandoTomador = false;
     this.loadingTomadores = true;
@@ -881,7 +897,8 @@ export class SolicitacaoNfeComponent implements OnInit {
       repetir: this.wizardForm.repetir,
       CodigoEmissaoNota: 0,
       Status: 'C',
-      exterior: this.wizardForm.exterior
+      exterior: this.wizardForm.exterior,
+      CodigoPrefeitura: this.wizardForm.codigoPrefeitura
     };
 
     this.http.post(`${this.apiBase}/CorpoEmissaoNota`, payload, { headers: this.headers }).subscribe({
