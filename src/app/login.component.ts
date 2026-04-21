@@ -75,6 +75,9 @@ import { LoginService } from './services/login.service';
             </nz-form-control>
           </nz-form-item>
 
+          <div class="forgot-link">
+            <a (click)="irParaAlterarSenha()">Esqueci minha senha / Alterar senha</a>
+          </div>
           <div class="actions">
             <button nz-button nzType="default" type="button" (click)="cancel()" [disabled]="loading">Limpar</button>
             <button nz-button nzType="primary" type="submit" class="primary-btn" [nzLoading]="loading">Entrar</button>
@@ -144,6 +147,9 @@ import { LoginService } from './services/login.service';
       font-weight: 600;
     }`,
     `.eye-toggle { cursor: pointer; color: rgba(0,0,0,0.45); }`,
+    `.forgot-link { text-align: right; margin-bottom: 8px; font-size: 13px; }
+     .forgot-link a { color: #0a66c2; cursor: pointer; }
+     .forgot-link a:hover { text-decoration: underline; }`,
     `@media (max-width: 480px) {
       .login-box { padding: 24px 18px; border-radius: 12px; }
       .login-title { font-size: 1.2rem; }
@@ -190,5 +196,9 @@ export class LoginComponent {
     this.username = '';
     this.password = '';
     this.errorMessage = '';
+  }
+
+  irParaAlterarSenha(): void {
+    this.router.navigate(['/alterar-senha']);
   }
 }
