@@ -242,6 +242,10 @@ export class DashboardComponent implements OnInit {
     this.router.navigate(['/receita-imposto']);
   }
 
+  irParaAlterarSenha(): void {
+    this.router.navigate(['/alterar-senha']);
+  }
+
   carregarNotas(codigoPessoa: number): void {
     this.http.get<NotaFiscal[]>(`${this.apiBase}/NotaFiscal/CodigoPessoa/${codigoPessoa}`, { headers: this.headers }).subscribe({
       next: (data) => {

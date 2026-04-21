@@ -22,6 +22,9 @@ import { LoginService } from './services/login.service';
       </div>
       <div class="actions">
         <button nz-button nzType="text" aria-label="notifications"><i nz-icon nzType="bell"></i></button>
+        <button nz-button nzType="text" aria-label="alterar senha" nz-tooltip nzTooltipTitle="Alterar senha" (click)="alterarSenha()">
+          <i nz-icon nzType="lock"></i>
+        </button>
         <div class="user-chip" nz-tooltip [nzTooltipTitle]="userEmail">
           <nz-avatar [nzText]="userInitials" nzSize="small" class="user-avatar"></nz-avatar>
           <span class="user-name-header">{{ userName }}</span>
@@ -79,5 +82,9 @@ export class HeaderComponent implements OnInit {
   logout(): void {
     this.loginService.logout();
     this.router.navigate(['/login']);
+  }
+
+  alterarSenha(): void {
+    this.router.navigate(['/alterar-senha']);
   }
 }
