@@ -262,11 +262,9 @@ export class ReceitaImpostoComponent implements OnInit {
     return new Date().getDate() < 20 ? 'Disponível' : 'Vencido';
   }
 
-  vencimento(periodo: string): Date {
-    const parts = periodo?.split('/');
-    const mes = parts ? parseInt(parts[0], 10) : new Date().getMonth() + 1;
-    const ano = parts && parts[1] ? parseInt(parts[1], 10) : new Date().getFullYear();
-    return new Date(ano, mes - 1, 20);
+  vencimento(_periodo?: string): Date {
+    const hoje = new Date();
+    return new Date(hoje.getFullYear(), hoje.getMonth(), 20);
   }
 
   parseBrl(valor: string | number | undefined | null): number {
