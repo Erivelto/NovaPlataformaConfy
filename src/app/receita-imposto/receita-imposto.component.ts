@@ -105,14 +105,23 @@ interface DasItem {
                 <nz-tag *ngIf="item.status !== 'Pago'" [nzColor]="statusDas() === 'Disponível' ? 'green' : 'red'">{{ statusDas() }}</nz-tag>
               </td>
               <td nzAlign="center">
-                <button *ngIf="item.status !== 'Pago'" nz-button nzType="primary" nzSize="small" (click)="gerarBoleto(item)" style="margin-right:8px">
-                  <i nz-icon nzType="file-text"></i> Gerar Boleto
-                </button>
-                <button *ngIf="item.status !== 'Pago'" nz-button nzType="default" nzSize="small"
-                  [nzLoading]="salvando.has(item.codigo)"
-                  (click)="marcarComoPaga(item)">
-                  <i nz-icon nzType="check-circle"></i> Marca como paga
-                </button>
+                <!-- Valores zerados: apenas botão Visualizar -->
+                <ng-container *ngIf="item.status !== 'Pago' && isValorZero(item)">
+                  <button nz-button nzType="default" nzSize="small" (click)="gerarBoleto(item)">
+                    <i nz-icon nzType="eye"></i> Visualizar
+                  </button>
+                </ng-container>
+                <!-- Valores preenchidos: Gerar Boleto + Marcar como paga -->
+                <ng-container *ngIf="item.status !== 'Pago' && !isValorZero(item)">
+                  <button nz-button nzType="primary" nzSize="small" (click)="gerarBoleto(item)" style="margin-right:8px">
+                    <i nz-icon nzType="file-text"></i> Gerar Boleto
+                  </button>
+                  <button nz-button nzType="default" nzSize="small"
+                    [nzLoading]="salvando.has(item.codigo)"
+                    (click)="marcarComoPaga(item)">
+                    <i nz-icon nzType="check-circle"></i> Marca como paga
+                  </button>
+                </ng-container>
                 <nz-tag *ngIf="item.status === 'Pago'" nzColor="green">Pago</nz-tag>
               </td>
             </tr>
@@ -283,6 +292,10 @@ export class ReceitaImpostoComponent implements OnInit {
   gerarBoletoParcela(item: ParcelamentoDas): void {
     // Implementação futura
     console.log('Gerar boleto parcela:', item);
+  }
+
+  isValorZero(item: DasItem): boolean {
+    return this.parseBrl(item.valorTributado) === 0 && this.parseBrl(item.valorTributo) === 0;
   }
 
   gerarBoleto(item: DasItem): void {

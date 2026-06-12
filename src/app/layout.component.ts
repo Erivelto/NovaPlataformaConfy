@@ -6,6 +6,7 @@ import { MainComponent } from './main.component';
 import { FooterComponent } from './footer.component';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
+import { MensalidadeStatusService } from './services/mensalidade-status.service';
 
 @Component({
   selector: 'app-layout',
@@ -53,8 +54,11 @@ export class LayoutComponent implements OnInit {
 
   private readonly MOBILE_BREAKPOINT = 768;
 
+  constructor(private mensalidadeStatus: MensalidadeStatusService) {}
+
   ngOnInit(): void {
     this.checkScreen();
+    this.mensalidadeStatus.verificar();
   }
 
   @HostListener('window:resize')

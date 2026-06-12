@@ -7,6 +7,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { LoginService } from './services/login.service';
+import { MensalidadeStatusService } from './services/mensalidade-status.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -17,33 +18,37 @@ import { LoginService } from './services/login.service';
       <div class="user-panel" [class.collapsed]="collapsed">
       </div>
       <ul nz-menu nzMode="inline" [nzInlineCollapsed]="collapsed" class="sidebar-menu">
-        <li nz-menu-item (click)="navigate('/dashboard')" [nzSelected]="isActive('/dashboard')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Dashboard' : ''" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigateGuarded('/dashboard')" [nzSelected]="isActive('/dashboard')" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Dashboard' : '')" nzTooltipPlacement="right">
           <i nz-icon nzType="home"></i>
           <span>Dashboard</span>
         </li>
-        <li nz-menu-item (click)="navigate('/meus-dados')" [nzSelected]="isActive('/meus-dados')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Meus Dados' : ''" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigateGuarded('/meus-dados')" [nzSelected]="isActive('/meus-dados')" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Meus Dados' : '')" nzTooltipPlacement="right">
           <i nz-icon nzType="idcard"></i>
           <span>Meus Dados</span>
         </li>
-        <li nz-menu-item (click)="navigate('/meu-contrato')" [nzSelected]="isActive('/meu-contrato')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Meu Contrato' : ''" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigateGuarded('/meu-contrato')" [nzSelected]="isActive('/meu-contrato')" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Meu Contrato' : '')" nzTooltipPlacement="right">
           <i nz-icon nzType="file-protect"></i>
           <span>Meu Contrato</span>
         </li>
-        <li nz-menu-item (click)="navigate('/solicitacao-nfe')" [nzSelected]="isActive('/solicitacao-nfe')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Solicitação Emissão Nfe' : ''" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigateGuarded('/solicitacao-nfe')" [nzSelected]="isActive('/solicitacao-nfe')" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Solicitação Emissão Nfe' : '')" nzTooltipPlacement="right">
           <i nz-icon nzType="file-add"></i>
           <span>Solicitação Emissão Nfe</span>
         </li>
-        <li nz-menu-item (click)="navigate('/notas-fiscais')" [nzSelected]="isActive('/notas-fiscais')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Notas Fiscais' : ''" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigateGuarded('/notas-fiscais')" [nzSelected]="isActive('/notas-fiscais')" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Notas Fiscais' : '')" nzTooltipPlacement="right">
           <i nz-icon nzType="file-text"></i>
           <span>Notas Fiscais</span>
         </li>
-        <li nz-menu-item (click)="navigate('/receita-imposto')" [nzSelected]="isActive('/receita-imposto')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Receita/Imposto' : ''" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigateGuarded('/receita-imposto')" [nzSelected]="isActive('/receita-imposto')" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Receita/Imposto' : '')" nzTooltipPlacement="right">
           <i nz-icon nzType="bar-chart"></i>
           <span>Impostos</span>
         </li>
         <li nz-menu-item (click)="navigate('/mensalidade')" [nzSelected]="isActive('/mensalidade')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Mensalidade' : ''" nzTooltipPlacement="right">
           <i nz-icon nzType="credit-card"></i>
           <span>Mensalidade</span>
+        </li>
+        <li nz-menu-item (click)="openGuarded()" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Situação Cadastral' : '')" nzTooltipPlacement="right">
+          <i nz-icon nzType="idcard"></i>
+          <span>Situação Cadastral</span>
         </li>
       </ul>
     </nz-sider>
@@ -56,7 +61,8 @@ import { LoginService } from './services/login.service';
     `.user-role{font-size:0.85rem;color:rgba(0,0,0,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
     `.avatar-initials{background:linear-gradient(135deg,#0a66c2,#5fb1ff);color:#fff;font-weight:700}`,
     `.sidebar-menu .ant-menu-item{border-radius:8px;margin:2px 0;transition:all .15s ease}`,
-    `.sidebar-menu .ant-menu-item:active{transform:scale(0.97)}`
+    `.sidebar-menu .ant-menu-item:active{transform:scale(0.97)}`,
+    `.menu-bloqueado{opacity:0.4!important;cursor:not-allowed!important;pointer-events:none}`
   ],
 })
 export class SidebarComponent implements OnInit {
@@ -72,7 +78,11 @@ export class SidebarComponent implements OnInit {
   userInitials = 'U';
   userAvatar: string | null = null;
 
-  constructor(private loginService: LoginService, private router: Router) {}
+  constructor(
+    private loginService: LoginService,
+    private router: Router,
+    public mensalidadeStatus: MensalidadeStatusService
+  ) {}
 
   ngOnInit(): void {
     const usuario = this.loginService.obterUsuario();
@@ -90,6 +100,21 @@ export class SidebarComponent implements OnInit {
   navigate(path: string): void {
     this.router.navigate([path]);
     this.navigated.emit();
+  }
+
+  navigateGuarded(path: string): void {
+    if (this.mensalidadeStatus.bloqueado) return;
+    this.navigate(path);
+  }
+
+  openSituacaoCadastral(): void {
+    window.open('https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/', '_blank');
+    this.navigated.emit();
+  }
+
+  openGuarded(): void {
+    if (this.mensalidadeStatus.bloqueado) return;
+    this.openSituacaoCadastral();
   }
 
   isActive(path: string): boolean {

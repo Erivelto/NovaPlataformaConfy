@@ -23,7 +23,7 @@ interface NotaFiscal {
   numeroNFE: number;
   dataEmissao: string;
   cancelada?: boolean;
-  dataCancelamento?: string | null;
+  excluido?: number;
   valorTotal?: number;
   valor?: string | number;
   tomador?: string;
@@ -272,7 +272,7 @@ export class NotasFiscaisComponent implements OnInit {
         this.notas = raw
           .map((n: any) => ({
             ...n,
-            cancelada: n.cancelada ?? !!n.dataCancelamento,
+            cancelada: n.excluido === 1,
             valor: n.valorTotal ?? n.valor ?? 0
           }))
           .sort((a: NotaFiscal, b: NotaFiscal) => {

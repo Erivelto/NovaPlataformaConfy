@@ -14,6 +14,7 @@ import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { PageTitleComponent } from './page-title.component';
 import { LoginService, UsuarioLogado } from './services/login.service';
+import { MensalidadeStatusService } from './services/mensalidade-status.service';
 import { Router } from '@angular/router';
 import { environment } from '../environments/environment';
 
@@ -27,7 +28,7 @@ interface NotaFiscal {
   numeroNFE: number;
   dataEmissao: string;
   cancelada?: boolean;
-  dataCancelamento?: string | null;
+  excluido?: number;
   valorTotal?: number;
   valor?: string | number;
   tomador?: string;
@@ -42,6 +43,26 @@ interface NotaFiscal {
   template: `
     <div class="dashboard">
       <app-page-title title="Painel" subtitle="Visão geral das suas notas fiscais"></app-page-title>
+
+      <!-- Alerta BLOQUEADO: mais de 2 mensalidades atrasadas -->
+      <div *ngIf="mensalidadeStatus.bloqueado" class="bloqueado-alert" (click)="irParaMensalidade()">
+        <div class="bloqueado-alert-icon"><i nz-icon nzType="stop" nzTheme="fill"></i></div>
+        <div class="bloqueado-alert-body">
+          <div class="bloqueado-alert-title">Acesso Temporariamente Bloqueado</div>
+          <div class="bloqueado-alert-msg">Identificamos mais de uma mensalidade da contabilidade em atraso em nossa plataforma. Por esse motivo, o seu acesso está temporariamente bloqueado. Solicitamos a regularização do débito o quanto antes para reativação do serviço.</div>
+          <div class="bloqueado-alert-cta">Clique aqui para regularizar <i nz-icon nzType="arrow-right"></i></div>
+        </div>
+      </div>
+
+      <!-- Alerta Mensalidade pendente (1–2 em atraso) -->
+      <div *ngIf="!mensalidadeStatus.bloqueado && mensalidadeStatus.atrasadas >= 1" class="mensalidade-alert" (click)="irParaMensalidade()">
+        <div class="mensalidade-alert-icon"><i nz-icon nzType="exclamation-circle" nzTheme="fill"></i></div>
+        <div class="mensalidade-alert-body">
+          <div class="mensalidade-alert-title">Pendência de Mensalidade</div>
+          <div class="mensalidade-alert-msg">Identificamos uma pendência referente à mensalidade da contabilidade em nossa plataforma. Para evitar a suspensão automática das suas atividades e do seu acesso, solicitamos a regularização do débito o quanto antes.</div>
+          <div class="mensalidade-alert-cta">Clique para regularização <i nz-icon nzType="arrow-right"></i></div>
+        </div>
+      </div>
 
       <!-- Alerta DAS pendente -->
       <div *ngIf="temDasPendente" class="das-alert" (click)="irParaImpostos()">
@@ -141,6 +162,22 @@ interface NotaFiscal {
     </div>
   `,
   styles: [
+    `.bloqueado-alert{display:flex;align-items:flex-start;gap:16px;margin:14px 0 10px;padding:20px 24px;background:linear-gradient(135deg,#3b0000,#5c0011);border:2px solid #a8071a;border-radius:12px;cursor:pointer;transition:box-shadow .2s,transform .15s;box-shadow:0 6px 28px rgba(168,7,26,.45)}`,
+    `.bloqueado-alert:hover{box-shadow:0 8px 36px rgba(168,7,26,.6);transform:translateY(-2px)}`,
+    `.bloqueado-alert-icon{font-size:36px;color:#ff4d4f;flex-shrink:0;margin-top:2px}`,
+    `.bloqueado-alert-body{flex:1}`,
+    `.bloqueado-alert-title{font-weight:900;font-size:1.1rem;color:#ff7875;margin-bottom:8px;letter-spacing:.02em;text-transform:uppercase}`,
+    `.bloqueado-alert-msg{color:#ffccc7;font-size:0.9rem;line-height:1.6;margin-bottom:12px}`,
+    `.bloqueado-alert-cta{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:0.9rem;color:#3b0000;background:#ff4d4f;padding:8px 20px;border-radius:6px;transition:background .2s}`,
+    `.bloqueado-alert:hover .bloqueado-alert-cta{background:#ff7875}`,
+    `.mensalidade-alert{display:flex;align-items:flex-start;gap:16px;margin:14px 0 10px;padding:18px 22px;background:linear-gradient(135deg,#fff1f0,#ffe6e6);border:2px solid #ff4d4f;border-radius:12px;cursor:pointer;transition:box-shadow .2s,transform .15s;box-shadow:0 4px 20px rgba(255,77,79,.18)}`,
+    `.mensalidade-alert:hover{box-shadow:0 6px 28px rgba(255,77,79,.32);transform:translateY(-2px)}`,
+    `.mensalidade-alert-icon{font-size:32px;color:#ff4d4f;flex-shrink:0;margin-top:2px}`,
+    `.mensalidade-alert-body{flex:1}`,
+    `.mensalidade-alert-title{font-weight:800;font-size:1.05rem;color:#cf1322;margin-bottom:6px;letter-spacing:.01em}`,
+    `.mensalidade-alert-msg{color:#5c0011;font-size:0.9rem;line-height:1.55;margin-bottom:10px}`,
+    `.mensalidade-alert-cta{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:0.9rem;color:#fff;background:#ff4d4f;padding:6px 16px;border-radius:6px;transition:background .2s}`,
+    `.mensalidade-alert:hover .mensalidade-alert-cta{background:#cf1322}`,
     `.das-alert{display:flex;align-items:center;gap:14px;margin:14px 0 4px;padding:14px 18px;background:linear-gradient(135deg,#fff7e6,#fff1d6);border:1.5px solid #ffa940;border-radius:10px;cursor:pointer;transition:box-shadow .2s,transform .15s}`,
     `.das-alert:hover{box-shadow:0 4px 16px rgba(255,169,64,.35);transform:translateY(-1px)}`,
     `.das-alert-icon{font-size:28px;color:#fa8c16;flex-shrink:0}`,
@@ -196,7 +233,8 @@ export class DashboardComponent implements OnInit {
     private loginService: LoginService,
     private http: HttpClient,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    public mensalidadeStatus: MensalidadeStatusService
   ) {}
 
   private get headers(): HttpHeaders {
@@ -238,6 +276,10 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  irParaMensalidade(): void {
+    this.router.navigate(['/mensalidade']);
+  }
+
   irParaImpostos(): void {
     this.router.navigate(['/receita-imposto']);
   }
@@ -252,7 +294,7 @@ export class DashboardComponent implements OnInit {
         const raw = Array.isArray(data) ? data : [];
         const notas: NotaFiscal[] = raw.map((n: any) => ({
           ...n,
-          cancelada: n.cancelada ?? !!n.dataCancelamento,
+          cancelada: n.excluido === 1,
           valor: n.valorTotal ?? n.valor ?? 0
         }));
         const ativas = notas.filter(n => !n.cancelada);
