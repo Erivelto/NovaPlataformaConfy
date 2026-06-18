@@ -1,0 +1,465 @@
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
+import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
+import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzMessageModule } from 'ng-zorro-antd/message';
+import { NzFormModule } from 'ng-zorro-antd/form';
+import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
+import { PageTitleComponent } from '../page-title.component';
+import { LoginService } from '../services/login.service';
+import { environment } from '../../environments/environment';
+
+interface Pessoa {
+  codigo: number;
+  documento: string;
+  nome: string;
+  razao: string;
+  dataInclusao: string;
+  fisica: boolean;
+  numeroWhats?: string;
+  prefeitura?: string;
+  isNovo?: boolean;
+  isTop5?: boolean;
+}
+
+interface DadosEmissaoNota {
+  codigoPessoa: number;
+  prefeitura?: string;
+  [key: string]: any;
+}
+
+interface PessoaCobranca {
+  codigoPessoa?: number;
+  [key: string]: any;
+}
+
+@Component({
+  selector: 'app-clientes-online',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    CommonModule, FormsModule,
+    NzCardModule, NzTableModule, NzTagModule, NzIconModule,
+    NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule,
+    NzModalModule, NzMessageModule, NzFormModule, NzDatePickerModule,
+    PageTitleComponent
+  ],
+  template: `
+    <div class="clientes-online">
+      <app-page-title title="Clientes Online" subtitle="Clientes Plataforma"></app-page-title>
+
+      <!-- KPIs -->
+      <div class="kpis">
+        <nz-card class="kpi" nzBordered>
+          <div class="kpi-icon"><i nz-icon nzType="user" style="color:#52c41a"></i></div>
+          <ng-container *ngIf="loading"><nz-skeleton [nzActive]="true" [nzTitle]="{ width:'50px' }" [nzParagraph]="{ rows:0 }"></nz-skeleton></ng-container>
+          <div class="kpi-value green" *ngIf="!loading">{{ clientes.length }}</div>
+          <div class="kpi-label">Clientes Ativos</div>
+        </nz-card>
+
+        <nz-card class="kpi" nzBordered>
+          <div class="kpi-icon"><i nz-icon nzType="heart" style="color:#1890ff"></i></div>
+          <ng-container *ngIf="loading"><nz-skeleton [nzActive]="true" [nzTitle]="{ width:'50px' }" [nzParagraph]="{ rows:0 }"></nz-skeleton></ng-container>
+          <div class="kpi-value primary" *ngIf="!loading">{{ clientesNovos }}</div>
+          <div class="kpi-label">Clientes Novos</div>
+        </nz-card>
+
+        <nz-card class="kpi" nzBordered>
+          <div class="kpi-icon"><i nz-icon nzType="dollar" style="color:#ff4d4f"></i></div>
+          <ng-container *ngIf="loading"><nz-skeleton [nzActive]="true" [nzTitle]="{ width:'50px' }" [nzParagraph]="{ rows:0 }"></nz-skeleton></ng-container>
+          <div class="kpi-value red" *ngIf="!loading">{{ inadimplentes }}</div>
+          <div class="kpi-label">Devedores</div>
+        </nz-card>
+
+        <nz-card class="kpi kpi-action" nzBordered (click)="abrirModalAdicionar()">
+          <div class="kpi-icon"><i nz-icon nzType="plus-circle" style="color:#722ed1"></i></div>
+          <div class="kpi-value purple"><button nz-button nzType="primary" nzShape="round" nzSize="small"><i nz-icon nzType="plus"></i></button></div>
+          <div class="kpi-label">Novo Cliente</div>
+        </nz-card>
+      </div>
+
+      <!-- Tabela -->
+      <nz-card style="margin-top:14px">
+        <div style="margin-bottom:12px">
+          <nz-input-group [nzPrefix]="prefixSearch" style="max-width:380px">
+            <input nz-input placeholder="Buscar por CNPJ, razão social ou código..." [(ngModel)]="filtro" (ngModelChange)="filtrar()" />
+          </nz-input-group>
+          <ng-template #prefixSearch><i nz-icon nzType="search"></i></ng-template>
+        </div>
+
+        <ng-container *ngIf="loading">
+          <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 8 }"></nz-skeleton>
+        </ng-container>
+
+        <nz-table
+          *ngIf="!loading"
+          [nzData]="clientesFiltrados"
+          nzBordered
+          nzSize="middle"
+          [nzShowPagination]="true"
+          [nzPageSize]="15">
+          <thead>
+            <tr>
+              <th nzWidth="90px">Código</th>
+              <th nzWidth="150px">CNPJ</th>
+              <th>Razão Social</th>
+              <th nzWidth="140px">Prefeitura</th>
+              <th nzWidth="140px">WhatsApp</th>
+              <th nzWidth="130px">Data Cadastro</th>
+              <th nzWidth="70px" nzAlign="center">Editar</th>
+              <th nzWidth="80px" nzAlign="center">Cancelar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of clientesFiltrados">
+              <td>
+                <nz-tag *ngIf="c.isTop5" nzColor="green" style="margin-right:4px;font-size:10px;border-radius:8px">⭐ NOVO</nz-tag>
+                <nz-tag *ngIf="c.isNovo && !c.isTop5" nzColor="blue" style="margin-right:4px;font-size:10px">NOVO</nz-tag>
+                {{ c.codigo }}
+              </td>
+              <td>{{ c.documento || '—' }}</td>
+              <td>{{ c.razao || '—' }}</td>
+              <td>
+                <span *ngIf="c.prefeitura; else semPrefeitura">{{ c.prefeitura }}</span>
+                <ng-template #semPrefeitura><span class="sem-dado">Sem Prefeitura</span></ng-template>
+              </td>
+              <td>
+                <span *ngIf="c.numeroWhats; else semWhats">{{ c.numeroWhats }}</span>
+                <ng-template #semWhats><span class="sem-dado">Sem WhatsApp</span></ng-template>
+              </td>
+              <td>{{ c.dataInclusao | date:'dd/MM/yyyy' }}</td>
+              <td nzAlign="center">
+                <button nz-button nzType="primary" nzSize="small" nz-tooltip nzTooltipTitle="Editar" (click)="editar(c)">
+                  <i nz-icon nzType="edit"></i>
+                </button>
+              </td>
+              <td nzAlign="center">
+                <button nz-button nzDanger nzSize="small" nz-tooltip nzTooltipTitle="Cancelar cliente" (click)="abrirModalCancelamento(c)">
+                  <i nz-icon nzType="close-circle"></i>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="clientesFiltrados.length === 0">
+              <td colspan="8" style="text-align:center;color:rgba(0,0,0,0.45);padding:32px">
+                Nenhum cliente encontrado.
+              </td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </nz-card>
+    </div>
+
+    <!-- Modal Cancelamento -->
+    <nz-modal
+      [(nzVisible)]="cancelamentoVisible"
+      nzTitle="Cancelamento de Cliente"
+      [nzWidth]="480"
+      [nzFooter]="footerCancelamento"
+      (nzOnCancel)="fecharModalCancelamento()">
+      <ng-container *nzModalContent>
+        <p *ngIf="clienteSelecionado" style="margin-bottom:16px">
+          Cliente: <strong>{{ clienteSelecionado.razao || clienteSelecionado.nome }}</strong> ({{ clienteSelecionado.documento }})
+        </p>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" nzRequired>Data de Cancelamento</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <nz-date-picker style="width:100%" [(ngModel)]="cancelDataCancelamento" nzFormat="dd/MM/yyyy" nzPlaceHolder="Selecione a data"></nz-date-picker>
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" nzRequired>Motivo</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <textarea nz-input [(ngModel)]="cancelMotivo" [nzAutosize]="{ minRows: 3, maxRows: 5 }" placeholder="Descreva o motivo do cancelamento..."></textarea>
+          </nz-form-control>
+        </nz-form-item>
+      </ng-container>
+      <ng-template #footerCancelamento>
+        <button nz-button (click)="fecharModalCancelamento()" [disabled]="salvando">Fechar</button>
+        <button nz-button nzDanger (click)="salvarCancelamento()" [nzLoading]="salvando">Cancelar Cliente</button>
+      </ng-template>
+    </nz-modal>
+
+    <!-- Modal Novo Cliente -->
+    <nz-modal
+      [(nzVisible)]="adicionarVisible"
+      nzTitle="Novo Cliente"
+      [nzWidth]="520"
+      [nzFooter]="footerAdicionar"
+      (nzOnCancel)="fecharModalAdicionar()">
+      <ng-container *nzModalContent>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" nzRequired>CNPJ</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <input nz-input [(ngModel)]="novoCliente.cnpj" placeholder="00.000.000/0000-00" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24">Celular</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <input nz-input [(ngModel)]="novoCliente.celular" placeholder="(00) 00000-0000" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" nzRequired>E-mail</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <input nz-input [(ngModel)]="novoCliente.email" placeholder="email@empresa.com.br" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" nzRequired>Razão Social</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <input nz-input [(ngModel)]="novoCliente.razao" placeholder="Razão Social da empresa" />
+          </nz-form-control>
+        </nz-form-item>
+      </ng-container>
+      <ng-template #footerAdicionar>
+        <button nz-button (click)="fecharModalAdicionar()" [disabled]="salvando">Fechar</button>
+        <button nz-button nzType="primary" (click)="salvarNovoCliente()" [nzLoading]="salvando">Salvar</button>
+      </ng-template>
+    </nz-modal>
+  `,
+  styles: [`
+    .clientes-online { padding: 8px 4px; }
+    .kpis { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+    .kpi { flex: 1; min-width: 180px; text-align: center; }
+    .kpi-icon { font-size: 26px; margin-bottom: 6px; }
+    .kpi-label { color: rgba(0,0,0,0.45); font-size: 0.88rem; margin-top: 4px; }
+    .kpi-value { font-size: 1.6rem; font-weight: 800; margin: 4px 0; }
+    .kpi-value.green { color: #52c41a; }
+    .kpi-value.primary { color: #1890ff; }
+    .kpi-value.red { color: #ff4d4f; }
+    .kpi-value.purple { color: #722ed1; }
+    .kpi-action { cursor: pointer; transition: box-shadow .2s; }
+    .kpi-action:hover { box-shadow: 0 4px 16px rgba(114,46,209,.2); }
+    .sem-dado { color: #ff4d4f; font-weight: 500; }
+    @media(max-width:720px) { .kpis { flex-direction: column; } }
+  `]
+})
+export class ClientesOnlineComponent implements OnInit {
+  private readonly api = environment.apiUrl;
+
+  loading = true;
+  clientes: Pessoa[] = [];
+  clientesFiltrados: Pessoa[] = [];
+  filtro = '';
+  clientesNovos = 0;
+  inadimplentes = 0;
+  salvando = false;
+
+  // Modal cancelamento
+  cancelamentoVisible = false;
+  clienteSelecionado: Pessoa | null = null;
+  cancelDataCancelamento: Date | null = null;
+  cancelMotivo = '';
+
+  // Modal novo cliente
+  adicionarVisible = false;
+  novoCliente = { cnpj: '', celular: '', email: '', razao: '' };
+
+  private get headers(): HttpHeaders {
+    const token = localStorage.getItem('auth_token');
+    return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : new HttpHeaders();
+  }
+
+  constructor(
+    private http: HttpClient,
+    private loginService: LoginService,
+    private router: Router,
+    private message: NzMessageService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit(): void {
+    this.carregar();
+  }
+
+  carregar(): void {
+    this.loading = true;
+    const safe = <T>(obs: any) => obs.pipe(timeout(8000), catchError(() => of([] as T[])));
+
+    forkJoin({
+      pessoas:  safe<Pessoa>(this.http.get<Pessoa[]>(`${this.api}/Pessoa`, { headers: this.headers })),
+      status:   safe<Pessoa>(this.http.get<Pessoa[]>(`${this.api}/Pessoa/Status`, { headers: this.headers })),
+      emissao:  safe<DadosEmissaoNota>(this.http.get<DadosEmissaoNota[]>(`${this.api}/DadosEmissaoNota`, { headers: this.headers })),
+      naoPagos: safe<PessoaCobranca>(this.http.get<PessoaCobranca[]>(`${this.api}/PessoaCobranca/ObterNaoPagos`, { headers: this.headers }))
+    }).subscribe({
+      next: ({ pessoas, status, emissao, naoPagos }) => {
+        const emissaoMap = new Map<number, DadosEmissaoNota>();
+        (emissao as DadosEmissaoNota[]).forEach(e => emissaoMap.set(e.codigoPessoa, e));
+
+        // Merge: prefere dados de /Status quando o mesmo codigo existir (igual ao getPessoa() do legado)
+        const statusMap = new Map<number, Pessoa>();
+        (status as Pessoa[]).filter(p => !p.fisica).forEach(p => statusMap.set(p.codigo, p));
+        const listGeral = (pessoas as Pessoa[]).filter(p => !p.fisica);
+        const merged = listGeral.map(p => statusMap.get(p.codigo) ?? p);
+
+        const agora = new Date();
+
+        const listMapeada = merged.map(p => {
+            const diffDays = (agora.getTime() - new Date(p.dataInclusao).getTime()) / (1000 * 60 * 60 * 24);
+            const emissaoData = emissaoMap.get(p.codigo);
+            return {
+              ...p,
+              prefeitura: emissaoData?.prefeitura ?? '',
+              isNovo: diffDays < 30,
+              isTop5: false
+            };
+          });
+
+        // Ordena: mais recentes primeiro
+        listMapeada.sort((a, b) => new Date(b.dataInclusao).getTime() - new Date(a.dataInclusao).getTime());
+
+        // Marca os 5 primeiros com até 60 dias de cadastro como destaque
+        listMapeada.slice(0, 5).forEach(p => {
+          const diff = (agora.getTime() - new Date(p.dataInclusao).getTime()) / 86400000;
+          p.isTop5 = diff <= 60;
+        });
+
+        this.clientes = listMapeada;
+
+        this.clientesNovos = this.clientes.filter(c => {
+          const diff = (agora.getTime() - new Date(c.dataInclusao).getTime()) / (1000 * 60 * 60 * 24);
+          return diff < 60;
+        }).length;
+
+        this.inadimplentes = Array.isArray(naoPagos) ? (naoPagos as any[]).length : 0;
+        this.clientesFiltrados = [...this.clientes];
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  filtrar(): void {
+    const f = this.filtro.toLowerCase().trim();
+    const base = f
+      ? this.clientes.filter(c =>
+          c.razao?.toLowerCase().includes(f) ||
+          c.nome?.toLowerCase().includes(f) ||
+          c.documento?.toLowerCase().includes(f) ||
+          String(c.codigo).includes(f))
+      : [...this.clientes];
+    // mantém ordenação: mais recentes primeiro
+    this.clientesFiltrados = base.sort((a, b) =>
+      new Date(b.dataInclusao).getTime() - new Date(a.dataInclusao).getTime());
+  }
+
+  editar(c: Pessoa): void {
+    this.router.navigate(['/administrativo/cliente', c.codigo, 'editar']);
+  }
+
+  // --- Modal Cancelamento ---
+  abrirModalCancelamento(c: Pessoa): void {
+    this.clienteSelecionado = c;
+    this.cancelDataCancelamento = null;
+    this.cancelMotivo = '';
+    this.cancelamentoVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  fecharModalCancelamento(): void {
+    this.cancelamentoVisible = false;
+    this.clienteSelecionado = null;
+    this.cdr.markForCheck();
+  }
+
+  salvarCancelamento(): void {
+    if (!this.cancelDataCancelamento || !this.cancelMotivo.trim()) {
+      this.message.warning('Preencha a data e o motivo do cancelamento.');
+      return;
+    }
+    this.salvando = true;
+    this.cdr.markForCheck();
+
+    const codigo = this.clienteSelecionado!.codigo;
+
+    // Busca pessoa completa, seta Excluido = true e faz PUT (igual ao legado)
+    this.http.get<any>(`${this.api}/Pessoa/${codigo}`, { headers: this.headers }).subscribe({
+      next: (pessoa) => {
+        const payload = { ...pessoa, excluido: true, Excluido: true };
+        this.http.put(`${this.api}/Pessoa`, payload, { headers: this.headers }).subscribe({
+          next: () => {
+            this.message.success('Cliente cancelado com sucesso.');
+            this.clientes = this.clientes.filter(c => c.codigo !== codigo);
+            this.filtrar();
+            this.salvando = false;
+            this.cancelamentoVisible = false;
+            this.clienteSelecionado = null;
+            this.cdr.markForCheck();
+          },
+          error: (err) => {
+            this.message.error(`Erro ao cancelar cliente (${err.status}).`);
+            this.salvando = false;
+            this.cdr.markForCheck();
+          }
+        });
+      },
+      error: (err) => {
+        this.message.error(`Erro ao buscar dados do cliente (${err.status}).`);
+        this.salvando = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // --- Modal Novo Cliente ---
+  abrirModalAdicionar(): void {
+    this.novoCliente = { cnpj: '', celular: '', email: '', razao: '' };
+    this.adicionarVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  fecharModalAdicionar(): void {
+    this.adicionarVisible = false;
+    this.cdr.markForCheck();
+  }
+
+  salvarNovoCliente(): void {
+    if (!this.novoCliente.cnpj.trim() || !this.novoCliente.email.trim() || !this.novoCliente.razao.trim()) {
+      this.message.warning('Preencha CNPJ, e-mail e razão social.');
+      return;
+    }
+    this.salvando = true;
+    this.cdr.markForCheck();
+
+    // Igual ao legado: GET /api/Contratacao/MudarDeContador?cnpj=&nome=&email=&celular=
+    const params = new URLSearchParams({
+      cnpj:    this.novoCliente.cnpj.trim(),
+      nome:    this.novoCliente.razao.trim(),
+      email:   this.novoCliente.email.trim(),
+      celular: this.novoCliente.celular.trim()
+    });
+
+    this.http.get(`${this.api}/Contratacao/MudarDeContador?${params}`, { headers: this.headers }).subscribe({
+      next: () => {
+        this.message.success('Cliente adicionado com sucesso!');
+        this.salvando = false;
+        this.adicionarVisible = false;
+        this.carregar();
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.message.error(`Erro ao adicionar cliente (${err.status}).`);
+        this.salvando = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+}

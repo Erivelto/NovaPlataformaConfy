@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -8,12 +8,15 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { LoginService } from './services/login.service';
+
+const REMEMBER_KEY = 'contfy_remembered_user';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, NzFormModule, NzInputModule, NzButtonModule, NzAlertModule, NzSpinModule, NzIconModule],
+  imports: [CommonModule, FormsModule, NzFormModule, NzInputModule, NzButtonModule, NzAlertModule, NzSpinModule, NzIconModule, NzCheckboxModule],
   template: `
     <div class="login-wrap">
       <div class="login-box">
@@ -75,8 +78,9 @@ import { LoginService } from './services/login.service';
             </nz-form-control>
           </nz-form-item>
 
-          <div class="forgot-link">
-            <a (click)="irParaAlterarSenha()">Esqueci minha senha / Alterar senha</a>
+          <div class="remember-row">
+            <label nz-checkbox [(ngModel)]="rememberMe" name="rememberMe">Lembrar meu login</label>
+            <a (click)="irParaAlterarSenha()">Esqueci minha senha</a>
           </div>
           <div class="actions">
             <button nz-button nzType="default" type="button" (click)="cancel()" [disabled]="loading">Limpar</button>
@@ -147,23 +151,38 @@ import { LoginService } from './services/login.service';
       font-weight: 600;
     }`,
     `.eye-toggle { cursor: pointer; color: rgba(0,0,0,0.45); }`,
-    `.forgot-link { text-align: right; margin-bottom: 8px; font-size: 13px; }
-     .forgot-link a { color: #0a66c2; cursor: pointer; }
-     .forgot-link a:hover { text-decoration: underline; }`,
+    `.remember-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+    .remember-row a { color: #0a66c2; cursor: pointer; }
+    .remember-row a:hover { text-decoration: underline; }`,
     `@media (max-width: 480px) {
       .login-box { padding: 24px 18px; border-radius: 12px; }
       .login-title { font-size: 1.2rem; }
     }`
   ]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   username = '';
   password = '';
   loading = false;
   errorMessage = '';
   showPassword = false;
+  rememberMe = false;
 
   constructor(private router: Router, private loginService: LoginService) {}
+
+  ngOnInit(): void {
+    const saved = localStorage.getItem(REMEMBER_KEY);
+    if (saved) {
+      this.username = saved;
+      this.rememberMe = true;
+    }
+  }
 
   login(): void {
     this.errorMessage = '';
@@ -173,6 +192,12 @@ export class LoginComponent {
       return;
     }
 
+    if (this.rememberMe) {
+      localStorage.setItem(REMEMBER_KEY, this.username.trim());
+    } else {
+      localStorage.removeItem(REMEMBER_KEY);
+    }
+
     this.loading = true;
     this.loginService.autenticar({ username: this.username.trim(), password: this.password }).subscribe({
       next: (res) => {
@@ -180,7 +205,8 @@ export class LoginComponent {
         if (res?.token) {
           this.loginService.salvarSessao(res);
         }
-        this.router.navigate(['/dashboard']);
+        const destino = this.loginService.isAdmin() ? '/administrativo' : '/dashboard';
+        this.router.navigate([destino]);
       },
       error: (err) => {
         this.loading = false;
@@ -196,6 +222,8 @@ export class LoginComponent {
     this.username = '';
     this.password = '';
     this.errorMessage = '';
+    this.rememberMe = false;
+    localStorage.removeItem(REMEMBER_KEY);
   }
 
   irParaAlterarSenha(): void {

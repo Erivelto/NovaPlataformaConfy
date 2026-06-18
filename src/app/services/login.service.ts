@@ -40,6 +40,8 @@ export interface PessoaSession {
 export interface LoginResponse {
   token: string;
   pessoas?: PessoaSession[];
+  phoneNumber?: string;
+  PhoneNumber?: string;
   [key: string]: any;
 }
 
@@ -49,6 +51,7 @@ export interface UsuarioLogado {
   perfil?: string;
   idUsuario?: string | number;
   codigoPessoa?: number;
+  isAdmin?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -79,12 +82,19 @@ export class LoginService {
       (claims?.['CodigoPessoa'] ? Number(claims['CodigoPessoa']) : undefined) ??
       (claims?.['codigoPessoa'] ? Number(claims['codigoPessoa']) : undefined);
 
+    const phoneNumber =
+      res.PhoneNumber ?? res.phoneNumber ??
+      (pessoa as any)?.PhoneNumber ?? (pessoa as any)?.phoneNumber ??
+      claims?.['PhoneNumber'] ?? claims?.['phone_number'] ??
+      claims?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/mobilephone'] ?? '';
+
     return {
       nome: pessoa?.nome || claims?.['unique_name'] || claims?.['email'] || 'Usuário',
       email: claims?.['unique_name'] || claims?.['email'] || '',
       perfil: claims?.['perfil'] || claims?.['role'] || claims?.['roles'],
       idUsuario: claims?.['nameid'] || claims?.['sub'],
-      codigoPessoa
+      codigoPessoa,
+      isAdmin: phoneNumber === 'admin'
     };
   }
 
@@ -118,6 +128,10 @@ export class LoginService {
     localStorage.removeItem('auth_usuario');
     localStorage.removeItem('auth_pessoa');
     localStorage.removeItem('auth_login_time');
+  }
+
+  isAdmin(): boolean {
+    return this.obterUsuario()?.isAdmin === true;
   }
 
   estaAutenticado(): boolean {
