@@ -713,9 +713,12 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
       </nz-form-control></nz-form-item>
     <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>Arquivo</nz-form-label>
       <nz-form-control [nzSpan]="24">
-        <nz-upload nzAction="" [nzBeforeUpload]="beforeUpload" [nzFileList]="fileList" [nzAccept]="'.pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.pfx,.p12'">
-          <button nz-button><i nz-icon nzType="upload"></i> Selecionar arquivo</button>
+        <nz-upload nzAction="" [nzBeforeUpload]="beforeUpload" [nzFileList]="fileList" nzAccept=".pdf" [nzMultiple]="false">
+          <button nz-button><i nz-icon nzType="upload"></i> Selecionar arquivo (.pdf)</button>
         </nz-upload>
+        <div *ngIf="fileList.length > 0" style="margin-top:6px;font-size:.82rem;color:rgba(0,0,0,.45)">
+          <i nz-icon nzType="paper-clip"></i> {{ fileList[0].name }}
+        </div>
       </nz-form-control></nz-form-item>
     <nz-form-item *ngIf="uploadForm.tipo === 'Certificado Digital'"><nz-form-label [nzSpan]="24">Data de Validade</nz-form-label>
       <nz-form-control [nzSpan]="24"><input nz-input [(ngModel)]="uploadForm.dataValidade" placeholder="dd/MM/yyyy" /></nz-form-control></nz-form-item>
@@ -1134,12 +1137,23 @@ export class ClienteEditarComponent implements OnInit {
 
   abrirUpload() { this.uploadForm = { tipo: 'Contrato Social', dataValidade: '' }; this.fileList = []; this.selectedFile = null; this.uploadVisible = true; this.cdr.markForCheck(); }
   beforeUpload = (file: NzUploadFile): boolean => {
+    const ext = (file.name || '').split('.').pop()?.toLowerCase();
+    if (ext !== 'pdf') {
+      this.message.error('Apenas arquivos PDF são aceitos.');
+      this.fileList = [];
+      this.selectedFile = null;
+      this.cdr.markForCheck();
+      return false;
+    }
     this.selectedFile = file as any;
     this.fileList = [file];
+    this.cdr.markForCheck();
     return false;
   };
   fazerUpload() {
-    if (!this.selectedFile) { this.message.warning('Selecione um arquivo.'); return; }
+    if (!this.selectedFile) { this.message.warning('Selecione um arquivo PDF.'); return; }
+    const ext = ((this.selectedFile as any).name || '').split('.').pop()?.toLowerCase();
+    if (ext !== 'pdf') { this.message.error('Apenas arquivos PDF são aceitos.'); return; }
     this.fazendoUpload = true; this.cdr.markForCheck();
     const reader = new FileReader();
     reader.onload = (e) => {
