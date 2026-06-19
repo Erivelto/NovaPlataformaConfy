@@ -19,11 +19,14 @@ import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
 
 interface Devedor {
-  codigoPessoa: number;
+  codigo: number;
+  reference: string;       // CNPJ da pessoa (chave do join)
   transacao: string;
   dateVencimento: string;
   valorBruto: number;
   status: string;
+  // Enriquecidos via join com /Pessoa
+  codigoPessoa?: number;
   razao?: string;
   documento?: string;
 }
@@ -135,7 +138,7 @@ export class DevedoresComponent implements OnInit {
   loading = true; enviando = false; lista: Devedor[] = []; listaFiltrada: Devedor[] = [];
   filtro = ''; valorTotal = 0; marcando = new Set<string>();
 
-  sortCodigo = (a: Devedor, b: Devedor) => a.codigoPessoa - b.codigoPessoa;
+  sortCodigo = (a: Devedor, b: Devedor) => (a.codigoPessoa ?? 0) - (b.codigoPessoa ?? 0);
   sortValor   = (a: Devedor, b: Devedor) => (a.valorBruto || 0) - (b.valorBruto || 0);
   sortVenc    = (a: Devedor, b: Devedor) => new Date(a.dateVencimento).getTime() - new Date(b.dateVencimento).getTime();
 
@@ -152,8 +155,17 @@ export class DevedoresComponent implements OnInit {
       cobrancas: safe<Devedor>(this.http.get<Devedor[]>(`${this.api}/PessoaCobranca/ObterPagamentoVencidoMesAtual`, { headers: this.h })),
       pessoas:   safe<any>(this.http.get<any[]>(`${this.api}/Pessoa`, { headers: this.h }))
     }).subscribe({ next: ({ cobrancas, pessoas }) => {
-      const pm = new Map<number, any>(); (pessoas as any[]).forEach(p => pm.set(p.codigo, p));
-      this.lista = (cobrancas as Devedor[]).map(c => ({ ...c, razao: pm.get(c.codigoPessoa)?.razao, documento: pm.get(c.codigoPessoa)?.documento }));
+      // join: PessoaCobranca.Reference == Pessoa.Documento (CNPJ)
+      const pm = new Map<string, any>();
+      (pessoas as any[]).forEach(p => {
+        if (p.documento) pm.set(p.documento, p);
+      });
+      this.lista = (cobrancas as Devedor[])
+        .map(c => {
+          const p = pm.get(c.reference);
+          return { ...c, codigoPessoa: p?.codigo, razao: p?.razao, documento: c.reference };
+        })
+        .filter(c => c.codigoPessoa); // só devedores com pessoa encontrada (igual ao legado)
       this.valorTotal = this.lista.reduce((s, d) => s + (d.valorBruto || 0), 0);
       this.listaFiltrada = [...this.lista]; this.loading = false; this.cdr.markForCheck();
     }, error: () => { this.loading = false; this.cdr.markForCheck(); }});
