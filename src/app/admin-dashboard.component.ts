@@ -19,7 +19,7 @@ interface PessoaResumo {
   nome?: string;
   dataInclusao?: string;
   fisica?: boolean | number;
-  excluido?: boolean;
+  excluido?: boolean | number;
 }
 
 interface PessoaCobranca {
@@ -28,11 +28,6 @@ interface PessoaCobranca {
   status?: string;
   valorBruto?: number;
   dateVencimento?: string;
-}
-
-interface PessoaAssinatura {
-  codigoPessoa: number;
-  status?: string;
 }
 
 interface ChamadoResumo {
@@ -150,7 +145,7 @@ export class DashboardAdminComponent implements OnInit {
 
   private inicializarKpis(): void {
     this.kpis = [
-      { label: 'Clientes Novos', value: '—', icon: 'user-add', color: '#1890ff', sub: 'Online · Física', link: '/administrativo/clientes' },
+      { label: 'Clientes Novos', value: '—', icon: 'user-add', color: '#1890ff', sub: 'Online · Física · até 60 dias', link: '/administrativo/clientes' },
       { label: 'Quantidade de Clientes', value: '—', icon: 'team', color: '#52c41a', sub: 'Online · Física', link: '/administrativo/clientes' },
       { label: 'Ticket Médio Faturamento', value: '—', icon: 'dollar', color: '#722ed1', sub: 'mensalidades pagas no mês' },
       { label: 'Chamados Abertos sem Interação', value: '—', icon: 'message', color: '#fa8c16', sub: 'status novo', link: '/administrativo/solicitacoes' },
@@ -169,36 +164,38 @@ export class DashboardAdminComponent implements OnInit {
       obs.pipe(timeout(15000), catchError(() => of(null as T | null)));
 
     forkJoin({
+      pessoas: safe<PessoaResumo[]>(this.http.get<PessoaResumo[]>(`${this.api}/Pessoa`, { headers: this.headers })),
       status: safe<PessoaResumo[]>(this.http.get<PessoaResumo[]>(`${this.api}/Pessoa/Status`, { headers: this.headers })),
-      assinaturas: safe<PessoaAssinatura[]>(this.http.get<PessoaAssinatura[]>(`${this.api}/PessoaAssinatura/PessoaAssinatura`, { headers: this.headers })),
       cobrancas: safe<PessoaCobranca[]>(this.http.get<PessoaCobranca[]>(`${this.api}/PessoaCobranca`, { headers: this.headers })),
       chamados: safe<ChamadoResumo[]>(this.http.get<ChamadoResumo[]>(`${this.api}/Chamado`, { headers: this.headers })),
       agendamento: safe<StatusAgendamento>(this.http.get<StatusAgendamento>(`${this.api}/CorpoEmissaoNota/RetornaStatusAgendamento`, { headers: this.headers })),
       devedoresMes: safe<PessoaCobranca[]>(this.http.get<PessoaCobranca[]>(`${this.api}/PessoaCobranca/ObterPagamentoVencidoMesAtual`, { headers: this.headers })),
       devedoresGeral: safe<PessoaCobranca[]>(this.http.get<PessoaCobranca[]>(`${this.api}/PessoaCobranca/ObterPagamentoVencido`, { headers: this.headers })),
-      pessoas: safe<PessoaResumo[]>(this.http.get<PessoaResumo[]>(`${this.api}/Pessoa`, { headers: this.headers })),
       certificados: safe<number>(this.http.get<number>(`${this.api}/Pessoa/CertificadosVencidos/Contagem`, { headers: this.headers }))
     }).subscribe({
       next: (res) => {
-        const todasPessoas = ((res.status as PessoaResumo[] | null) || []).filter(p => !p.excluido);
+        const todasPessoas = ((res.pessoas as Record<string, unknown>[] | null) || [])
+          .map(p => this.normalizarPessoa(p))
+          .filter(p => !this.isExcluido(p));
+        const statusPessoas = ((res.status as Record<string, unknown>[] | null) || [])
+          .map(p => this.normalizarPessoa(p))
+          .filter(p => !this.isExcluido(p));
+
+        const statusOnlineMap = new Map<number, PessoaResumo>();
+        statusPessoas.filter(p => this.isOnline(p)).forEach(p => statusOnlineMap.set(p.codigo, p));
+        const statusFisicaMap = new Map<number, PessoaResumo>();
+        statusPessoas.filter(p => this.isFisica(p)).forEach(p => statusFisicaMap.set(p.codigo, p));
+
         const clientesOnline = todasPessoas.filter(p => this.isOnline(p));
         const clientesFisica = todasPessoas.filter(p => this.isFisica(p));
+        const mergedOnline = clientesOnline.map(p => statusOnlineMap.get(p.codigo) ?? p);
+        const mergedFisica = clientesFisica.map(p => statusFisicaMap.get(p.codigo) ?? p);
+
         const cobrancas = (res.cobrancas as PessoaCobranca[] | null) || [];
-        const assinaturas = (res.assinaturas as PessoaAssinatura[] | null) || [];
         const chamados = ((res.chamados as ChamadoResumo[] | null) || []).filter(c => !c.mensagem?.includes('[Solicitação excluída pelo cliente]'));
 
-        const refsCobranca = new Set(cobrancas.filter(c => c.reference).map(c => this.normDoc(c.reference!)));
-        const pessoasComAssinatura = new Set(assinaturas.filter(a => a.status === 'Ativo').map(a => a.codigoPessoa));
-
-        const isClienteNovo = (p: PessoaResumo) => {
-          const doc = this.normDoc(p.documento || '');
-          const semCobranca = !doc || !refsCobranca.has(doc);
-          const semAssinatura = !pessoasComAssinatura.has(p.codigo);
-          return semCobranca && semAssinatura;
-        };
-
-        const novosOnline = clientesOnline.filter(isClienteNovo).length;
-        const novosFisica = clientesFisica.filter(isClienteNovo).length;
+        const novosOnline = this.contarClientesNovos(mergedOnline);
+        const novosFisica = this.contarClientesNovos(mergedFisica);
         const totalNovos = novosOnline + novosFisica;
         const qtdOnline = clientesOnline.length;
         const qtdFisica = clientesFisica.length;
@@ -210,13 +207,12 @@ export class DashboardAdminComponent implements OnInit {
         const agendamentoPendente = (ag?.aguardando || 0) + (ag?.execusao || 0) + (ag?.erro || 0);
         const listaDevedoresMes = (res.devedoresMes as PessoaCobranca[] | null) || [];
         const listaDevedoresGeral = (res.devedoresGeral as PessoaCobranca[] | null) || [];
-        const pessoas = (res.pessoas as PessoaResumo[] | null) || [];
         const valorDevidoMes = this.calcularValorDevido(listaDevedoresMes);
-        const devedoresGeralResumo = this.calcularDevedoresGeralAnterior(listaDevedoresGeral, pessoas);
+        const devedoresGeralResumo = this.calcularDevedoresGeralAnterior(listaDevedoresGeral, todasPessoas);
         const clientesDevedoresMes = this.contarDevedores(listaDevedoresMes);
 
         this.kpis = [
-          { label: 'Clientes Novos', value: totalNovos, icon: 'user-add', color: '#1890ff', sub: `Online: ${novosOnline} · Física: ${novosFisica}`, link: '/administrativo/clientes' },
+          { label: 'Clientes Novos', value: totalNovos, icon: 'user-add', color: '#1890ff', sub: `Online: ${novosOnline} · Física: ${novosFisica} · até 60 dias`, link: '/administrativo/clientes' },
           { label: 'Quantidade de Clientes', value: totalClientes, icon: 'team', color: '#52c41a', sub: `Online: ${qtdOnline} · Física: ${qtdFisica}`, link: '/administrativo/clientes' },
           { label: 'Ticket Médio Faturamento', value: this.fmtMoeda(ticketMedio), icon: 'dollar', color: '#722ed1', sub: 'mensalidades pagas no mês' },
           { label: 'Chamados Abertos sem Interação', value: chamadosSemInteracao, icon: 'message', color: '#fa8c16', sub: 'status novo', link: '/administrativo/solicitacoes' },
@@ -292,8 +288,37 @@ export class DashboardAdminComponent implements OnInit {
     return refs.size || lista.length;
   }
 
+  /** Mesma regra das telas clientes e clientes-fisica: cadastro há menos de 60 dias. */
+  private contarClientesNovos(lista: PessoaResumo[]): number {
+    return lista.filter(p => this.diasDesdeInclusao(p) < 60).length;
+  }
+
+  private diasDesdeInclusao(p: PessoaResumo): number {
+    if (!p.dataInclusao) return Number.POSITIVE_INFINITY;
+    const data = new Date(p.dataInclusao);
+    if (isNaN(data.getTime())) return Number.POSITIVE_INFINITY;
+    return (Date.now() - data.getTime()) / 86400000;
+  }
+
+  private normalizarPessoa(raw: Record<string, unknown>): PessoaResumo {
+    return {
+      codigo: Number(raw['codigo'] ?? raw['Codigo'] ?? 0),
+      documento: String(raw['documento'] ?? raw['Documento'] ?? ''),
+      razao: String(raw['razao'] ?? raw['Razao'] ?? ''),
+      nome: String(raw['nome'] ?? raw['Nome'] ?? ''),
+      dataInclusao: String(raw['dataInclusao'] ?? raw['DataInclusao'] ?? ''),
+      fisica: (raw['fisica'] ?? raw['Fisica']) as boolean | number | undefined,
+      excluido: (raw['excluido'] ?? raw['Excluido']) as boolean | number | undefined
+    };
+  }
+
+  private isExcluido(p: PessoaResumo): boolean {
+    const e = p.excluido;
+    return e === true || e === 1;
+  }
+
   private isFisica(p: PessoaResumo): boolean {
-    const f = p.fisica as boolean | number | undefined;
+    const f = p.fisica;
     return f === true || f === 1;
   }
 
