@@ -37,6 +37,7 @@ interface ValidacaoPessoa { usuario: boolean; celular: boolean; prefeitura: bool
 interface RepresentanteLegal { codigo: number; codigoPessoa: number; nome: string; cpf: string; dataContfy?: string; codigoEndereco?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; }
 interface DadosEmissao { codigo: number; codigoPessoa: number; usuario: string; senha: string; prefeitura: string; urlPrefeitura?: string; codigoPrefeitura?: string; excluido?: boolean; }
 interface DadosDAS { codigo: number; codigoPessoa: number; cnpj: string; cpf: string; codigoContribuite: string; mesApuracao?: number; anoApuracao?: number; valorTributado?: string; excluido?: boolean; }
+interface AnexoContribuinte { codigo: number; codigoDadosDeDAS: number; menu: string; anexo: string; excluido?: boolean; }
 interface Prefeitura { codigo: number; nome: string; }
 interface PessoaUpload { codigo: number; codigoPessoa: number; tipo: string; nomeArquivo: string; dataValidade?: string; }
 interface DadosCobranca { codigo: number; codigoPessoa: number; tipo: string; diaCobranca: number; mensalidade: number; cpf: string; celular?: string; email: string; excluido?: boolean; dataAlteracao?: string; }
@@ -416,6 +417,61 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
               </button>
             </div>
           </ng-template>
+          <!-- ANEXO CONTRIBUINTE -->
+          <nz-divider nzText="Anexo" nzOrientation="left" style="margin-top:24px"></nz-divider>
+
+          <div *ngIf="carregandoAnexo" style="text-align:center;padding:16px">
+            <nz-spin nzSimple></nz-spin>
+          </div>
+
+          <ng-container *ngIf="!carregandoAnexo">
+            <!-- Registro existente -->
+            <ng-container *ngIf="anexoContribuinte; else semAnexo">
+              <div class="das-info-box">
+                <div class="das-info-row">
+                  <div class="das-info-item" style="flex:1">
+                    <span class="das-info-label">Menu</span>
+                    <span class="das-info-val">{{ anexoContribuinte.menu || '—' }}</span>
+                  </div>
+                  <div class="das-info-item" style="flex:2">
+                    <span class="das-info-label">Anexo</span>
+                    <span class="das-info-val" style="word-break:break-all">
+                      <a *ngIf="anexoContribuinte.anexo" [href]="anexoContribuinte.anexo" target="_blank" rel="noopener">
+                        <i nz-icon nzType="paper-clip"></i> {{ anexoContribuinte.anexo }}
+                      </a>
+                      <span *ngIf="!anexoContribuinte.anexo">—</span>
+                    </span>
+                  </div>
+                  <button nz-button nzType="default" nzDanger nzSize="small"
+                    [nzLoading]="excluindoAnexo"
+                    nz-popconfirm nzPopconfirmTitle="Excluir este anexo permanentemente?"
+                    nzOkText="Excluir" nzCancelText="Cancelar"
+                    (nzOnConfirm)="excluirAnexo(anexoContribuinte!.codigo)"
+                    style="align-self:flex-end;flex-shrink:0">
+                    <i nz-icon nzType="delete"></i> Excluir
+                  </button>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Sem registro -->
+            <ng-template #semAnexo>
+              <ng-container *ngIf="dasInline.codigo && dasInline.codigo > 0; else semDASParaAnexo">
+                <div class="sem-anexo-box">
+                  <i nz-icon nzType="inbox" style="font-size:32px;color:rgba(0,0,0,.25)"></i>
+                  <span style="color:rgba(0,0,0,.45);margin:8px 0">Nenhum anexo cadastrado para este DAS.</span>
+                  <button nz-button nzType="dashed" disabled>
+                    <i nz-icon nzType="plus"></i> Cadastrar Anexo
+                    <nz-tag nzColor="blue" style="margin-left:8px;font-size:.7rem">em breve</nz-tag>
+                  </button>
+                </div>
+              </ng-container>
+              <ng-template #semDASParaAnexo>
+                <nz-alert nzType="info" nzMessage="Cadastre os Dados DAS primeiro para poder vincular um anexo." nzShowIcon></nz-alert>
+              </ng-template>
+            </ng-template>
+          </ng-container>
+
         </div>
       </nz-tab>
 
@@ -619,6 +675,7 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
     .pend-item.ok { background: #f6ffed; }
     .pend-item.ok > span:first-of-type { color: rgba(0,0,0,.45); font-size: .9rem; }
     .pend-hint { font-size: .72rem; color: #ff4d4f; margin-left: auto; white-space: nowrap; font-weight: 600; }
+    .sem-anexo-box { display:flex;flex-direction:column;align-items:center;padding:24px;border:1px dashed #d9d9d9;border-radius:8px;background:#fafafa; }
     .das-info-box { background:#f6ffed;border:1.5px solid #b7eb8f;border-radius:8px;padding:16px 20px;margin-bottom:8px; }
     .das-info-row { display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap; }
     .das-info-item { display:flex;flex-direction:column;gap:2px; }
@@ -629,11 +686,27 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
     .user-plat-label { font-size:.8rem;color:rgba(0,0,0,.45);text-transform:uppercase;letter-spacing:.05em; }
     .user-plat-email { font-size:1.15rem;font-weight:700;color:#1890ff; }
     .form-section { padding: 8px 4px; }
-    .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 0; }
-    .form-row nz-form-item { margin-bottom: 14px; }
+    .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 0; align-items: flex-start; }
+    .form-row nz-form-item { margin-bottom: 14px; display: flex; flex-direction: column; }
     .flex1 { flex: 1; min-width: 160px; }
     .flex2 { flex: 2; min-width: 220px; }
     .flex3 { flex: 3; min-width: 280px; }
+
+    /* Label sempre acima do input — layout vertical forçado */
+    .form-row nz-form-label, .form-row ::ng-deep .ant-form-item-label {
+      display: block; width: 100%; text-align: left; padding: 0 0 4px 0; white-space: nowrap; overflow: visible;
+      line-height: 1.4;
+    }
+    .form-row nz-form-label > label, .form-row ::ng-deep .ant-form-item-label > label {
+      height: auto; font-size: .82rem; color: rgba(0,0,0,.65); font-weight: 600;
+    }
+    .form-row nz-form-control, .form-row ::ng-deep .ant-form-item-control {
+      width: 100%; flex: 1;
+    }
+    /* Remove o padding lateral padrão do label horizontal do NG-ZORRO */
+    .form-row ::ng-deep .ant-form-item { flex-direction: column; }
+    .form-row ::ng-deep .ant-form-item-label { padding-bottom: 4px; }
+    .form-row ::ng-deep .ant-col { max-width: 100%; flex: 0 0 100%; }
     .flags-row { display: flex; gap: 24px; flex-wrap: wrap; margin: 8px 0 16px; }
     .flag-item { display: flex; flex-direction: column; gap: 6px; align-items: center; }
     .flag-item label { font-size: .82rem; color: rgba(0,0,0,.55); font-weight: 600; text-align: center; }
@@ -698,6 +771,9 @@ export class ClienteEditarComponent implements OnInit {
   dasForm: Partial<DadosDAS> = { codigoContribuite: '', cpf: '' };
   dasInline: Partial<DadosDAS> = { codigo: 0, codigoContribuite: '', cpf: '' };
   editandoDAS = false;
+  anexoContribuinte: AnexoContribuinte | null = null;
+  carregandoAnexo = false;
+  excluindoAnexo = false;
 
   // User Plataforma
   salvandoUser = false;
@@ -773,8 +849,10 @@ export class ClienteEditarComponent implements OnInit {
         if (this.dadosDasList.length > 0) {
           const d = this.dadosDasList[0];
           this.dasInline = { codigo: d.codigo, codigoPessoa: d.codigoPessoa, codigoContribuite: d.codigoContribuite, cpf: d.cpf, cnpj: d.cnpj };
+          this.carregarAnexo(d.codigo);
         } else {
           this.dasInline = { codigo: 0, codigoPessoa: this.codigoPessoa, codigoContribuite: '', cpf: '', cnpj: (this.pessoa.documento || '').replace(/\D/g, '') };
+          this.anexoContribuinte = null;
         }
         this.cdr.markForCheck();
       });
@@ -857,6 +935,34 @@ export class ClienteEditarComponent implements OnInit {
     });
   }
 
+  carregarAnexo(codigoDAS: number) {
+    this.carregandoAnexo = true; this.cdr.markForCheck();
+    this.http.get<AnexoContribuinte[]>(`${this.api}/AnexoContribuinte/ListaPorCodigoDAS/${codigoDAS}`, { headers: this.h })
+      .pipe(timeout(8000), catchError(() => of([])))
+      .subscribe(r => {
+        this.anexoContribuinte = Array.isArray(r) && r.length > 0 ? r[0] : null;
+        this.carregandoAnexo = false;
+        this.cdr.markForCheck();
+      });
+  }
+
+  excluirAnexo(codigo: number) {
+    this.excluindoAnexo = true; this.cdr.markForCheck();
+    this.http.delete(`${this.api}/AnexoContribuinte/Fisico/${codigo}`, { headers: this.h }).subscribe({
+      next: () => {
+        this.message.success('Anexo excluído com sucesso.');
+        this.anexoContribuinte = null;
+        this.excluindoAnexo = false;
+        this.cdr.markForCheck();
+      },
+      error: (e) => {
+        this.message.error(`Erro ao excluir anexo (${e.status})`);
+        this.excluindoAnexo = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   abrirNovoDAS() { this.dasForm = { codigoPessoa: this.codigoPessoa, cnpj: (this.pessoa.documento || '').replace(/\D/g,''), codigoContribuite: '', cpf: '' }; this.dasVisible = true; this.cdr.markForCheck(); }
   salvarDAS() {
     this.salvandoDAS = true; this.cdr.markForCheck();
@@ -878,7 +984,7 @@ export class ClienteEditarComponent implements OnInit {
       ? this.http.put(`${this.api}/DadosDeDAS`, payload, { headers: this.h })
       : this.http.post(`${this.api}/DadosDeDAS`, payload, { headers: this.h });
     obs.subscribe({
-      next: () => { this.message.success('Dados DAS salvos!'); this.salvandoDAS = false; this.editandoDAS = false; this.carregarDAS(); },
+      next: (res: any) => { this.message.success('Dados DAS salvos!'); this.salvandoDAS = false; this.editandoDAS = false; this.carregarDAS(); },
       error: (e) => { this.message.error(`Erro (${e.status})`); this.salvandoDAS = false; this.cdr.markForCheck(); }
     });
   }
