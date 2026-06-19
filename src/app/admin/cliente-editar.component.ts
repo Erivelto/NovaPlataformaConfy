@@ -47,7 +47,7 @@ interface AnexoMenuItemModel { codigo: number; item: string; codigoMenu: number;
 interface Prefeitura { codigo: number; nome: string; }
 interface PessoaUpload { codigo: number; codigoPessoa: number; tipo: string; nomeArquivo: string; dataValidade?: string; }
 interface DadosCobranca { codigo: number; codigoPessoa: number; tipo: string; diaCobranca: number; mensalidade: number; cpf: string; celular?: string; email: string; excluido?: boolean; dataAlteracao?: string; }
-interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBruto?: number; status?: string; }
+interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBruto?: number; status?: string; urlBoleto?: string; }
 
 @Component({
   selector: 'app-cliente-editar',
@@ -255,7 +255,7 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
       </nz-tab>
 
       <!-- ABA 3: REPRESENTANTE LEGAL -->
-      <nz-tab nzTitle="Representante Legal">
+      <nz-tab nzTitle="Rep. Legal">
         <div class="form-section">
           <div style="text-align:right;margin-bottom:12px">
             <button nz-button nzType="primary" (click)="abrirNovoRep()"><i nz-icon nzType="plus"></i> Novo Representante</button>
@@ -264,7 +264,7 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
             <thead><tr>
               <th>Nome</th><th nzWidth="140px">CPF</th>
               <th nzWidth="130px">Data Cadastro</th><th nzWidth="130px">Cidade/UF</th>
-              <th nzWidth="80px" nzAlign="center">Ação</th>
+              <th nzWidth="110px" nzAlign="center">Ação</th>
             </tr></thead>
             <tbody>
               <tr *ngFor="let r of representantes">
@@ -273,7 +273,11 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
                 <td>{{ r.dataContfy ? (r.dataContfy | date:'dd/MM/yyyy') : '—' }}</td>
                 <td>{{ r.cidade ? r.cidade + '/' + r.uf : '—' }}</td>
                 <td nzAlign="center">
-                  <button nz-button nzSize="small" nzType="primary" (click)="editarRep(r)"><i nz-icon nzType="edit"></i></button>
+                  <button nz-button nzSize="small" nzType="primary" (click)="editarRep(r)" style="margin-right:6px"><i nz-icon nzType="edit"></i></button>
+                  <button nz-button nzDanger nzSize="small" nz-popconfirm nzPopconfirmTitle="Excluir este representante legal?"
+                    [nzLoading]="excluindoRep.has(r.codigo)" (nzOnConfirm)="excluirRep(r)">
+                    <i nz-icon nzType="delete"></i>
+                  </button>
                 </td>
               </tr>
               <tr *ngIf="representantes.length===0">
@@ -554,14 +558,18 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
 
           <nz-divider nzText="Últimas Faturas" nzOrientation="left"></nz-divider>
           <nz-table [nzData]="ultimasFaturas" nzBordered nzSize="small" [nzShowPagination]="false">
-            <thead><tr><th nzWidth="130px">Vencimento</th><th nzWidth="130px">Valor</th><th nzWidth="120px" nzAlign="center">Status</th></tr></thead>
+            <thead><tr><th nzWidth="130px">Vencimento</th><th nzWidth="130px">Valor</th><th nzWidth="120px" nzAlign="center">Status</th><th nzWidth="100px" nzAlign="center"></th></tr></thead>
             <tbody>
               <tr *ngFor="let f of ultimasFaturas">
                 <td>{{ f.dateVencimento | date:'dd/MM/yyyy' }}</td>
                 <td>{{ f.valorBruto | currency:'BRL':'symbol':'1.2-2' }}</td>
                 <td nzAlign="center"><nz-tag [nzColor]="statusCobrancaColor(f.status)">{{ statusCobrancaLabel(f.status) }}</nz-tag></td>
+                <td nzAlign="center">
+                  <a *ngIf="f.urlBoleto" [href]="f.urlBoleto" target="_blank" rel="noopener noreferrer" class="btn-boleto">Boleto</a>
+                  <span *ngIf="!f.urlBoleto" style="color:rgba(0,0,0,.35)">—</span>
+                </td>
               </tr>
-              <tr *ngIf="ultimasFaturas.length===0"><td colspan="3" style="text-align:center;padding:16px;color:rgba(0,0,0,.45)">Sem histórico.</td></tr>
+              <tr *ngIf="ultimasFaturas.length===0"><td colspan="4" style="text-align:center;padding:16px;color:rgba(0,0,0,.45)">Sem histórico.</td></tr>
             </tbody>
           </nz-table>
         </div>
@@ -876,6 +884,8 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
     .flag-item label { font-size: .82rem; color: rgba(0,0,0,.55); font-weight: 600; text-align: center; }
     .flag-danger { color: #ff4d4f !important; }
     .form-actions { margin-top: 8px; border-top: 1px solid #f0f0f0; padding-top: 16px; text-align: right; }
+    .btn-boleto { display:inline-block;padding:4px 14px;background:#1890ff;color:#fff;border-radius:20px;font-size:.85rem;font-weight:500;text-decoration:none; }
+    .btn-boleto:hover { background:#40a9ff;color:#fff; }
   `]
 })
 export class ClienteEditarComponent implements OnInit {
@@ -933,6 +943,7 @@ export class ClienteEditarComponent implements OnInit {
 
   // Representante
   repVisible = false; salvandoRep = false;
+  excluindoRep = new Set<number>();
   repSelecionado: RepresentanteLegal | null = null;
   repForm: Partial<RepresentanteLegal> = {};
 
@@ -1024,9 +1035,64 @@ export class ClienteEditarComponent implements OnInit {
   }
 
   carregarRepresentantes() {
-    this.http.get<RepresentanteLegal[]>(`${this.api}/RepresentanteLegal/Pessoa/${this.codigoPessoa}`, { headers: this.h })
+    this.http.get<any>(`${this.api}/RepresentanteLegal?CodigoPessoa=${this.codigoPessoa}`, { headers: this.h })
       .pipe(timeout(8000), catchError(() => of([])))
-      .subscribe(r => { this.representantes = Array.isArray(r) ? r : []; this.loading = false; this.cdr.markForCheck(); });
+      .subscribe(r => {
+        const lista = Array.isArray(r) ? r : (r ? [r] : []);
+        this.representantes = lista.map((item: any) => this.mapRepresentante(item));
+        this.loading = false;
+        this.cdr.markForCheck();
+      });
+  }
+
+  private mapRepresentante(item: any): RepresentanteLegal {
+    const end = item.endereco || {};
+    return {
+      codigo: item.codigo,
+      codigoPessoa: item.codigoPessoa,
+      nome: item.nome,
+      cpf: item.cpf,
+      dataContfy: item.dataInclisao || item.dataContfy,
+      codigoEndereco: end.codigo,
+      tipoEnd: end.tipoEnd,
+      logradouro: end.logradouro,
+      numrero: end.numrero,
+      complemento: end.complemento,
+      bairro: end.bairro,
+      cidade: end.cidade,
+      uf: end.uf,
+      cep: end.cep
+    };
+  }
+
+  private buildRepPayload(): Record<string, unknown> {
+    const cpf = (this.repForm.cpf || '').replace(/\D/g, '');
+    const cep = (this.repForm.cep || '').replace(/\D/g, '');
+    const agora = new Date().toISOString();
+    return {
+      codigo: this.repForm.codigo || 0,
+      codigoPessoa: this.codigoPessoa,
+      nome: this.repForm.nome?.trim(),
+      cpf,
+      status: 0,
+      excluido: false,
+      dataInclisao: this.repForm.codigo ? (this.repSelecionado as any)?.dataContfy || agora : agora,
+      dataAlteracao: agora,
+      endereco: {
+        codigo: this.repForm.codigoEndereco || 0,
+        codigoPessoa: this.codigoPessoa,
+        codigoRepLegal: this.repForm.codigo || 0,
+        tipoEnd: this.repForm.tipoEnd || '',
+        logradouro: this.repForm.logradouro?.trim() || '',
+        numrero: this.repForm.numrero?.trim() || '',
+        complemento: this.repForm.complemento || '',
+        bairro: this.repForm.bairro || '',
+        cidade: this.repForm.cidade?.trim() || '',
+        uf: this.repForm.uf || '',
+        cep,
+        excluido: false
+      }
+    };
   }
 
   carregarDAS() {
@@ -1099,14 +1165,38 @@ export class ClienteEditarComponent implements OnInit {
   editarRep(r: RepresentanteLegal) { this.repSelecionado = r; this.repForm = { ...r }; this.repVisible = true; this.cdr.markForCheck(); }
   salvarRep() {
     if (!this.repForm.nome?.trim() || !this.repForm.cpf?.trim()) { this.message.warning('Preencha nome e CPF.'); return; }
-    this.salvandoRep = true; this.cdr.markForCheck();
-    const payload = { ...this.repForm, codigoPessoa: this.codigoPessoa, cep: (this.repForm.cep || '').replace(/\D/g,'') };
-    const obs = this.repSelecionado
+    if (!this.repForm.logradouro?.trim() || !this.repForm.numrero?.trim() || !this.repForm.cidade?.trim() || !this.repForm.uf || !this.repForm.cep?.trim()) {
+      this.message.warning('Preencha o endereço completo do representante.');
+      return;
+    }
+    this.salvandoRep = true;
+    this.cdr.markForCheck();
+    const payload = this.buildRepPayload();
+    const obs = this.repSelecionado?.codigo
       ? this.http.put(`${this.api}/RepresentanteLegal`, payload, { headers: this.h })
       : this.http.post(`${this.api}/RepresentanteLegal`, payload, { headers: this.h });
     obs.subscribe({
       next: () => { this.message.success('Representante salvo!'); this.salvandoRep = false; this.repVisible = false; this.carregarRepresentantes(); },
-      error: (e) => { this.message.error(`Erro (${e.status})`); this.salvandoRep = false; this.cdr.markForCheck(); }
+      error: (e) => { this.message.error(e?.error?.message || e?.error || `Erro ao salvar representante (${e.status})`); this.salvandoRep = false; this.cdr.markForCheck(); }
+    });
+  }
+
+  excluirRep(r: RepresentanteLegal) {
+    if (!r.codigo || this.excluindoRep.has(r.codigo)) return;
+    this.excluindoRep.add(r.codigo);
+    this.cdr.markForCheck();
+    this.http.delete<boolean>(`${this.api}/RepresentanteLegal?codigo=${r.codigo}`, { headers: this.h }).subscribe({
+      next: () => {
+        this.representantes = this.representantes.filter(x => x.codigo !== r.codigo);
+        this.excluindoRep.delete(r.codigo);
+        this.message.success('Representante excluído.');
+        this.cdr.markForCheck();
+      },
+      error: (e) => {
+        this.message.error(e?.error?.message || e?.error || `Erro ao excluir representante (${e.status})`);
+        this.excluindoRep.delete(r.codigo);
+        this.cdr.markForCheck();
+      }
     });
   }
 

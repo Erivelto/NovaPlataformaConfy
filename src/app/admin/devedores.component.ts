@@ -8,13 +8,8 @@ import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
-import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
-import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
 
@@ -25,6 +20,7 @@ interface Devedor {
   dateVencimento: string;
   valorBruto: number;
   status: string;
+  urlBoleto?: string;
   // Enriquecidos via join com /Pessoa
   codigoPessoa?: number;
   razao?: string;
@@ -36,8 +32,7 @@ interface Devedor {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
-    NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule, NzMessageModule,
-    NzDividerModule, NzPopconfirmModule, PageTitleComponent],
+    NzSkeletonModule, NzInputModule, PageTitleComponent],
   template: `
     <div class="page">
       <app-page-title title="Clientes Devedores — Mês Atual"></app-page-title>
@@ -78,7 +73,7 @@ interface Devedor {
             <th>Razão Social</th>
             <th nzWidth="100px" [nzSortFn]="sortValor">Valor</th>
             <th nzWidth="120px" [nzSortFn]="sortVenc">Vencimento</th>
-            <th nzWidth="160px" nzAlign="center"></th>
+            <th nzWidth="100px" nzAlign="center"></th>
           </tr>
         </thead>
         <tbody>
@@ -89,14 +84,8 @@ interface Devedor {
             <td>{{ d.valorBruto | number:'1.2-2' }}</td>
             <td>{{ d.dateVencimento | date:'dd/MM/yyyy' }}</td>
             <td nzAlign="center">
-              <button nz-button nzType="primary" nzSize="small"
-                nz-popconfirm nzPopconfirmTitle="Confirmar pagamento?"
-                nzOkText="Confirmar" nzCancelText="Cancelar"
-                (nzOnConfirm)="marcarPago(d)"
-                [nzLoading]="marcando.has(d.transacao)"
-                class="btn-pago">
-                <span nz-icon nzType="check"></span> Marcar como pago
-              </button>
+              <a *ngIf="d.urlBoleto" [href]="d.urlBoleto" target="_blank" rel="noopener noreferrer" class="btn-boleto">Boleto</a>
+              <span *ngIf="!d.urlBoleto" style="color:rgba(0,0,0,.35)">—</span>
             </td>
           </tr>
           <tr *ngIf="listaFiltrada.length===0">
@@ -106,15 +95,6 @@ interface Devedor {
           </tr>
         </tbody>
       </nz-table>
-
-      <!-- Rodapé: Enviar cobrança (igual ao legado) -->
-      <nz-divider></nz-divider>
-      <div class="footer-cobranca">
-        <h2 style="color:#ff4d4f;margin-bottom:12px">Enviar cobrança</h2>
-        <button nz-button nzType="primary" nzSize="large" (click)="enviarCobranca()" [nzLoading]="enviando" class="btn-whats">
-          <span nz-icon nzType="message"></span> Enviar
-        </button>
-      </div>
     </div>
   `,
   styles: [`
@@ -126,17 +106,14 @@ interface Devedor {
     .tile-stats h3 { color: rgba(0,0,0,.55); font-size: .95rem; margin: 0; font-weight: 500; }
     .row-devedor td { color: #ff4d4f !important; font-weight: 500; }
     .row-devedor .cod { font-weight: 700; }
-    .btn-pago { background: #52c41a; border-color: #52c41a; color: #fff; border-radius: 20px; }
-    .btn-pago:hover { background: #73d13d; border-color: #73d13d; }
-    .footer-cobranca { padding: 8px 0 24px; }
-    .btn-whats { background: #25d366; border-color: #25d366; color: #fff; border-radius: 6px; }
-    .btn-whats:hover { background: #1ebe57; border-color: #1ebe57; }
+    .btn-boleto { display:inline-block;padding:4px 14px;background:#1890ff;color:#fff;border-radius:20px;font-size:.85rem;font-weight:500;text-decoration:none; }
+    .btn-boleto:hover { background:#40a9ff;color:#fff; }
   `]
 })
 export class DevedoresComponent implements OnInit {
   private readonly api = environment.apiUrl;
-  loading = true; enviando = false; lista: Devedor[] = []; listaFiltrada: Devedor[] = [];
-  filtro = ''; valorTotal = 0; marcando = new Set<string>();
+  loading = true; lista: Devedor[] = []; listaFiltrada: Devedor[] = [];
+  filtro = ''; valorTotal = 0;
 
   sortCodigo = (a: Devedor, b: Devedor) => (a.codigoPessoa ?? 0) - (b.codigoPessoa ?? 0);
   sortValor   = (a: Devedor, b: Devedor) => (a.valorBruto || 0) - (b.valorBruto || 0);
@@ -145,7 +122,7 @@ export class DevedoresComponent implements OnInit {
   private get h(): HttpHeaders {
     const t = localStorage.getItem('auth_token'); return t ? new HttpHeaders({ Authorization: `Bearer ${t}` }) : new HttpHeaders();
   }
-  constructor(private http: HttpClient, private message: NzMessageService, private cdr: ChangeDetectorRef) {}
+  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
   ngOnInit() { this.carregar(); }
 
   carregar() {
@@ -174,27 +151,5 @@ export class DevedoresComponent implements OnInit {
   filtrar() {
     const f = this.filtro.toLowerCase().trim();
     this.listaFiltrada = f ? this.lista.filter(d => (d.razao||'').toLowerCase().includes(f) || (d.documento||'').includes(f)) : [...this.lista];
-  }
-
-  statusLabel(s: string): string {
-    const m: any = { paid:'Pago', waiting:'Aguardando', settled:'Pago', canceled:'Cancelado', unpaid:'Devedor', cancel:'Cancelando', expired:'Expirado' };
-    return m[s?.toLowerCase()] || s || '—';
-  }
-
-  marcarPago(d: Devedor) {
-    this.marcando.add(d.transacao); this.cdr.markForCheck();
-    const payload = { ...d, status: 'settled', dataPagamento: new Date().toISOString() };
-    this.http.put(`${this.api}/PessoaCobranca`, payload, { headers: this.h }).subscribe({
-      next: () => { d.status = 'paid'; this.marcando.delete(d.transacao); this.message.success('Marcado como pago.'); this.cdr.markForCheck(); },
-      error: (e) => { this.marcando.delete(d.transacao); this.message.error(`Erro (${e.status})`); this.cdr.markForCheck(); }
-    });
-  }
-
-  enviarCobranca() {
-    this.enviando = true; this.cdr.markForCheck();
-    this.http.get(`${this.api}/PessoaCobranca/EnviarVencidosCobrancaMesAtual`, { headers: this.h }).subscribe({
-      next: () => { this.message.success('Cobranças enviadas com sucesso!'); this.enviando = false; this.carregar(); },
-      error: (e) => { this.message.error(`Erro ao enviar cobranças (${e.status})`); this.enviando = false; this.cdr.markForCheck(); }
-    });
   }
 }
