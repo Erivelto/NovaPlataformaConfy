@@ -38,49 +38,32 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
         <!-- Gestão -->
         <li nz-submenu nzTitle="Gestão" nzIcon="edit" [nzOpen]="gestaoOpen" (nzOpenChange)="gestaoOpen=$event">
           <ul>
-            <li nz-menu-item nzIcon="user"
-              (click)="go('/administrativo/clientes')" [nzSelected]="isActive('/administrativo/clientes')">
-              Clientes Online
+            <li nz-menu-item (click)="go('/administrativo/clientes')" [nzSelected]="isActive('/administrativo/clientes')">
+              <span nz-icon nzType="user"></span> Clientes Online
             </li>
-            <li nz-menu-item nzIcon="contacts"
-              (click)="go('/administrativo/clientes-fisica')" [nzSelected]="isActive('/administrativo/clientes-fisica')">
-              Clientes Fisica
+            <li nz-menu-item (click)="go('/administrativo/clientes-fisica')" [nzSelected]="isActive('/administrativo/clientes-fisica')">
+              <span nz-icon nzType="user"></span> Clientes Fisica
             </li>
-            <li nz-menu-item nzIcon="dollar"
-              (click)="go('/administrativo/devedores')" [nzSelected]="isActive('/administrativo/devedores')">
-              Clientes Devedores Mês Atual
+            <li nz-menu-item (click)="go('/administrativo/devedores')" [nzSelected]="isActive('/administrativo/devedores')">
+              <span nz-icon nzType="dollar"></span> Clientes Devedores Mês Atual
             </li>
-            <li nz-menu-item nzIcon="history"
-              (click)="go('/administrativo/devedores-anterior')" [nzSelected]="isActive('/administrativo/devedores-anterior')">
-              Clientes Devedores Todos Meses
+            <li nz-menu-item (click)="go('/administrativo/devedores-anterior')" [nzSelected]="isActive('/administrativo/devedores-anterior')">
+              <span nz-icon nzType="dollar"></span> Clientes Devedores Todos Meses
             </li>
-            <li nz-menu-item nzIcon="bar-chart"
-              (click)="go('/administrativo/historico-das')" [nzSelected]="isActive('/administrativo/historico-das')">
-              Relatório DAS
+            <li nz-menu-item (click)="go('/administrativo/historico-das')" [nzSelected]="isActive('/administrativo/historico-das')">
+              <span nz-icon nzType="bar-chart"></span> Relatório DAS
             </li>
-            <li nz-menu-item nzIcon="audit"
-              (click)="go('/administrativo/validacao-das')" [nzSelected]="isActive('/administrativo/validacao-das')">
-              Relatório Geral
+            <li nz-menu-item (click)="go('/administrativo/validacao-das')" [nzSelected]="isActive('/administrativo/validacao-das')">
+              <span nz-icon nzType="audit"></span> Relatório Geral
             </li>
-            <li nz-menu-item nzIcon="idcard"
-              (click)="go('/administrativo/gestao-pessoal')" [nzSelected]="isActive('/administrativo/gestao-pessoal')">
-              Gestão Pessoal
+            <li nz-menu-item (click)="go('/administrativo/gestao-pessoal')" [nzSelected]="isActive('/administrativo/gestao-pessoal')">
+              <span nz-icon nzType="idcard"></span> Gestão Pessoal
             </li>
-            <li nz-menu-item nzIcon="read"
-              (click)="go('/administrativo/blog')" [nzSelected]="isActive('/administrativo/blog')">
-              Blog
+            <li nz-menu-item (click)="go('/administrativo/solicitacoes')" [nzSelected]="isActive('/administrativo/solicitacoes')">
+              <span nz-icon nzType="unordered-list"></span> Solicitações Lista
             </li>
-            <li nz-menu-item nzIcon="unordered-list"
-              (click)="go('/administrativo/solicitacoes')" [nzSelected]="isActive('/administrativo/solicitacoes')">
-              Solicitações Lista
-            </li>
-            <li nz-menu-item nzIcon="pie-chart"
-              (click)="go('/administrativo/solicitacoes-dashboard')" [nzSelected]="isActive('/administrativo/solicitacoes-dashboard')">
-              Solicitações Dashboard
-            </li>
-            <li nz-menu-item nzIcon="calendar"
-              (click)="go('/administrativo/agendamento-nfe')" [nzSelected]="isActive('/administrativo/agendamento-nfe')">
-              Agendamento NFE
+            <li nz-menu-item (click)="go('/administrativo/agendamento-nfe')" [nzSelected]="isActive('/administrativo/agendamento-nfe')">
+              <span nz-icon nzType="calendar"></span> Agendamento NFE
             </li>
           </ul>
         </li>

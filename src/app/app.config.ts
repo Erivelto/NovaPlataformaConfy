@@ -28,7 +28,38 @@ import {
   SolutionOutline,
   BankOutline,
   PhoneOutline,
-  EditOutline
+  EditOutline,
+  DollarOutline,
+  AuditOutline,
+  UnorderedListOutline,
+  CalendarOutline,
+  CrownFill,
+  HistoryOutline,
+  PieChartOutline,
+  MessageOutline,
+  ReadOutline,
+  WarningOutline,
+  ScheduleOutline,
+  TeamOutline,
+  ContactsOutline,
+  DashboardOutline,
+  PlusOutline,
+  SaveOutline,
+  DeleteOutline,
+  InboxOutline,
+  PaperClipOutline,
+  ArrowLeftOutline,
+  CheckCircleOutline,
+  CloseCircleOutline,
+  ExclamationCircleOutline,
+  InfoCircleOutline,
+  LoadingOutline,
+  ReloadOutline,
+  SearchOutline,
+  StarOutline,
+  StarFill,
+  FolderOutline,
+  NumberOutline
 } from '@ant-design/icons-angular/icons';
 
 registerLocaleData(en);
@@ -40,6 +71,18 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     importProvidersFrom(BrowserAnimationsModule),
     { provide: NZ_I18N, useValue: en_US },
-    { provide: NZ_ICONS, useValue: [HomeOutline, SettingOutline, BellOutline, LogoutOutline, MenuFoldOutline, UserOutline, LockOutline, EyeOutline, EyeInvisibleOutline, SafetyCertificateTwoTone, IdcardOutline, FileProtectOutline, FileAddOutline, FileTextOutline, BarChartOutline, CreditCardOutline, SolutionOutline, BankOutline, PhoneOutline, EditOutline] }
+    { provide: NZ_ICONS, useValue: [
+      HomeOutline, SettingOutline, BellOutline, LogoutOutline, MenuFoldOutline,
+      UserOutline, LockOutline, EyeOutline, EyeInvisibleOutline, SafetyCertificateTwoTone,
+      IdcardOutline, FileProtectOutline, FileAddOutline, FileTextOutline, BarChartOutline,
+      CreditCardOutline, SolutionOutline, BankOutline, PhoneOutline, EditOutline,
+      DollarOutline, AuditOutline, UnorderedListOutline, CalendarOutline, CrownFill,
+      HistoryOutline, PieChartOutline, MessageOutline, ReadOutline, WarningOutline,
+      ScheduleOutline, TeamOutline, ContactsOutline, DashboardOutline, PlusOutline,
+      SaveOutline, DeleteOutline, InboxOutline, PaperClipOutline, ArrowLeftOutline,
+      CheckCircleOutline, CloseCircleOutline, ExclamationCircleOutline, InfoCircleOutline,
+      LoadingOutline, ReloadOutline, SearchOutline, StarOutline, StarFill,
+      FolderOutline, NumberOutline
+    ] }
   ]
 };
