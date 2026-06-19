@@ -338,17 +338,46 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
 
           <!-- Emissão NF -->
           <nz-divider nzText="Emissão de Nota Fiscal" nzOrientation="left"></nz-divider>
-          <nz-table [nzData]="emissoes" nzBordered nzSize="small" [nzShowPagination]="false" style="margin-bottom:12px">
-            <thead><tr><th>Usuário</th><th nzWidth="140px">Codigo Acesso</th><th>Prefeitura</th><th nzWidth="130px">Cód. Prefeitura</th><th nzWidth="60px" nzAlign="center">Ação</th></tr></thead>
-            <tbody>
-              <tr *ngFor="let e of emissoes">
-                <td>{{ e.usuario }}</td><td>{{ e.senha }}</td><td>{{ e.prefeitura }}</td><td>{{ e.codigoPrefeitura }}</td>
-                <td nzAlign="center"><button nz-button nzSize="small" nzType="primary" (click)="editarEmissao(e)"><i nz-icon nzType="edit"></i></button></td>
-              </tr>
-              <tr *ngIf="emissoes.length===0"><td colspan="5" style="text-align:center;padding:16px;color:rgba(0,0,0,.45)">Sem dados de emissão.</td></tr>
-            </tbody>
-          </nz-table>
-          <button nz-button nzType="default" (click)="abrirNovaEmissao()"><i nz-icon nzType="plus"></i> Adicionar Credencial NF</button>
+
+          <!-- Registro existente -->
+          <ng-container *ngIf="emissoes.length > 0; else semEmissao">
+            <div class="das-info-box">
+              <div class="das-info-row">
+                <div class="das-info-item" style="flex:2">
+                  <span class="das-info-label">Usuário</span>
+                  <span class="das-info-val">{{ emissoes[0].usuario || '—' }}</span>
+                </div>
+                <div class="das-info-item" style="flex:1.5">
+                  <span class="das-info-label">Codigo Acesso</span>
+                  <span class="das-info-val">{{ emissoes[0].senha || '—' }}</span>
+                </div>
+                <div class="das-info-item" style="flex:2">
+                  <span class="das-info-label">Prefeitura</span>
+                  <span class="das-info-val">{{ emissoes[0].prefeitura || '—' }}</span>
+                </div>
+                <div class="das-info-item" style="flex:1.2">
+                  <span class="das-info-label">Cód. Prefeitura</span>
+                  <span class="das-info-val">{{ emissoes[0].codigoPrefeitura || '—' }}</span>
+                </div>
+                <button nz-button nzType="primary" nzGhost nzSize="small"
+                  (click)="editarEmissao(emissoes[0])"
+                  style="align-self:flex-end;flex-shrink:0">
+                  <i nz-icon nzType="edit"></i> Editar
+                </button>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Sem registro -->
+          <ng-template #semEmissao>
+            <div class="sem-anexo-box">
+              <i nz-icon nzType="file-text" style="font-size:32px;color:rgba(0,0,0,.25)"></i>
+              <span style="color:rgba(0,0,0,.45);margin:8px 0">Nenhuma credencial NF cadastrada.</span>
+              <button nz-button nzType="primary" nzGhost (click)="abrirNovaEmissao()">
+                <i nz-icon nzType="plus"></i> Cadastrar Credencial NF
+              </button>
+            </div>
+          </ng-template>
 
           <!-- DAS -->
           <nz-divider nzText="Dados DAS" nzOrientation="left" style="margin-top:24px"></nz-divider>

@@ -35,75 +35,42 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
           <span>Dashboard</span>
         </li>
 
-        <!-- Gestão (nível 1) -->
+        <!-- Gestão -->
         <li nz-submenu nzTitle="Gestão" nzIcon="edit" [nzOpen]="gestaoOpen" (nzOpenChange)="gestaoOpen=$event">
           <ul>
-
-            <!-- Clientes (nível 2) -->
-            <li nz-submenu nzTitle="Clientes" nzIcon="team">
-              <ul>
-                <li nz-menu-item (click)="go('/administrativo/clientes')" [nzSelected]="isActive('/administrativo/clientes')">Online</li>
-                <li nz-menu-item (click)="go('/administrativo/clientes-fisica')" [nzSelected]="isActive('/administrativo/clientes-fisica')">Física</li>
-              </ul>
+            <li nz-menu-item (click)="go('/administrativo/clientes')" [nzSelected]="isActive('/administrativo/clientes')">
+              <i nz-icon nzType="user"></i><span>Clientes Online</span>
             </li>
-
-            <!-- Cobrança (nível 2) -->
-            <li nz-submenu nzTitle="Cobrança" nzIcon="dollar">
-              <ul>
-                <li nz-menu-item (click)="go('/administrativo/devedores')" [nzSelected]="isActive('/administrativo/devedores')">Devedores Mês Atual</li>
-                <li nz-menu-item (click)="go('/administrativo/devedores-anterior')" [nzSelected]="isActive('/administrativo/devedores-anterior')">Devedores Todos Meses</li>
-              </ul>
+            <li nz-menu-item (click)="go('/administrativo/clientes-fisica')" [nzSelected]="isActive('/administrativo/clientes-fisica')">
+              <i nz-icon nzType="contacts"></i><span>Clientes Fisica</span>
             </li>
-
-            <!-- Relatório DAS -->
+            <li nz-menu-item (click)="go('/administrativo/devedores')" [nzSelected]="isActive('/administrativo/devedores')">
+              <i nz-icon nzType="dollar"></i><span>Clientes Devedores Mês Atual</span>
+            </li>
+            <li nz-menu-item (click)="go('/administrativo/devedores-anterior')" [nzSelected]="isActive('/administrativo/devedores-anterior')">
+              <i nz-icon nzType="history"></i><span>Clientes Devedores Todos Meses</span>
+            </li>
             <li nz-menu-item (click)="go('/administrativo/historico-das')" [nzSelected]="isActive('/administrativo/historico-das')">
-              <i nz-icon nzType="bar-chart"></i>
-              <span>Relatório DAS</span>
+              <i nz-icon nzType="bar-chart"></i><span>Relatório DAS</span>
             </li>
-
-            <!-- Validação DAS (nível 2) -->
-            <li nz-submenu nzTitle="Validação DAS" nzIcon="audit">
-              <ul>
-                <li nz-menu-item (click)="goQuery('/administrativo/validacao-das', {status:'E'})" [nzSelected]="isActiveQuery('/administrativo/validacao-das','E')">Erro</li>
-                <li nz-menu-item (click)="goQuery('/administrativo/validacao-das', {status:'A'})" [nzSelected]="isActiveQuery('/administrativo/validacao-das','A')">Atenção</li>
-                <li nz-menu-item (click)="goQuery('/administrativo/validacao-das', {status:'O'})" [nzSelected]="isActiveQuery('/administrativo/validacao-das','O')">Normal</li>
-                <li nz-menu-item (click)="goQuery('/administrativo/validacao-das', {status:'V'})" [nzSelected]="isActiveQuery('/administrativo/validacao-das','V')">Incompleto</li>
-                <li nz-menu-item (click)="goQuery('/administrativo/validacao-das', {status:'Z'})" [nzSelected]="isActiveQuery('/administrativo/validacao-das','Z')">Zerado</li>
-              </ul>
+            <li nz-menu-item (click)="go('/administrativo/validacao-das')" [nzSelected]="isActive('/administrativo/validacao-das')">
+              <i nz-icon nzType="audit"></i><span>Relatório Geral</span>
             </li>
-
-            <!-- Pendências DAS -->
-            <li nz-menu-item (click)="go('/administrativo/pendencias-das')" [nzSelected]="isActive('/administrativo/pendencias-das')">
-              <i nz-icon nzType="warning"></i>
-              <span>Pendências Clientes DAS</span>
-            </li>
-
-            <!-- Gestão Pessoal -->
             <li nz-menu-item (click)="go('/administrativo/gestao-pessoal')" [nzSelected]="isActive('/administrativo/gestao-pessoal')">
-              <i nz-icon nzType="idcard"></i>
-              <span>Gestão Pessoal</span>
+              <i nz-icon nzType="idcard"></i><span>Gestão Pessoal</span>
             </li>
-
-            <!-- Blog -->
             <li nz-menu-item (click)="go('/administrativo/blog')" [nzSelected]="isActive('/administrativo/blog')">
-              <i nz-icon nzType="read"></i>
-              <span>Blog</span>
+              <i nz-icon nzType="read"></i><span>Blog</span>
             </li>
-
-            <!-- Solicitações (nível 2) -->
-            <li nz-submenu nzTitle="Solicitações" nzIcon="message">
-              <ul>
-                <li nz-menu-item (click)="go('/administrativo/solicitacoes')" [nzSelected]="isActive('/administrativo/solicitacoes')">Lista</li>
-                <li nz-menu-item (click)="go('/administrativo/solicitacoes-dashboard')" [nzSelected]="isActive('/administrativo/solicitacoes-dashboard')">Dashboard</li>
-              </ul>
+            <li nz-menu-item (click)="go('/administrativo/solicitacoes')" [nzSelected]="isActive('/administrativo/solicitacoes')">
+              <i nz-icon nzType="message"></i><span>Solicitações Lista</span>
             </li>
-
-            <!-- Agendamento NFE -->
+            <li nz-menu-item (click)="go('/administrativo/solicitacoes-dashboard')" [nzSelected]="isActive('/administrativo/solicitacoes-dashboard')">
+              <i nz-icon nzType="dashboard"></i><span>Solicitações Dashboard</span>
+            </li>
             <li nz-menu-item (click)="go('/administrativo/agendamento-nfe')" [nzSelected]="isActive('/administrativo/agendamento-nfe')">
-              <i nz-icon nzType="schedule"></i>
-              <span>Agendamento NFE</span>
+              <i nz-icon nzType="schedule"></i><span>Agendamento NFE</span>
             </li>
-
           </ul>
         </li>
 
