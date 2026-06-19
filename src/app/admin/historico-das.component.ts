@@ -150,7 +150,7 @@ interface Relatorio {
 
           <!-- 1: Sem cadastro -->
           <nz-collapse-panel
-            [nzHeader]="hdr1" [nzActive]="dados.totalSemCadastro > 0" [nzExtra]="cnt1">
+            [nzHeader]="hdr1" [nzActive]="false" [nzExtra]="cnt1">
             <ng-template #hdr1>
               <span class="sec-hdr"><i nz-icon nzType="warning" style="color:darkgoldenrod;margin-right:6px"></i>Clientes sem cadastro para DAS automático</span>
             </ng-template>
@@ -171,7 +171,7 @@ interface Relatorio {
 
           <!-- 2: MEI -->
           <nz-collapse-panel
-            [nzHeader]="hdr2" [nzActive]="dados.totalMEI > 0" [nzExtra]="cnt2">
+            [nzHeader]="hdr2" [nzActive]="false" [nzExtra]="cnt2">
             <ng-template #hdr2>
               <span class="sec-hdr"><i nz-icon nzType="check-square" style="color:#1890ff;margin-right:6px"></i>Clientes MEI</span>
             </ng-template>
@@ -191,49 +191,49 @@ interface Relatorio {
           </nz-collapse-panel>
 
           <!-- 3: Fora do Simples -->
-          <nz-collapse-panel [nzHeader]="hdr3" [nzActive]="dados.totalForaDoSimples > 0" [nzExtra]="cnt3">
+          <nz-collapse-panel [nzHeader]="hdr3" [nzActive]="false" [nzExtra]="cnt3">
             <ng-template #hdr3><span class="sec-hdr"><i nz-icon nzType="exclamation-circle" style="color:#fa8c16;margin-right:6px"></i>Fora do Simples Nacional</span></ng-template>
             <ng-template #cnt3><nz-badge [nzCount]="dados.totalForaDoSimples" [nzStyle]="badgeStyle(dados.totalForaDoSimples,'orange')"></nz-badge></ng-template>
             <ng-container [ngTemplateOutlet]="tabelaDAS" [ngTemplateOutletContext]="{rows: dados.foraDoSimples}"></ng-container>
           </nz-collapse-panel>
 
           <!-- 4: Geradas com erro -->
-          <nz-collapse-panel [nzHeader]="hdr4" [nzActive]="dados.totalComErro > 0" [nzExtra]="cnt4">
+          <nz-collapse-panel [nzHeader]="hdr4" [nzActive]="false" [nzExtra]="cnt4">
             <ng-template #hdr4><span class="sec-hdr"><i nz-icon nzType="bug" style="color:#ff4d4f;margin-right:6px"></i>Geradas com erro</span></ng-template>
             <ng-template #cnt4><nz-badge [nzCount]="dados.totalComErro" [nzStyle]="badgeStyle(dados.totalComErro,'red')"></nz-badge></ng-template>
             <ng-container [ngTemplateOutlet]="tabelaDAS" [ngTemplateOutletContext]="{rows: dados.comErro}"></ng-container>
           </nz-collapse-panel>
 
           <!-- 5: Sem Faturamento -->
-          <nz-collapse-panel [nzHeader]="hdr5" [nzActive]="dados.semFaturamento.length > 0" [nzExtra]="cnt5">
+          <nz-collapse-panel [nzHeader]="hdr5" [nzActive]="false" [nzExtra]="cnt5">
             <ng-template #hdr5><span class="sec-hdr"><i nz-icon nzType="robot" style="color:darkgoldenrod;margin-right:6px"></i>Sem Faturamento — sem consulta do Robô</span></ng-template>
             <ng-template #cnt5><nz-badge [nzCount]="dados.semFaturamento.length" [nzStyle]="badgeStyle(dados.semFaturamento.length,'gold')"></nz-badge></ng-template>
             <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semFaturamento}"></ng-container>
           </nz-collapse-panel>
 
           <!-- 6: Sem valor de Faturamento -->
-          <nz-collapse-panel [nzHeader]="hdr6" [nzActive]="dados.semValorFaturamento.length > 0" [nzExtra]="cnt6">
+          <nz-collapse-panel [nzHeader]="hdr6" [nzActive]="false" [nzExtra]="cnt6">
             <ng-template #hdr6><span class="sec-hdr"><i nz-icon nzType="dollar" style="color:darkgoldenrod;margin-right:6px"></i>Sem valor de Faturamento</span></ng-template>
             <ng-template #cnt6><nz-badge [nzCount]="dados.semValorFaturamento.length" [nzStyle]="badgeStyle(dados.semValorFaturamento.length,'gold')"></nz-badge></ng-template>
             <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semValorFaturamento}"></ng-container>
           </nz-collapse-panel>
 
           <!-- 7: Aguardando -->
-          <nz-collapse-panel [nzHeader]="hdr7" [nzActive]="dados.totalAguardando > 0" [nzExtra]="cnt7">
+          <nz-collapse-panel [nzHeader]="hdr7" [nzActive]="false" [nzExtra]="cnt7">
             <ng-template #hdr7><span class="sec-hdr"><i nz-icon nzType="clock-circle" style="color:#13c2c2;margin-right:6px"></i>DAS Aguardando Envio</span></ng-template>
             <ng-template #cnt7><nz-badge [nzCount]="dados.totalAguardando" [nzStyle]="badgeStyle(dados.totalAguardando,'cyan')"></nz-badge></ng-template>
             <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.aguardando}"></ng-container>
           </nz-collapse-panel>
 
           <!-- 8: Enviados -->
-          <nz-collapse-panel [nzHeader]="hdr8" [nzActive]="dados.totalEnviado > 0" [nzExtra]="cnt8">
+          <nz-collapse-panel [nzHeader]="hdr8" [nzActive]="false" [nzExtra]="cnt8">
             <ng-template #hdr8><span class="sec-hdr"><i nz-icon nzType="check-circle" style="color:#52c41a;margin-right:6px"></i>DAS Enviado</span></ng-template>
             <ng-template #cnt8><nz-badge [nzCount]="dados.totalEnviado" [nzStyle]="badgeStyle(dados.totalEnviado,'green')"></nz-badge></ng-template>
             <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.enviados}"></ng-container>
           </nz-collapse-panel>
 
           <!-- 9: Fat Desativado -->
-          <nz-collapse-panel [nzHeader]="hdr9" [nzActive]="dados.totalFatDesativado > 0" [nzExtra]="cnt9">
+          <nz-collapse-panel [nzHeader]="hdr9" [nzActive]="false" [nzExtra]="cnt9">
             <ng-template #hdr9><span class="sec-hdr"><i nz-icon nzType="stop" style="color:#8c8c8c;margin-right:6px"></i>Faturamento desativado</span></ng-template>
             <ng-template #cnt9><nz-badge [nzCount]="dados.totalFatDesativado" [nzStyle]="badgeStyle(dados.totalFatDesativado,'grey')"></nz-badge></ng-template>
             <ng-container [ngTemplateOutlet]="tabelaDAS" [ngTemplateOutletContext]="{rows: dados.fatDesativado}"></ng-container>

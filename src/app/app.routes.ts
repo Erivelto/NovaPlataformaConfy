@@ -35,6 +35,7 @@ export const routes: Routes = [
 			{ path: 'clientes', loadComponent: () => import('./admin/clientes-online.component').then(m => m.ClientesOnlineComponent) },
 			{ path: 'clientes-fisica', loadComponent: () => import('./admin/clientes-fisica.component').then(m => m.ClientesFisicaComponent) },
 			{ path: 'cliente/:id/editar', loadComponent: () => import('./admin/cliente-editar.component').then(m => m.ClienteEditarComponent) },
+			{ path: 'receita-anual/:pessoaCodigo', loadComponent: () => import('./admin/dashboard-fiscal-admin.component').then(m => m.DashboardFiscalAdminComponent) },
 
 			// Gestão > Cobrança
 			{ path: 'devedores', loadComponent: () => import('./admin/devedores.component').then(m => m.DevedoresComponent) },

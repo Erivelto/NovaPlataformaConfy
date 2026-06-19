@@ -584,6 +584,12 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
 
     </nz-tabset>
   </nz-card>
+
+  <div *ngIf="!loading" class="acoes-rodape">
+    <button nz-button nzType="primary" class="btn-acao-verde" (click)="abrirReceitaAnual()">
+      <i nz-icon nzType="bar-chart"></i> Receita Anual
+    </button>
+  </div>
 </div>
 
 <!-- MODAL: Cadastro de Anexo (Treeview) -->
@@ -756,6 +762,9 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
     .user-plat-email { font-size:1.15rem;font-weight:700;color:#1890ff; }
     .form-section { padding: 8px 4px; }
     .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 0; align-items: flex-start; }
+    .acoes-rodape { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .btn-acao-verde { background: #52c41a; border-color: #52c41a; }
+    .btn-acao-verde:hover, .btn-acao-verde:focus { background: #73d13d; border-color: #73d13d; }
     .form-row nz-form-item { margin-bottom: 14px; display: flex; flex-direction: column; }
     .flex1 { flex: 1; min-width: 160px; }
     .flex2 { flex: 2; min-width: 220px; }
@@ -1224,6 +1233,10 @@ export class ClienteEditarComponent implements OnInit {
 
   statusCobrancaLabel(s: string | undefined): string { const m: any = { paid:'Pago', settled:'Pago', waiting:'Aguardando', canceled:'Cancelado', unpaid:'Devedor', expired:'Expirado' }; return m[(s||'').toLowerCase()] || s || '—'; }
   statusCobrancaColor(s: string | undefined): string { const m: any = { paid:'green', settled:'green', waiting:'orange', canceled:'default', unpaid:'red', expired:'red' }; return m[(s||'').toLowerCase()] || 'default'; }
+
+  abrirReceitaAnual() {
+    this.router.navigate(['/administrativo/receita-anual', this.codigoPessoa]);
+  }
 
   voltar() { this.router.navigate([this.pessoa.fisica ? '/administrativo/clientes-fisica' : '/administrativo/clientes']); }
 }
