@@ -1004,7 +1004,8 @@ export class ClienteEditarComponent implements OnInit {
             icon: 'file-text',
             isLeaf: true,
             selectable: true,
-            origin: { menuText: m.menu, item: i }
+            _menuText: m.menu,
+            _itemData: i
           } as any))
       } as any));
       this.carregandoTree = false;
@@ -1015,10 +1016,10 @@ export class ClienteEditarComponent implements OnInit {
   onTreeNodeClick(event: NzFormatEmitEvent) {
     const node = event.node;
     if (!node || !node.isLeaf) return;
-    const origin = (node as any).origin;
-    if (origin?.item) {
-      this.selectedAnexoItem = origin.item as AnexoMenuItemModel;
-      this.selectedAnexoMenu = origin.menuText as string;
+    const raw = node.origin as any;
+    if (raw?._itemData) {
+      this.selectedAnexoItem = raw._itemData as AnexoMenuItemModel;
+      this.selectedAnexoMenu = raw._menuText as string;
       this.cdr.markForCheck();
     }
   }
