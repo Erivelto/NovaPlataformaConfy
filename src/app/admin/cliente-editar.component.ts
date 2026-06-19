@@ -27,6 +27,7 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzTreeModule, NzTreeNode, NzFormatEmitEvent } from 'ng-zorro-antd/tree';
 
 import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
@@ -38,6 +39,8 @@ interface RepresentanteLegal { codigo: number; codigoPessoa: number; nome: strin
 interface DadosEmissao { codigo: number; codigoPessoa: number; usuario: string; senha: string; prefeitura: string; urlPrefeitura?: string; codigoPrefeitura?: string; excluido?: boolean; }
 interface DadosDAS { codigo: number; codigoPessoa: number; cnpj: string; cpf: string; codigoContribuite: string; mesApuracao?: number; anoApuracao?: number; valorTributado?: string; excluido?: boolean; }
 interface AnexoContribuinte { codigo: number; codigoDadosDeDAS: number; menu: string; anexo: string; excluido?: boolean; }
+interface AnexoMenuModel { codigo: number; menu: string; }
+interface AnexoMenuItemModel { codigo: number; item: string; codigoMenu: number; }
 interface Prefeitura { codigo: number; nome: string; }
 interface PessoaUpload { codigo: number; codigoPessoa: number; tipo: string; nomeArquivo: string; dataValidade?: string; }
 interface DadosCobranca { codigo: number; codigoPessoa: number; tipo: string; diaCobranca: number; mensalidade: number; cpf: string; celular?: string; email: string; excluido?: boolean; dataAlteracao?: string; }
@@ -53,7 +56,7 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
     NzSelectModule, NzCheckboxModule, NzSwitchModule, NzIconModule, NzAlertModule,
     NzTableModule, NzTagModule, NzModalModule, NzSkeletonModule, NzMessageModule,
     NzDividerModule, NzToolTipModule, NzUploadModule, NzCollapseModule, NzBadgeModule,
-    NzSpinModule, PageTitleComponent
+    NzSpinModule, NzTreeModule, PageTitleComponent
   ],
   template: `
 <div class="page">
@@ -460,9 +463,8 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
                 <div class="sem-anexo-box">
                   <i nz-icon nzType="inbox" style="font-size:32px;color:rgba(0,0,0,.25)"></i>
                   <span style="color:rgba(0,0,0,.45);margin:8px 0">Nenhum anexo cadastrado para este DAS.</span>
-                  <button nz-button nzType="dashed" disabled>
+                  <button nz-button nzType="primary" nzGhost (click)="abrirModalAnexo()">
                     <i nz-icon nzType="plus"></i> Cadastrar Anexo
-                    <nz-tag nzColor="blue" style="margin-left:8px;font-size:.7rem">em breve</nz-tag>
                   </button>
                 </div>
               </ng-container>
@@ -553,6 +555,40 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
     </nz-tabset>
   </nz-card>
 </div>
+
+<!-- MODAL: Cadastro de Anexo (Treeview) -->
+<nz-modal
+  [(nzVisible)]="modalAnexoVisible"
+  nzTitle="Cadastrar Anexo"
+  [nzWidth]="520"
+  [nzFooter]="ftAnexo"
+  (nzOnCancel)="modalAnexoVisible = false">
+  <ng-container *nzModalContent>
+    <div *ngIf="carregandoTree" style="text-align:center;padding:32px"><nz-spin nzSimple nzTip="Carregando menus..."></nz-spin></div>
+    <ng-container *ngIf="!carregandoTree">
+      <p style="color:rgba(0,0,0,.55);margin-bottom:12px;font-size:.88rem">
+        Selecione um <strong>subitem</strong> para associar ao DAS atual.
+      </p>
+      <nz-tree
+        [nzData]="treeNodes"
+        nzShowIcon
+        (nzClick)="onTreeNodeClick($event)"
+        style="border:1px solid #d9d9d9;border-radius:6px;padding:8px;max-height:340px;overflow-y:auto">
+      </nz-tree>
+      <div *ngIf="selectedAnexoItem" style="margin-top:16px;padding:12px 16px;background:#f6ffed;border:1px solid #b7eb8f;border-radius:6px">
+        <div style="font-size:.78rem;color:rgba(0,0,0,.45);text-transform:uppercase;letter-spacing:.04em">Selecionado</div>
+        <div style="font-weight:700;margin-top:4px">{{ selectedAnexoMenu }} → {{ selectedAnexoItem.item }}</div>
+      </div>
+      <nz-alert *ngIf="!selectedAnexoItem" nzType="warning" nzMessage="Selecione um subitem para continuar." nzShowIcon style="margin-top:12px"></nz-alert>
+    </ng-container>
+  </ng-container>
+  <ng-template #ftAnexo>
+    <button nz-button (click)="modalAnexoVisible = false">Cancelar</button>
+    <button nz-button nzType="primary" [nzLoading]="salvandoAnexo" [disabled]="!selectedAnexoItem" (click)="salvarAnexo()">
+      <i nz-icon nzType="save"></i> Salvar
+    </button>
+  </ng-template>
+</nz-modal>
 
 <!-- MODAL: Representante Legal -->
 <nz-modal [(nzVisible)]="repVisible" [nzTitle]="repSelecionado?.codigo ? 'Editar Representante' : 'Novo Representante'"
@@ -774,6 +810,13 @@ export class ClienteEditarComponent implements OnInit {
   anexoContribuinte: AnexoContribuinte | null = null;
   carregandoAnexo = false;
   excluindoAnexo = false;
+  // Modal cadastro anexo
+  modalAnexoVisible = false;
+  carregandoTree = false;
+  salvandoAnexo = false;
+  treeNodes: NzTreeNode[] = [];
+  selectedAnexoItem: AnexoMenuItemModel | null = null;
+  selectedAnexoMenu: string = '';
 
   // User Plataforma
   salvandoUser = false;
@@ -932,6 +975,75 @@ export class ClienteEditarComponent implements OnInit {
     obs.subscribe({
       next: () => { this.message.success('Credencial NF salva!'); this.salvandoEmissao = false; this.emissaoVisible = false; this.carregar(); },
       error: (e) => { this.message.error(`Erro (${e.status})`); this.salvandoEmissao = false; this.cdr.markForCheck(); }
+    });
+  }
+
+  abrirModalAnexo() {
+    this.selectedAnexoItem = null;
+    this.selectedAnexoMenu = '';
+    this.modalAnexoVisible = true;
+    this.carregandoTree = true;
+    this.cdr.markForCheck();
+    forkJoin({
+      menus: this.http.get<AnexoMenuModel[]>(`${this.api}/DadosDeDAS/AnexoMenu`, { headers: this.h }).pipe(catchError(() => of([]))),
+      itens: this.http.get<AnexoMenuItemModel[]>(`${this.api}/DadosDeDAS/AnexoMenuItem`, { headers: this.h }).pipe(catchError(() => of([])))
+    }).subscribe(({ menus, itens }) => {
+      this.treeNodes = menus.map(m => ({
+        title: m.menu,
+        key: `menu-${m.codigo}`,
+        icon: 'folder',
+        isLeaf: false,
+        selectable: false,
+        expanded: false,
+        children: itens
+          .filter(i => i.codigoMenu === m.codigo)
+          .map(i => ({
+            title: i.item,
+            key: `item-${i.codigo}`,
+            icon: 'file-text',
+            isLeaf: true,
+            selectable: true,
+            origin: { menuText: m.menu, item: i }
+          } as any))
+      } as any));
+      this.carregandoTree = false;
+      this.cdr.markForCheck();
+    });
+  }
+
+  onTreeNodeClick(event: NzFormatEmitEvent) {
+    const node = event.node;
+    if (!node || !node.isLeaf) return;
+    const origin = (node as any).origin;
+    if (origin?.item) {
+      this.selectedAnexoItem = origin.item as AnexoMenuItemModel;
+      this.selectedAnexoMenu = origin.menuText as string;
+      this.cdr.markForCheck();
+    }
+  }
+
+  salvarAnexo() {
+    if (!this.selectedAnexoItem || !this.dasInline.codigo) return;
+    this.salvandoAnexo = true; this.cdr.markForCheck();
+    const payload = {
+      codigoDadosDeDAS: this.dasInline.codigo,
+      menu: this.selectedAnexoMenu,
+      anexo: this.selectedAnexoItem.item,
+      excluido: false
+    };
+    this.http.post<AnexoContribuinte>(`${this.api}/AnexoContribuinte`, payload, { headers: this.h }).subscribe({
+      next: (res) => {
+        this.message.success('Anexo cadastrado com sucesso!');
+        this.anexoContribuinte = res;
+        this.modalAnexoVisible = false;
+        this.salvandoAnexo = false;
+        this.cdr.markForCheck();
+      },
+      error: (e) => {
+        this.message.error(`Erro ao cadastrar anexo (${e.status})`);
+        this.salvandoAnexo = false;
+        this.cdr.markForCheck();
+      }
     });
   }
 
