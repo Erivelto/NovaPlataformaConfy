@@ -23,6 +23,7 @@ import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
@@ -56,7 +57,7 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
     NzSelectModule, NzCheckboxModule, NzSwitchModule, NzIconModule, NzAlertModule,
     NzTableModule, NzTagModule, NzModalModule, NzSkeletonModule, NzMessageModule,
     NzDividerModule, NzToolTipModule, NzUploadModule, NzCollapseModule, NzBadgeModule,
-    NzSpinModule, NzTreeModule, PageTitleComponent
+    NzSpinModule, NzTreeModule, NzPopconfirmModule, PageTitleComponent
   ],
   template: `
 <div class="page">
