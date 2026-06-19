@@ -30,10 +30,6 @@ import { MensalidadeStatusService } from './services/mensalidade-status.service'
           <i nz-icon nzType="file-protect"></i>
           <span>Meu Contrato</span>
         </li>
-        <li nz-menu-item (click)="navigate('/solicitacoes')" [nzSelected]="isActive('/solicitacoes')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Solicitações' : ''" nzTooltipPlacement="right">
-          <i nz-icon nzType="customer-service"></i>
-          <span>Solicitações</span>
-        </li>
         <li nz-menu-item (click)="navigateGuarded('/solicitacao-nfe')" [nzSelected]="isActive('/solicitacao-nfe')" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Solicitação Emissão Nfe' : '')" nzTooltipPlacement="right">
           <i nz-icon nzType="file-add"></i>
           <span>Solicitação Emissão Nfe</span>
@@ -53,6 +49,10 @@ import { MensalidadeStatusService } from './services/mensalidade-status.service'
         <li nz-menu-item (click)="openGuarded()" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Situação Cadastral' : '')" nzTooltipPlacement="right">
           <i nz-icon nzType="idcard"></i>
           <span>Situação Cadastral</span>
+        </li>
+        <li nz-menu-item (click)="navigate('/solicitacoes')" [nzSelected]="isActive('/solicitacoes')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Solicitar Serviço' : ''" nzTooltipPlacement="right">
+          <i nz-icon nzType="audit"></i>
+          <span>Solicitar Serviço</span>
         </li>
       </ul>
     </nz-sider>

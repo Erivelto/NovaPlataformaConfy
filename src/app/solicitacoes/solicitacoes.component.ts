@@ -17,12 +17,16 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzGridModule } from 'ng-zorro-antd/grid';
+import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { PageTitleComponent } from '../page-title.component';
 import { LoginService } from '../services/login.service';
 import { environment } from '../../environments/environment';
 
 const AREA_FIXA = 'Contabilidade';
 const ATENDENTE_FIXO = 'Analista Contabil';
+const ARMAZENAMENTO_URL = 'http://armazemantodearquivocontfy.azurewebsites.net/ArmazenamentoDeObjeto';
+const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
 
 const TIPOS_SOLICITACAO = [
   'Emissão de Nota',
@@ -59,6 +63,14 @@ interface ChamadoHistorico {
   dataHistorico: string;
 }
 
+interface ChamadoUpload {
+  codigo: number;
+  chamadoId: number;
+  dataCriacao: string;
+  arquivo: string;
+  tipo: string;
+}
+
 @Component({
   selector: 'app-solicitacoes-cliente',
   standalone: true,
@@ -67,11 +79,11 @@ interface ChamadoHistorico {
     CommonModule, FormsModule,
     NzCardModule, NzTableModule, NzTagModule, NzIconModule, NzButtonModule,
     NzSkeletonModule, NzModalModule, NzFormModule, NzSelectModule, NzInputModule,
-    NzPopconfirmModule, NzMessageModule, NzDividerModule, PageTitleComponent
+    NzPopconfirmModule, NzMessageModule, NzDividerModule, NzGridModule, NzUploadModule, PageTitleComponent
   ],
   template: `
     <div class="page">
-      <app-page-title title="Solicitações" subtitle="Abra e acompanhe suas solicitações com a contabilidade"></app-page-title>
+      <app-page-title title="Solicitar Serviço" subtitle="Abra e acompanhe seus chamados com a contabilidade"></app-page-title>
 
       <nz-card>
         <div class="toolbar">
@@ -124,44 +136,72 @@ interface ChamadoHistorico {
     </div>
 
     <!-- Nova solicitação -->
-    <nz-modal [(nzVisible)]="novoVisible" nzTitle="Nova Solicitação" [nzWidth]="640" [nzFooter]="ftNovo" (nzOnCancel)="novoVisible=false">
+    <nz-modal [(nzVisible)]="novoVisible" nzTitle="Nova Solicitação" [nzWidth]="720" [nzFooter]="ftNovo" (nzOnCancel)="novoVisible=false">
       <ng-container *nzModalContent>
-        <div class="form-grid">
+        <div class="modal-form">
           <nz-form-item>
-            <nz-form-label nzRequired>Prioridade</nz-form-label>
-            <nz-form-control>
+            <nz-form-label [nzSpan]="24" nzRequired>Prioridade</nz-form-label>
+            <nz-form-control [nzSpan]="24">
               <nz-select [(ngModel)]="form.prioridade" nzPlaceHolder="Selecione" style="width:100%">
-                <nz-option [nzValue]="0" nzLabel="Selecione" nzDisabled></nz-option>
                 <nz-option [nzValue]="1" nzLabel="Alta"></nz-option>
                 <nz-option [nzValue]="2" nzLabel="Média"></nz-option>
                 <nz-option [nzValue]="3" nzLabel="Baixa"></nz-option>
               </nz-select>
             </nz-form-control>
           </nz-form-item>
-          <nz-form-item>
-            <nz-form-label nzRequired>Tipo de Solicitação</nz-form-label>
-            <nz-form-control>
-              <nz-select [(ngModel)]="form.titulo" nzPlaceHolder="Selecione" style="width:100%">
-                <nz-option nzValue="" nzLabel="Selecione" nzDisabled></nz-option>
+
+          <nz-form-item class="campo-tipo">
+            <nz-form-label [nzSpan]="24" nzRequired>Tipo de Solicitação</nz-form-label>
+            <nz-form-control [nzSpan]="24">
+              <nz-select
+                [(ngModel)]="form.titulo"
+                nzPlaceHolder="Selecione o tipo"
+                nzShowSearch
+                nzAllowClear
+                style="width:100%">
                 <nz-option *ngFor="let t of tiposSolicitacao" [nzValue]="t" [nzLabel]="t"></nz-option>
               </nz-select>
             </nz-form-control>
           </nz-form-item>
+
+          <div nz-row [nzGutter]="16" class="campos-fixos">
+            <div nz-col [nzSpan]="12" [nzXs]="24" [nzSm]="12">
+              <div class="campo-readonly">
+                <label>Área</label>
+                <input nz-input [value]="areaFixa" disabled />
+              </div>
+            </div>
+            <div nz-col [nzSpan]="12" [nzXs]="24" [nzSm]="12">
+              <div class="campo-readonly">
+                <label>Atendente</label>
+                <input nz-input [value]="atendenteFixo" disabled />
+              </div>
+            </div>
+          </div>
+
           <nz-form-item>
-            <nz-form-label>Área</nz-form-label>
-            <nz-form-control><input nz-input [value]="areaFixa" disabled /></nz-form-control>
+            <nz-form-label [nzSpan]="24">Anexo de Arquivo</nz-form-label>
+            <nz-form-control [nzSpan]="24">
+              <nz-upload
+                nzAction=""
+                [nzBeforeUpload]="beforeUpload"
+                [nzFileList]="fileList"
+                [nzMultiple]="true"
+                (nzRemove)="onRemoveArquivo">
+                <button nz-button type="button">
+                  <span nz-icon nzType="inbox"></span> Selecionar arquivo(s)
+                </button>
+              </nz-upload>
+            </nz-form-control>
           </nz-form-item>
+
           <nz-form-item>
-            <nz-form-label>Atendente</nz-form-label>
-            <nz-form-control><input nz-input [value]="atendenteFixo" disabled /></nz-form-control>
+            <nz-form-label [nzSpan]="24" nzRequired>Descrição</nz-form-label>
+            <nz-form-control [nzSpan]="24">
+              <textarea nz-input [(ngModel)]="form.mensagem" [nzAutosize]="{minRows:5,maxRows:10}" placeholder="Descreva sua solicitação..."></textarea>
+            </nz-form-control>
           </nz-form-item>
         </div>
-        <nz-form-item>
-          <nz-form-label nzRequired>Descrição</nz-form-label>
-          <nz-form-control>
-            <textarea nz-input [(ngModel)]="form.mensagem" [nzAutosize]="{minRows:5,maxRows:10}" placeholder="Descreva sua solicitação..."></textarea>
-          </nz-form-control>
-        </nz-form-item>
       </ng-container>
       <ng-template #ftNovo>
         <button nz-button (click)="novoVisible=false" [disabled]="salvando">Cancelar</button>
@@ -179,6 +219,15 @@ interface ChamadoHistorico {
           <div class="detalhe"><label>Status</label><div>{{ statusLabel(selecionado.status) }}</div></div>
           <div class="detalhe"><label>Data</label><div>{{ selecionado.dataCriacao | date:'dd/MM/yyyy HH:mm' }}</div></div>
           <div class="detalhe"><label>Descrição</label><div class="msg">{{ selecionado.mensagem }}</div></div>
+          <nz-divider nzText="Anexos" nzOrientation="left"></nz-divider>
+          <ng-container *ngIf="carregandoAnexos"><nz-skeleton [nzActive]="true" [nzParagraph]="{rows:2}"></nz-skeleton></ng-container>
+          <div *ngIf="!carregandoAnexos && anexos.length === 0" class="vazio-hist">Sem anexos.</div>
+          <div *ngFor="let a of anexos" class="anexo-item">
+            <span>{{ a.tipo }} — {{ a.dataCriacao | date:'dd/MM/yyyy HH:mm' }}</span>
+            <button nz-button nzType="link" nzSize="small" (click)="abrirAnexo(a)">
+              <span nz-icon nzType="paper-clip"></span> Abrir
+            </button>
+          </div>
           <nz-divider nzText="Histórico" nzOrientation="left"></nz-divider>
           <ng-container *ngIf="carregandoHistorico"><nz-skeleton [nzActive]="true" [nzParagraph]="{rows:3}"></nz-skeleton></ng-container>
           <div *ngIf="!carregandoHistorico && historico.length === 0" class="vazio-hist">Sem histórico registrado.</div>
@@ -199,8 +248,31 @@ interface ChamadoHistorico {
     .hint { color: rgba(0,0,0,.45); font-size: .88rem; }
     .acoes { display: flex; gap: 6px; justify-content: center; }
     .vazio, .vazio-hist { text-align: center; padding: 24px; color: rgba(0,0,0,.45); }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
-    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+    .modal-form { padding: 4px 0; }
+    .modal-form nz-form-item { margin-bottom: 16px; }
+    .modal-form ::ng-deep .ant-form-item { flex-direction: column; align-items: stretch; }
+    .modal-form ::ng-deep .ant-form-item-label { text-align: left; width: 100%; padding: 0 0 6px; }
+    .modal-form ::ng-deep .ant-form-item-label > label { height: auto; font-weight: 600; }
+    .modal-form ::ng-deep .ant-form-item-control { width: 100%; max-width: 100%; }
+    .modal-form ::ng-deep .ant-select-selector { min-height: 36px; height: auto !important; align-items: center; }
+    .modal-form ::ng-deep .ant-select-selection-item,
+    .modal-form ::ng-deep .ant-select-selection-placeholder {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: unset;
+      line-height: 1.35;
+      padding: 4px 0;
+    }
+    .modal-form .campo-tipo ::ng-deep .ant-select { width: 100%; }
+    .campos-fixos { margin-bottom: 8px; }
+    .campo-readonly label {
+      display: block;
+      font-weight: 600;
+      color: rgba(0,0,0,.65);
+      font-size: .82rem;
+      margin-bottom: 6px;
+    }
+    .campo-readonly input { width: 100%; }
     .detalhe { margin-bottom: 12px; }
     .detalhe label { font-weight: 600; color: rgba(0,0,0,.55); font-size: .78rem; text-transform: uppercase; display: block; margin-bottom: 4px; }
     .detalhe div { background: #fafafa; border: 1px solid #f0f0f0; border-radius: 4px; padding: 6px 10px; }
@@ -208,6 +280,7 @@ interface ChamadoHistorico {
     .hist-item { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
     .hist-data { font-size: .8rem; color: rgba(0,0,0,.45); margin-bottom: 2px; }
     .hist-desc { font-size: .92rem; }
+    .anexo-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: .9rem; }
   `]
 })
 export class SolicitacoesClienteComponent implements OnInit {
@@ -223,12 +296,15 @@ export class SolicitacoesClienteComponent implements OnInit {
   solicitante = '';
 
   novoVisible = false;
-  form = { prioridade: 0, titulo: '', mensagem: '' };
+  form: { prioridade: number | null; titulo: string | null; mensagem: string } = { prioridade: null, titulo: null, mensagem: '' };
+  fileList: NzUploadFile[] = [];
 
   viewVisible = false;
   selecionado: Chamado | null = null;
   historico: ChamadoHistorico[] = [];
+  anexos: ChamadoUpload[] = [];
   carregandoHistorico = false;
+  carregandoAnexos = false;
   excluindo = new Set<number>();
 
   get viewTitulo(): string {
@@ -283,9 +359,28 @@ export class SolicitacoesClienteComponent implements OnInit {
   }
 
   abrirNovo(): void {
-    this.form = { prioridade: 0, titulo: '', mensagem: '' };
+    this.form = { prioridade: null, titulo: null, mensagem: '' };
+    this.fileList = [];
     this.novoVisible = true;
     this.cdr.markForCheck();
+  }
+
+  beforeUpload = (file: NzUploadFile): boolean => {
+    this.fileList = [...this.fileList, file];
+    this.cdr.markForCheck();
+    return false;
+  };
+
+  onRemoveArquivo = (file: NzUploadFile): boolean => {
+    this.fileList = this.fileList.filter(f => f.uid !== file.uid);
+    this.cdr.markForCheck();
+    return true;
+  };
+
+  private getArquivosSelecionados(): File[] {
+    return this.fileList
+      .map(f => (f as NzUploadFile & { originFileObj?: File }).originFileObj)
+      .filter((f): f is File => !!f);
   }
 
   salvarNovo(): void {
@@ -325,11 +420,19 @@ export class SolicitacoesClienteComponent implements OnInit {
     };
 
     this.http.post<Chamado>(`${this.api}/Chamado`, payload, { headers: this.h }).subscribe({
-      next: () => {
-        this.message.success('Solicitação cadastrada com sucesso!');
-        this.salvando = false;
-        this.novoVisible = false;
-        this.carregar();
+      next: (chamado) => {
+        const chamadoId = chamado?.id ?? (chamado as { ID?: number })?.ID;
+        const arquivos = this.getArquivosSelecionados();
+        if (!chamadoId || arquivos.length === 0) {
+          this.finalizarCadastro();
+          return;
+        }
+        this.uploadAnexos(chamadoId, arquivos)
+          .then(() => this.finalizarCadastro())
+          .catch(() => {
+            this.message.warning('Solicitação criada, mas houve erro ao enviar um ou mais anexos.');
+            this.finalizarCadastro();
+          });
       },
       error: (e) => {
         this.message.error(e?.error?.message || e?.error || `Erro ao cadastrar (${e.status})`);
@@ -339,11 +442,58 @@ export class SolicitacoesClienteComponent implements OnInit {
     });
   }
 
+  private finalizarCadastro(): void {
+    this.message.success('Solicitação cadastrada com sucesso!');
+    this.salvando = false;
+    this.novoVisible = false;
+    this.fileList = [];
+    this.carregar();
+  }
+
+  private uploadAnexos(chamadoId: number, arquivos: File[]): Promise<void> {
+    return Promise.all(arquivos.map(arquivo => this.uploadUmAnexo(chamadoId, arquivo))).then(() => undefined);
+  }
+
+  private uploadUmAnexo(chamadoId: number, arquivo: File): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const guid = crypto.randomUUID();
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        this.http.post(ARMAZENAMENTO_URL, {
+          codigo: guid,
+          image: base64,
+          pasta: String(this.codigoPessoa)
+        }).pipe(timeout(30000), catchError(() => of(null))).subscribe({
+          next: () => {
+            const uploadPayload = {
+              chamadoId,
+              dataCriacao: new Date().toISOString(),
+              arquivo: guid,
+              tipo: AREA_FIXA
+            };
+            this.http.post(`${this.api}/Chamado/ChamadoUpload`, uploadPayload, { headers: this.h })
+              .pipe(timeout(15000))
+              .subscribe({
+                next: () => resolve(),
+                error: (e) => reject(e)
+              });
+          },
+          error: (e) => reject(e)
+        });
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(arquivo);
+    });
+  }
+
   visualizar(c: Chamado): void {
     this.selecionado = c;
     this.historico = [];
+    this.anexos = [];
     this.viewVisible = true;
     this.carregandoHistorico = true;
+    this.carregandoAnexos = true;
     this.cdr.markForCheck();
 
     this.http.get<ChamadoHistorico[]>(`${this.api}/Chamado/ChamadoHistorico/${c.id}`, { headers: this.h })
@@ -360,6 +510,25 @@ export class SolicitacoesClienteComponent implements OnInit {
           this.cdr.markForCheck();
         }
       });
+
+    this.http.get<ChamadoUpload[]>(`${this.api}/Chamado/ChamadoUpload/ObterPorCodigo/${c.id}`, { headers: this.h })
+      .pipe(timeout(8000), catchError(() => of([] as ChamadoUpload[])))
+      .subscribe({
+        next: (a) => {
+          this.anexos = a || [];
+          this.carregandoAnexos = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.carregandoAnexos = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  abrirAnexo(anexo: ChamadoUpload): void {
+    const url = `${ARQUIVO_BASE_URL}?diretorioCompleto=${this.codigoPessoa}&nomeArquivo=${anexo.arquivo}`;
+    window.open(url, '_blank');
   }
 
   excluir(c: Chamado): void {
