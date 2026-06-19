@@ -29,11 +29,13 @@ import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTreeModule, NzTreeNode, NzFormatEmitEvent } from 'ng-zorro-antd/tree';
+import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 
 import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
 
-interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; status?: string; dataInclusao?: string; dataAtulizacao?: string; contabilidade?: number; excluido?: boolean; usuario?: string; endereco?: EnderecoData; }
+interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; status?: string; dataInclusao?: string; dataAtulizacao?: string; contabilidade?: number; excluido?: boolean; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
+interface PessoaCertificadoData { codigo: number; codigoPessoa: number; validade: string; diretorio: string; codigoAcesso: string; }
 interface EnderecoData { codigo?: number; codigoPessoa?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; excluido?: boolean; }
 interface ValidacaoPessoa { usuario: boolean; celular: boolean; prefeitura: boolean; dadosDAS: boolean; cobranca: boolean; documentos: boolean; }
 interface RepresentanteLegal { codigo: number; codigoPessoa: number; nome: string; cpf: string; dataContfy?: string; codigoEndereco?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; }
@@ -57,7 +59,7 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
     NzSelectModule, NzCheckboxModule, NzSwitchModule, NzIconModule, NzAlertModule,
     NzTableModule, NzTagModule, NzModalModule, NzSkeletonModule, NzMessageModule,
     NzDividerModule, NzToolTipModule, NzUploadModule, NzCollapseModule, NzBadgeModule,
-    NzSpinModule, NzTreeModule, NzPopconfirmModule, PageTitleComponent
+    NzSpinModule, NzTreeModule, NzPopconfirmModule, NzDatePickerModule, PageTitleComponent
   ],
   template: `
 <div class="page">
@@ -125,7 +127,13 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
         </div>
       </ng-container>
 
-      <div class="pend-item" [class.ok]="temDocumentos" [class.pend]="!temDocumentos" (click)="!temDocumentos && irParaAba(pessoa.fisica ? 3 : 6)">
+      <div class="pend-item" [class.ok]="temCertificado" [class.pend]="!temCertificado" (click)="!temCertificado && irParaAba(abaCertificado)">
+        <i nz-icon [nzType]="temCertificado ? 'check-circle' : 'close-circle'" nzTheme="fill" [style.color]="temCertificado ? '#52c41a' : '#ff4d4f'" style="font-size:18px;flex-shrink:0"></i>
+        <span>Cert. Digital</span>
+        <span *ngIf="!temCertificado" class="pend-hint">→ cadastrar</span>
+      </div>
+
+      <div class="pend-item" [class.ok]="temDocumentos" [class.pend]="!temDocumentos" (click)="!temDocumentos && irParaAba(abaDocumentos)">
         <i nz-icon [nzType]="temDocumentos ? 'check-circle' : 'warning'" nzTheme="fill" [style.color]="temDocumentos ? '#52c41a' : '#faad14'" style="font-size:18px;flex-shrink:0"></i>
         <span>Documentos</span>
         <span *ngIf="!temDocumentos" class="pend-hint">→ anexar</span>
@@ -559,6 +567,82 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
         </div>
       </nz-tab>
 
+      <!-- ABA: CERTIFICADO DIGITAL -->
+      <nz-tab nzTitle="Certificado Digital">
+        <div class="form-section">
+          <nz-alert
+            *ngIf="!temCertificado && !editandoCert"
+            nzType="warning"
+            nzShowIcon
+            nzMessage="Certificado digital não cadastrado"
+            nzDescription="Cadastre a validade, o diretório do arquivo e o código de acesso do certificado A1 deste cliente."
+            style="margin-bottom:16px">
+          </nz-alert>
+
+          <nz-alert
+            *ngIf="temCertificado && certificadoVencido"
+            nzType="error"
+            nzShowIcon
+            nzMessage="Certificado digital vencido"
+            [nzDescription]="'Validade: ' + (certificado!.validade | date:'dd/MM/yyyy')"
+            style="margin-bottom:16px">
+          </nz-alert>
+
+          <!-- Visualização -->
+          <div *ngIf="temCertificado && !editandoCert" class="cert-info-box">
+            <div class="das-info-row">
+              <div class="das-info-item">
+                <span class="das-info-label">Validade</span>
+                <span class="das-info-val">{{ certificado!.validade | date:'dd/MM/yyyy' }}</span>
+              </div>
+              <div class="das-info-item flex2">
+                <span class="das-info-label">Diretório</span>
+                <span class="das-info-val">{{ certificado!.diretorio || '—' }}</span>
+              </div>
+              <div class="das-info-item">
+                <span class="das-info-label">Código de Acesso</span>
+                <span class="das-info-val">{{ certificado!.codigoAcesso ? '••••••••' : '—' }}</span>
+              </div>
+              <button nz-button nzType="default" (click)="editarCertificado()"><i nz-icon nzType="edit"></i> Editar</button>
+              <button nz-button nzDanger nz-popconfirm nzPopconfirmTitle="Excluir certificado digital?" (nzOnConfirm)="excluirCertificado()">
+                <i nz-icon nzType="delete"></i> Excluir
+              </button>
+            </div>
+          </div>
+
+          <!-- Cadastro / Edição -->
+          <div *ngIf="!temCertificado || editandoCert" class="cert-form-box">
+            <nz-divider [nzText]="temCertificado ? 'Editar Certificado' : 'Cadastrar Certificado'" nzOrientation="left"></nz-divider>
+            <div class="form-row">
+              <nz-form-item class="flex1">
+                <nz-form-label nzRequired>Validade</nz-form-label>
+                <nz-form-control>
+                  <nz-date-picker style="width:100%" [(ngModel)]="certValidade" nzFormat="dd/MM/yyyy" nzPlaceHolder="Selecione a data"></nz-date-picker>
+                </nz-form-control>
+              </nz-form-item>
+              <nz-form-item class="flex2">
+                <nz-form-label nzRequired>Diretório</nz-form-label>
+                <nz-form-control>
+                  <input nz-input [(ngModel)]="certForm.diretorio" placeholder="Caminho ou nome do arquivo .pfx" />
+                </nz-form-control>
+              </nz-form-item>
+              <nz-form-item class="flex1">
+                <nz-form-label nzRequired>Código de Acesso</nz-form-label>
+                <nz-form-control>
+                  <input nz-input type="password" [(ngModel)]="certForm.codigoAcesso" placeholder="Senha do certificado" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div class="form-actions">
+              <button *ngIf="editandoCert" nz-button style="margin-right:8px" (click)="cancelarCertificado()" [disabled]="salvandoCert">Cancelar</button>
+              <button nz-button nzType="primary" [nzLoading]="salvandoCert" (click)="salvarCertificado()">
+                <i nz-icon nzType="save"></i> {{ temCertificado ? 'Salvar alterações' : 'Cadastrar Certificado' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </nz-tab>
+
       <!-- ABA 6: DOCUMENTOS -->
       <nz-tab nzTitle="Documentos">
         <div class="form-section">
@@ -756,6 +840,8 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
     .das-info-item { display:flex;flex-direction:column;gap:2px; }
     .das-info-label { font-size:.75rem;color:rgba(0,0,0,.45);text-transform:uppercase;letter-spacing:.04em; }
     .das-info-val { font-size:1rem;font-weight:600;color:rgba(0,0,0,.85); }
+    .cert-info-box { background:#f0f5ff;border:1.5px solid #91caff;border-radius:8px;padding:16px 20px;margin-bottom:8px; }
+    .cert-form-box { background:#fafafa;border:1px dashed #d9d9d9;border-radius:8px;padding:8px 12px 4px; }
     .user-plat-box { display:flex;align-items:center;gap:20px;background:#f0f8ff;border:1.5px solid #91caff;border-radius:10px;padding:20px 24px;margin-bottom:8px; }
     .user-plat-info { display:flex;flex-direction:column;gap:6px; }
     .user-plat-label { font-size:.8rem;color:rgba(0,0,0,.45);text-transform:uppercase;letter-spacing:.05em; }
@@ -818,6 +904,15 @@ export class ClienteEditarComponent implements OnInit {
   get temRepresentante(): boolean { return this.representantes.length > 0; }
   get temDadosRobo(): boolean { return this.emissoes.length > 0 || this.dadosDasList.length > 0; }
   get temCobranca(): boolean { return this.cobranca.codigo > 0; }
+  get temCertificado(): boolean { return !!(this.certificado?.codigo); }
+  get certificadoVencido(): boolean {
+    if (!this.certificado?.validade) return false;
+    const v = new Date(this.certificado.validade);
+    v.setHours(23, 59, 59, 999);
+    return v < new Date();
+  }
+  get abaCertificado(): number { return this.pessoa.fisica ? 3 : 6; }
+  get abaDocumentos(): number { return this.pessoa.fisica ? 4 : 7; }
   get temDocumentos(): boolean { return this.documentos.length > 0; }
   get totalPendencias(): number {
     let count = 0;
@@ -829,6 +924,7 @@ export class ClienteEditarComponent implements OnInit {
       if (!this.temDadosRobo) count++;
       if (!this.temCobranca) count++;
     }
+    if (!this.temCertificado) count++;
     if (!this.temDocumentos) count++;
     return count;
   }
@@ -871,6 +967,13 @@ export class ClienteEditarComponent implements OnInit {
   fileList: NzUploadFile[] = [];
   selectedFile: File | null = null;
 
+  // Certificado Digital
+  certificado: PessoaCertificadoData | null = null;
+  editandoCert = false;
+  salvandoCert = false;
+  certForm: Partial<PessoaCertificadoData> = { diretorio: '', codigoAcesso: '' };
+  certValidade: Date | null = null;
+
   readonly ufs = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
 
   private get h(): HttpHeaders {
@@ -903,6 +1006,7 @@ export class ClienteEditarComponent implements OnInit {
         this.pessoa = { ...p, usuario: emailPlat };
         this.endereco = p.endereco ? { ...p.endereco } : {};
         this.statusLogin = p.status === 'bloqueado';
+        this.aplicarCertificado(p.certificado);
       }
       this.validacao = r.validacao ? (r.validacao as ValidacaoPessoa) : null;
       this.prefeituras = Array.isArray(r.prefeituras) ? r.prefeituras : [];
@@ -1236,6 +1340,100 @@ export class ClienteEditarComponent implements OnInit {
 
   abrirReceitaAnual() {
     this.router.navigate(['/administrativo/receita-anual', this.codigoPessoa]);
+  }
+
+  aplicarCertificado(c?: PessoaCertificadoData | null) {
+    this.certificado = c?.codigo ? { ...c } : null;
+    this.editandoCert = false;
+    this.resetCertForm();
+  }
+
+  resetCertForm() {
+    if (this.certificado) {
+      this.certForm = {
+        codigo: this.certificado.codigo,
+        codigoPessoa: this.certificado.codigoPessoa,
+        diretorio: this.certificado.diretorio || '',
+        codigoAcesso: this.certificado.codigoAcesso || '',
+        validade: this.certificado.validade
+      };
+      this.certValidade = this.certificado.validade ? new Date(this.certificado.validade) : null;
+    } else {
+      this.certForm = { codigo: 0, codigoPessoa: this.codigoPessoa, diretorio: '', codigoAcesso: '' };
+      this.certValidade = null;
+    }
+  }
+
+  editarCertificado() {
+    this.editandoCert = true;
+    this.resetCertForm();
+    this.cdr.markForCheck();
+  }
+
+  cancelarCertificado() {
+    this.editandoCert = false;
+    this.resetCertForm();
+    this.cdr.markForCheck();
+  }
+
+  salvarCertificado() {
+    if (!this.certValidade) { this.message.warning('Informe a validade do certificado.'); return; }
+    if (!this.certForm.diretorio?.trim()) { this.message.warning('Informe o diretório do certificado.'); return; }
+    if (!this.certForm.codigoAcesso?.trim()) { this.message.warning('Informe o código de acesso do certificado.'); return; }
+
+    const payload: PessoaCertificadoData = {
+      codigo: this.certForm.codigo || 0,
+      codigoPessoa: this.codigoPessoa,
+      validade: this.certValidade.toISOString(),
+      diretorio: this.certForm.diretorio.trim(),
+      codigoAcesso: this.certForm.codigoAcesso.trim()
+    };
+
+    this.salvandoCert = true;
+    this.cdr.markForCheck();
+    const req = payload.codigo > 0
+      ? this.http.put<PessoaCertificadoData>(`${this.api}/Pessoa/Certificado`, payload, { headers: this.h })
+      : this.http.post<PessoaCertificadoData>(`${this.api}/Pessoa/Certificado`, payload, { headers: this.h });
+
+    req.subscribe({
+      next: (res) => {
+        this.certificado = { ...(res || payload), codigo: (res as any)?.codigo || payload.codigo };
+        if (!this.certificado.codigo && (res as any)?.codigo) this.certificado.codigo = (res as any).codigo;
+        this.pessoa = { ...this.pessoa, certificado: this.certificado };
+        this.editandoCert = false;
+        this.resetCertForm();
+        this.salvandoCert = false;
+        this.message.success('Certificado digital salvo com sucesso!');
+        this.cdr.markForCheck();
+      },
+      error: (e) => {
+        this.message.error(e?.error?.message || e?.error || `Erro ao salvar certificado (${e.status})`);
+        this.salvandoCert = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  excluirCertificado() {
+    if (!this.certificado?.codigo) return;
+    this.salvandoCert = true;
+    this.cdr.markForCheck();
+    this.http.delete<boolean>(`${this.api}/Pessoa/Certificado/${this.certificado.codigo}`, { headers: this.h }).subscribe({
+      next: () => {
+        this.certificado = null;
+        this.pessoa = { ...this.pessoa, certificado: undefined };
+        this.editandoCert = false;
+        this.resetCertForm();
+        this.salvandoCert = false;
+        this.message.success('Certificado digital excluído.');
+        this.cdr.markForCheck();
+      },
+      error: (e) => {
+        this.message.error(`Erro ao excluir certificado (${e.status})`);
+        this.salvandoCert = false;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   voltar() { this.router.navigate([this.pessoa.fisica ? '/administrativo/clientes-fisica' : '/administrativo/clientes']); }
