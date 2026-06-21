@@ -20,12 +20,13 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
 
 const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
 
-type AbaDebito = 'das' | 'tfe' | 'inss';
+type AbaDebito = 'parcelamento' | 'das' | 'tfe' | 'inss';
 
 interface PessoaResumo {
   codigo: number;
@@ -44,14 +45,21 @@ interface DebitoArquivo {
   tipo: string;
   excluido?: boolean;
   dataVencimento?: string;
+  periodo?: string;
+  status?: string;
+  valorTributado?: string;
+  valorTributo?: string;
+  data?: string;
 }
 
 interface AbaConfig {
   id: AbaDebito;
   titulo: string;
   endpoint: string;
+  listPath: (codigoPessoa: number) => string;
   tipoPadrao: string;
   comParcela: boolean;
+  modoDas: boolean;
 }
 
 @Component({
@@ -63,7 +71,7 @@ interface AbaConfig {
     NzCardModule, NzTabsModule, NzFormModule, NzInputModule, NzButtonModule,
     NzIconModule, NzTableModule, NzTagModule, NzModalModule, NzSkeletonModule,
     NzMessageModule, NzUploadModule, NzDatePickerModule, NzInputNumberModule,
-    NzPopconfirmModule, PageTitleComponent
+    NzPopconfirmModule, NzSelectModule, PageTitleComponent
   ],
   template: `
     <div class="page">
@@ -101,30 +109,42 @@ interface AbaConfig {
               </div>
 
               <nz-table
+                #debitosTable
                 [nzData]="listas[aba.id]"
                 nzBordered
                 nzSize="middle"
-                [nzShowPagination]="false"
+                [nzShowPagination]="listas[aba.id].length > pageSize"
+                [nzPageSize]="pageSize"
+                [nzFrontPagination]="true"
+                [(nzPageIndex)]="pageIndex[aba.id]"
                 [nzLoading]="carregandoLista.has(aba.id)">
                 <thead>
                   <tr>
                     <th nzWidth="70px">Código</th>
-                    <th *ngIf="aba.comParcela" nzWidth="80px">Parcela</th>
-                    <th>Tipo</th>
-                    <th nzWidth="120px">Vencimento</th>
-                    <th nzWidth="120px">Cadastro</th>
+                    <th *ngIf="aba.modoDas" nzWidth="100px">Período</th>
+                    <th *ngIf="aba.modoDas">Status</th>
+                    <th *ngIf="aba.modoDas" nzWidth="120px">Valor Trib.</th>
+                    <th *ngIf="aba.modoDas" nzWidth="120px">Valor Tributo</th>
+                    <th *ngIf="!aba.modoDas && aba.comParcela" nzWidth="80px">Parcela</th>
+                    <th *ngIf="!aba.modoDas">Tipo</th>
+                    <th *ngIf="!aba.modoDas" nzWidth="120px">Vencimento</th>
+                    <th nzWidth="120px">{{ aba.modoDas ? 'Data' : 'Cadastro' }}</th>
                     <th nzWidth="140px" nzAlign="center">Ação</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let item of listas[aba.id]">
+                  <tr *ngFor="let item of debitosTable.data">
                     <td>{{ item.codigo }}</td>
-                    <td *ngIf="aba.comParcela">{{ item.parcela ?? '—' }}</td>
-                    <td><nz-tag>{{ item.tipo || '—' }}</nz-tag></td>
-                    <td>{{ formatarData(item.dataVencimento) }}</td>
-                    <td>{{ formatarData(item.dataCriacao) }}</td>
+                    <td *ngIf="aba.modoDas">{{ item.periodo || '—' }}</td>
+                    <td *ngIf="aba.modoDas"><nz-tag [nzColor]="statusColor(item.status)">{{ item.status || '—' }}</nz-tag></td>
+                    <td *ngIf="aba.modoDas">{{ item.valorTributado || '—' }}</td>
+                    <td *ngIf="aba.modoDas">{{ item.valorTributo || '—' }}</td>
+                    <td *ngIf="!aba.modoDas && aba.comParcela">{{ item.parcela ?? '—' }}</td>
+                    <td *ngIf="!aba.modoDas"><nz-tag>{{ item.tipo || '—' }}</nz-tag></td>
+                    <td *ngIf="!aba.modoDas">{{ formatarData(item.dataVencimento) }}</td>
+                    <td>{{ formatarData(aba.modoDas ? item.data : item.dataCriacao) }}</td>
                     <td nzAlign="center">
-                      <button nz-button nzType="link" nzSize="small" (click)="abrirArquivo(item)">
+                      <button nz-button nzType="link" nzSize="small" (click)="abrirArquivo(item, aba.id)">
                         <i nz-icon nzType="eye"></i> Abrir
                       </button>
                       <button
@@ -140,7 +160,7 @@ interface AbaConfig {
                     </td>
                   </tr>
                   <tr *ngIf="!carregandoLista.has(aba.id) && listas[aba.id].length === 0">
-                    <td [attr.colspan]="aba.comParcela ? 6 : 5" class="empty">Nenhum arquivo anexado.</td>
+                    <td [attr.colspan]="colspanAba(aba)" class="empty">Nenhum arquivo anexado.</td>
                   </tr>
                 </tbody>
               </nz-table>
@@ -157,19 +177,40 @@ interface AbaConfig {
       [nzFooter]="ftUpload"
       (nzOnCancel)="fecharUpload()">
       <ng-container *nzModalContent>
+        <nz-form-item *ngIf="uploadAbaConfig?.modoDas">
+          <nz-form-label [nzSpan]="24" nzRequired>Período (mês/ano)</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <nz-date-picker
+              nzMode="month"
+              style="width:100%"
+              [(ngModel)]="uploadPeriodo"
+              nzFormat="MM/yyyy"
+              nzPlaceHolder="Selecione o mês">
+            </nz-date-picker>
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item *ngIf="uploadAbaConfig?.modoDas">
+          <nz-form-label [nzSpan]="24" nzRequired>Status</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <nz-select [(ngModel)]="uploadStatus" style="width:100%">
+              <nz-option nzValue="Concluido" nzLabel="Concluído"></nz-option>
+              <nz-option nzValue="Enviado" nzLabel="Enviado"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
         <nz-form-item *ngIf="uploadAbaConfig?.comParcela">
           <nz-form-label [nzSpan]="24" nzRequired>Parcela</nz-form-label>
           <nz-form-control [nzSpan]="24">
             <nz-input-number [(ngModel)]="uploadParcela" [nzMin]="1" [nzStep]="1" style="width:100%"></nz-input-number>
           </nz-form-control>
         </nz-form-item>
-        <nz-form-item>
+        <nz-form-item *ngIf="!uploadAbaConfig?.modoDas">
           <nz-form-label [nzSpan]="24" nzRequired>Tipo</nz-form-label>
           <nz-form-control [nzSpan]="24">
             <input nz-input [(ngModel)]="uploadTipo" />
           </nz-form-control>
         </nz-form-item>
-        <nz-form-item>
+        <nz-form-item *ngIf="!uploadAbaConfig?.modoDas">
           <nz-form-label [nzSpan]="24">Data de Vencimento</nz-form-label>
           <nz-form-control [nzSpan]="24">
             <nz-date-picker style="width:100%" [(ngModel)]="uploadVencimento" nzFormat="dd/MM/yyyy"></nz-date-picker>
@@ -213,19 +254,56 @@ export class EditarDebitosComponent implements OnInit {
   pessoa: PessoaResumo = { codigo: 0 };
 
   readonly abas: AbaConfig[] = [
-    { id: 'das', titulo: 'Parcelamento DAS/Prefeitura', endpoint: 'PessoaPrefeituraDASDebitos', tipoPadrao: 'Parcelamento DAS/Prefeitura', comParcela: true },
-    { id: 'tfe', titulo: 'TFE', endpoint: 'PessoaTFE', tipoPadrao: 'TFE', comParcela: false },
-    { id: 'inss', titulo: 'Prolabore/INSS', endpoint: 'PessoaINSS', tipoPadrao: 'Prolabore/INSS', comParcela: false }
+    {
+      id: 'parcelamento',
+      titulo: 'Parcelamento DAS/Prefeitura',
+      endpoint: 'PessoaPrefeituraDASDebitos',
+      listPath: (id) => `PessoaPrefeituraDASDebitos/ObterPorCodigo/${id}`,
+      tipoPadrao: 'Parcelamento DAS/Prefeitura',
+      comParcela: true,
+      modoDas: false
+    },
+    {
+      id: 'das',
+      titulo: 'DAS',
+      endpoint: 'DAS',
+      listPath: (id) => `DAS/ObterPorCodigoPessoa/Codigo/${id}`,
+      tipoPadrao: 'DAS',
+      comParcela: false,
+      modoDas: true
+    },
+    {
+      id: 'tfe',
+      titulo: 'TFE',
+      endpoint: 'PessoaTFE',
+      listPath: (id) => `PessoaTFE/ObterPorCodigo/${id}`,
+      tipoPadrao: 'TFE',
+      comParcela: false,
+      modoDas: false
+    },
+    {
+      id: 'inss',
+      titulo: 'Prolabore/INSS',
+      endpoint: 'PessoaINSS',
+      listPath: (id) => `PessoaINSS/ObterPorCodigo/${id}`,
+      tipoPadrao: 'Prolabore/INSS',
+      comParcela: false,
+      modoDas: false
+    }
   ];
 
-  listas: Record<AbaDebito, DebitoArquivo[]> = { das: [], tfe: [], inss: [] };
+  listas: Record<AbaDebito, DebitoArquivo[]> = { parcelamento: [], das: [], tfe: [], inss: [] };
+  pageIndex: Record<AbaDebito, number> = { parcelamento: 1, das: 1, tfe: 1, inss: 1 };
+  readonly pageSize = 6;
   carregandoLista = new Set<AbaDebito>();
   excluindo = new Set<number>();
 
   uploadVisible = false;
-  uploadAba: AbaDebito = 'das';
+  uploadAba: AbaDebito = 'parcelamento';
   uploadTipo = '';
   uploadParcela = 1;
+  uploadPeriodo: Date | null = null;
+  uploadStatus: 'Concluido' | 'Enviado' = 'Enviado';
   uploadVencimento: Date | null = null;
   fileList: NzUploadFile[] = [];
   selectedFile: File | null = null;
@@ -300,7 +378,7 @@ export class EditarDebitosComponent implements OnInit {
           fisica: Boolean(r['fisica'] ?? r['Fisica'])
         };
         this.loading = false;
-        this.carregarLista('das');
+        this.carregarLista('parcelamento');
         this.cdr.markForCheck();
       });
   }
@@ -312,10 +390,12 @@ export class EditarDebitosComponent implements OnInit {
     this.carregandoLista.add(abaId);
     this.cdr.markForCheck();
 
-    this.http.get<unknown[]>(`${this.api}/${aba.endpoint}/ObterPorCodigo/${this.codigoPessoa}`, { headers: this.h })
+    this.http.get<unknown[]>(`${this.api}/${aba.listPath(this.codigoPessoa)}`, { headers: this.h })
       .pipe(timeout(10000), catchError(() => of([])))
       .subscribe(raw => {
-        this.listas[abaId] = (raw || []).map(item => this.mapItem(item));
+        const itens = (raw || []).map(item => aba.modoDas ? this.mapDasItem(item) : this.mapItem(item));
+        this.listas[abaId] = this.ordenarLista(itens, aba.modoDas);
+        this.pageIndex[abaId] = 1;
         this.carregandoLista.delete(abaId);
         this.cdr.markForCheck();
       });
@@ -327,6 +407,8 @@ export class EditarDebitosComponent implements OnInit {
     this.uploadAba = abaId;
     this.uploadTipo = aba.tipoPadrao;
     this.uploadParcela = 1;
+    this.uploadPeriodo = aba.modoDas ? new Date() : null;
+    this.uploadStatus = 'Enviado';
     this.uploadVencimento = null;
     this.fileList = [];
     this.selectedFile = null;
@@ -357,14 +439,23 @@ export class EditarDebitosComponent implements OnInit {
   fazerUpload(): void {
     const aba = this.uploadAbaConfig;
     if (!aba) return;
-    if (!this.uploadTipo.trim()) {
-      this.message.warning('Informe o tipo.');
-      return;
+
+    if (aba.modoDas) {
+      if (!this.uploadPeriodo) {
+        this.message.warning('Informe o período (mês/ano).');
+        return;
+      }
+    } else {
+      if (!this.uploadTipo.trim()) {
+        this.message.warning('Informe o tipo.');
+        return;
+      }
+      if (aba.comParcela && (!this.uploadParcela || this.uploadParcela < 1)) {
+        this.message.warning('Informe a parcela.');
+        return;
+      }
     }
-    if (aba.comParcela && (!this.uploadParcela || this.uploadParcela < 1)) {
-      this.message.warning('Informe a parcela.');
-      return;
-    }
+
     if (!this.selectedFile) {
       this.message.warning('Selecione um arquivo PDF.');
       return;
@@ -390,19 +481,9 @@ export class EditarDebitosComponent implements OnInit {
             return;
           }
 
-          const payload: Record<string, unknown> = {
-            codigoPessoa: this.codigoPessoa,
-            dataCriacao: new Date().toISOString(),
-            arquivo: arquivoGuid,
-            tipo: this.uploadTipo.trim(),
-            excluido: false
-          };
-          if (this.uploadVencimento) {
-            payload['dataVencimento'] = this.uploadVencimento.toISOString();
-          }
-          if (aba.comParcela) {
-            payload['parcela'] = this.uploadParcela;
-          }
+          const payload = aba.modoDas
+            ? this.buildDasPayload(arquivoGuid)
+            : this.buildDebitoPayload(arquivoGuid, aba);
 
           this.http.post(`${this.api}/${aba.endpoint}`, payload, { headers: this.h }).subscribe({
             next: () => {
@@ -428,9 +509,18 @@ export class EditarDebitosComponent implements OnInit {
     reader.readAsDataURL(this.selectedFile);
   }
 
-  abrirArquivo(item: DebitoArquivo): void {
+  abrirArquivo(item: DebitoArquivo, abaId: AbaDebito): void {
     if (!item.arquivo) {
       this.message.warning('Arquivo não encontrado.');
+      return;
+    }
+    const aba = this.abas.find(a => a.id === abaId);
+    if (aba?.modoDas) {
+      window.open(
+        `${ARQUIVO_BASE_URL}?diretorioCompleto=${item.codigoPessoa}&nomeArquivo=${item.arquivo}`,
+        '_blank',
+        'noopener,noreferrer'
+      );
       return;
     }
     const params = new URLSearchParams({
@@ -448,6 +538,34 @@ export class EditarDebitosComponent implements OnInit {
     this.excluindo.add(item.codigo);
     this.cdr.markForCheck();
 
+    if (aba.modoDas) {
+      const payload = {
+        codigo: item.codigo,
+        codigoPessoa: item.codigoPessoa,
+        periodo: item.periodo || '',
+        valorTributado: item.valorTributado || '0',
+        valorTributo: item.valorTributo || '0',
+        mensagem: '',
+        data: item.data || new Date().toISOString(),
+        excluido: true,
+        status: item.status || 'Enviado',
+        nomeArquivo: item.arquivo
+      };
+      this.http.put(`${this.api}/${aba.endpoint}`, payload, { headers: this.h }).subscribe({
+        next: () => {
+          this.message.success('Registro excluído.');
+          this.excluindo.delete(item.codigo);
+          this.carregarLista(abaId);
+        },
+        error: (err) => {
+          this.message.error(`Erro ao excluir (${err.status}).`);
+          this.excluindo.delete(item.codigo);
+          this.cdr.markForCheck();
+        }
+      });
+      return;
+    }
+
     this.http.delete(`${this.api}/${aba.endpoint}/${item.codigo}`, { headers: this.h }).subscribe({
       next: () => {
         this.message.success('Registro excluído.');
@@ -462,10 +580,94 @@ export class EditarDebitosComponent implements OnInit {
     });
   }
 
+  colspanAba(aba: AbaConfig): number {
+    if (aba.modoDas) return 7;
+    return aba.comParcela ? 6 : 5;
+  }
+
+  statusColor(status?: string): string {
+    switch ((status || '').toLowerCase()) {
+      case 'enviado': return 'green';
+      case 'concluido': return 'blue';
+      case 'pago': return 'green';
+      case 'aguardando': return 'cyan';
+      default: return 'default';
+    }
+  }
+
   formatarData(data?: string): string {
     if (!data) return '—';
     const d = new Date(data);
     return isNaN(d.getTime()) ? data : d.toLocaleDateString('pt-BR');
+  }
+
+  private buildDebitoPayload(arquivoGuid: string, aba: AbaConfig): Record<string, unknown> {
+    const payload: Record<string, unknown> = {
+      codigoPessoa: this.codigoPessoa,
+      dataCriacao: new Date().toISOString(),
+      arquivo: arquivoGuid,
+      tipo: this.uploadTipo.trim(),
+      excluido: false
+    };
+    if (this.uploadVencimento) {
+      payload['dataVencimento'] = this.uploadVencimento.toISOString();
+    }
+    if (aba.comParcela) {
+      payload['parcela'] = this.uploadParcela;
+    }
+    return payload;
+  }
+
+  private buildDasPayload(arquivoGuid: string): Record<string, unknown> {
+    const periodo = this.formatPeriodo(this.uploadPeriodo!);
+    const dataRef = this.uploadPeriodo || new Date();
+    return {
+      codigoPessoa: this.codigoPessoa,
+      periodo,
+      valorTributado: '0',
+      valorTributo: '0',
+      mensagem: '',
+      data: dataRef.toISOString(),
+      excluido: false,
+      status: this.uploadStatus,
+      nomeArquivo: arquivoGuid
+    };
+  }
+
+  private formatPeriodo(data: Date): string {
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const ano = data.getFullYear();
+    return `${mes}/${ano}`;
+  }
+
+  private ordenarLista(itens: DebitoArquivo[], modoDas: boolean): DebitoArquivo[] {
+    return [...itens].sort((a, b) => {
+      const diff = this.dataOrdenacao(b, modoDas) - this.dataOrdenacao(a, modoDas);
+      return diff !== 0 ? diff : b.codigo - a.codigo;
+    });
+  }
+
+  private dataOrdenacao(item: DebitoArquivo, modoDas: boolean): number {
+    const raw = modoDas ? item.data : item.dataCriacao;
+    if (!raw) return 0;
+    const t = new Date(raw).getTime();
+    return isNaN(t) ? 0 : t;
+  }
+
+  private mapDasItem(raw: unknown): DebitoArquivo {
+    const r = raw as Record<string, unknown>;
+    return {
+      codigo: Number(r['codigo'] ?? r['Codigo'] ?? 0),
+      codigoPessoa: Number(r['codigoPessoa'] ?? r['CodigoPessoa'] ?? 0),
+      arquivo: String(r['nomeArquivo'] ?? r['NomeArquivo'] ?? ''),
+      tipo: 'DAS',
+      periodo: String(r['periodo'] ?? r['Periodo'] ?? ''),
+      status: String(r['status'] ?? r['Status'] ?? ''),
+      valorTributado: String(r['valorTributado'] ?? r['ValorTributado'] ?? ''),
+      valorTributo: String(r['valorTributo'] ?? r['ValorTributo'] ?? ''),
+      data: String(r['data'] ?? r['Data'] ?? ''),
+      excluido: Boolean(r['excluido'] ?? r['Excluido'])
+    };
   }
 
   private mapItem(raw: unknown): DebitoArquivo {
