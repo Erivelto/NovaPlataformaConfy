@@ -62,13 +62,22 @@ interface Pessoa {
           <ng-template #pfx><i nz-icon nzType="search"></i></ng-template>
         </div>
         <ng-container *ngIf="loading"><nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{rows:8}"></nz-skeleton></ng-container>
-        <nz-table *ngIf="!loading" [nzData]="clientesFiltrados" nzBordered nzSize="middle" [nzShowPagination]="true" [nzPageSize]="15">
+        <nz-table
+          #clientesTable
+          *ngIf="!loading"
+          [nzData]="clientesFiltrados"
+          nzBordered
+          nzSize="middle"
+          [nzShowPagination]="clientesFiltrados.length > 15"
+          [nzPageSize]="15"
+          [nzFrontPagination]="true"
+          [(nzPageIndex)]="pageIndex">
           <thead><tr>
             <th nzWidth="80px">Código</th><th nzWidth="140px">CPF</th><th>Nome</th>
             <th nzWidth="130px">Data Cadastro</th><th nzWidth="70px" nzAlign="center">Editar</th><th nzWidth="80px" nzAlign="center">Cancelar</th>
           </tr></thead>
           <tbody>
-            <tr *ngFor="let c of clientesFiltrados">
+            <tr *ngFor="let c of clientesTable.data">
               <td>
                 <nz-tag *ngIf="c.isTop5" nzColor="green" style="font-size:10px;border-radius:8px">⭐ NOVO</nz-tag>
                 <nz-tag *ngIf="c.isNovo && !c.isTop5" nzColor="blue" style="font-size:10px">NOVO</nz-tag>
@@ -118,7 +127,7 @@ interface Pessoa {
 export class ClientesFisicaComponent implements OnInit {
   private readonly api = environment.apiUrl;
   loading = true; clientes: Pessoa[] = []; clientesFiltrados: Pessoa[] = [];
-  filtro = ''; clientesNovos = 0; salvando = false;
+  filtro = ''; pageIndex = 1; clientesNovos = 0; salvando = false;
   cancelVisible = false; selecionado: Pessoa | null = null; cancelData: Date | null = null; cancelMotivo = '';
   adicionarVisible = false; novo = { cnpj: '', celular: '', email: '', razao: '' };
 
@@ -150,7 +159,7 @@ export class ClientesFisicaComponent implements OnInit {
         p.isTop5 = diff <= 60;
       });
       this.clientesNovos = this.clientes.filter(c => (agora.getTime() - new Date(c.dataInclusao).getTime()) / 86400000 < 60).length;
-      this.clientesFiltrados = [...this.clientes]; this.loading = false; this.cdr.markForCheck();
+      this.clientesFiltrados = [...this.clientes]; this.pageIndex = 1; this.loading = false; this.cdr.markForCheck();
     }, error: () => { this.loading = false; this.cdr.markForCheck(); }});
   }
   filtrar() {
@@ -159,6 +168,8 @@ export class ClientesFisicaComponent implements OnInit {
       ? this.clientes.filter(c => (c.razao||c.nome||'').toLowerCase().includes(f) || (c.documento||'').includes(f) || String(c.codigo).includes(f))
       : [...this.clientes];
     this.clientesFiltrados = base.sort((a, b) => new Date(b.dataInclusao).getTime() - new Date(a.dataInclusao).getTime());
+    this.pageIndex = 1;
+    this.cdr.markForCheck();
   }
   editar(c: Pessoa): void { this.router.navigate(['/administrativo/cliente', c.codigo, 'editar']); }
   abrirCancelamento(c: Pessoa) { this.selecionado = c; this.cancelData = null; this.cancelMotivo = ''; this.cancelVisible = true; this.cdr.markForCheck(); }

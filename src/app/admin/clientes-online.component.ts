@@ -105,12 +105,15 @@ interface PessoaCobranca {
         </ng-container>
 
         <nz-table
+          #clientesTable
           *ngIf="!loading"
           [nzData]="clientesFiltrados"
           nzBordered
           nzSize="middle"
-          [nzShowPagination]="true"
-          [nzPageSize]="15">
+          [nzShowPagination]="clientesFiltrados.length > 15"
+          [nzPageSize]="15"
+          [nzFrontPagination]="true"
+          [(nzPageIndex)]="pageIndex">
           <thead>
             <tr>
               <th nzWidth="90px">Código</th>
@@ -124,7 +127,7 @@ interface PessoaCobranca {
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let c of clientesFiltrados">
+            <tr *ngFor="let c of clientesTable.data">
               <td>
                 <nz-tag *ngIf="c.isTop5" nzColor="green" style="margin-right:4px;font-size:10px;border-radius:8px">⭐ NOVO</nz-tag>
                 <nz-tag *ngIf="c.isNovo && !c.isTop5" nzColor="blue" style="margin-right:4px;font-size:10px">NOVO</nz-tag>
@@ -255,6 +258,7 @@ export class ClientesOnlineComponent implements OnInit {
   clientes: Pessoa[] = [];
   clientesFiltrados: Pessoa[] = [];
   filtro = '';
+  pageIndex = 1;
   clientesNovos = 0;
   inadimplentes = 0;
   salvando = false;
@@ -337,6 +341,7 @@ export class ClientesOnlineComponent implements OnInit {
 
         this.inadimplentes = Array.isArray(naoPagos) ? (naoPagos as any[]).length : 0;
         this.clientesFiltrados = [...this.clientes];
+        this.pageIndex = 1;
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -359,6 +364,8 @@ export class ClientesOnlineComponent implements OnInit {
     // mantém ordenação: mais recentes primeiro
     this.clientesFiltrados = base.sort((a, b) =>
       new Date(b.dataInclusao).getTime() - new Date(a.dataInclusao).getTime());
+    this.pageIndex = 1;
+    this.cdr.markForCheck();
   }
 
   editar(c: Pessoa): void {

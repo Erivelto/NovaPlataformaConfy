@@ -44,6 +44,9 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
             <li nz-menu-item (click)="go('/administrativo/clientes-fisica')" [nzSelected]="isActive('/administrativo/clientes-fisica')">
               <span nz-icon nzType="user"></span> Clientes Fisica
             </li>
+            <li nz-menu-item (click)="go('/administrativo/gestao-debitos')" [nzSelected]="isActive('/administrativo/gestao-debitos')">
+              <span nz-icon nzType="idcard"></span> Gestão Débitos
+            </li>
             <li nz-menu-item (click)="go('/administrativo/devedores')" [nzSelected]="isActive('/administrativo/devedores')">
               <span nz-icon nzType="dollar"></span> Clientes Devedores Mês Atual
             </li>
@@ -55,9 +58,6 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
             </li>
             <li nz-menu-item (click)="go('/administrativo/validacao-das')" [nzSelected]="isActive('/administrativo/validacao-das')">
               <span nz-icon nzType="audit"></span> Relatório Geral
-            </li>
-            <li nz-menu-item (click)="go('/administrativo/gestao-pessoal')" [nzSelected]="isActive('/administrativo/gestao-pessoal')">
-              <span nz-icon nzType="idcard"></span> Gestão Pessoal
             </li>
             <li nz-menu-item (click)="go('/administrativo/solicitacoes')" [nzSelected]="isActive('/administrativo/solicitacoes')">
               <span nz-icon nzType="unordered-list"></span> Solicitações Lista
