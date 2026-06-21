@@ -36,7 +36,7 @@ import { environment } from '../../environments/environment';
 
 const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
 
-interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; status?: string; dataInclusao?: string; dataAtulizacao?: string; contabilidade?: number; excluido?: boolean; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
+interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; ccm?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; status?: string; dataInclusao?: string; dataAtulizacao?: string; contabilidade?: number; excluido?: boolean; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
 interface PessoaCertificadoData { codigo: number; codigoPessoa: number; validade: string; diretorio: string; codigoAcesso: string; }
 interface EnderecoData { codigo?: number; codigoPessoa?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; excluido?: boolean; }
 interface ValidacaoPessoa { usuario: boolean; celular: boolean; prefeitura: boolean; dadosDAS: boolean; cobranca: boolean; documentos: boolean; }
@@ -163,6 +163,8 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
               <nz-form-control><input nz-input [(ngModel)]="pessoa.documento" /></nz-form-control></nz-form-item>
             <nz-form-item class="flex1"><nz-form-label>Inscrição Municipal</nz-form-label>
               <nz-form-control><input nz-input [(ngModel)]="pessoa.incricaoMunicipal" /></nz-form-control></nz-form-item>
+            <nz-form-item class="flex1"><nz-form-label>CCM (Cadastro de Contribuintes Mobiliários)</nz-form-label>
+              <nz-form-control><input nz-input [(ngModel)]="pessoa.ccm" placeholder="Opcional" /></nz-form-control></nz-form-item>
             <nz-form-item class="flex1"><nz-form-label>CNAE</nz-form-label>
               <nz-form-control><input nz-input [(ngModel)]="pessoa.cnae" /></nz-form-control></nz-form-item>
           </div>
@@ -611,7 +613,7 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
               </div>
               <div class="das-info-item">
                 <span class="das-info-label">Código de Acesso</span>
-                <span class="das-info-val">{{ certificado!.codigoAcesso ? '••••••••' : '—' }}</span>
+                <span class="das-info-val">{{ certificado!.codigoAcesso || '—' }}</span>
               </div>
               <button nz-button nzType="default" (click)="editarCertificado()"><i nz-icon nzType="edit"></i> Editar</button>
               <button nz-button nzDanger nz-popconfirm nzPopconfirmTitle="Excluir certificado digital?" (nzOnConfirm)="excluirCertificado()">
@@ -639,7 +641,7 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
               <nz-form-item class="flex1">
                 <nz-form-label nzRequired>Código de Acesso</nz-form-label>
                 <nz-form-control>
-                  <input nz-input type="password" [(ngModel)]="certForm.codigoAcesso" placeholder="Senha do certificado" />
+                  <input nz-input [(ngModel)]="certForm.codigoAcesso" placeholder="Código de acesso do certificado" />
                 </nz-form-control>
               </nz-form-item>
             </div>
@@ -809,6 +811,7 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
           <nz-option nzValue="Cartão CNPJ" nzLabel="Cartão CNPJ"></nz-option>
           <nz-option nzValue="Certidão Negativa" nzLabel="Certidão Negativa"></nz-option>
           <nz-option nzValue="Simples Nacional" nzLabel="Simples Nacional"></nz-option>
+          <nz-option nzValue="Relatório Situação Fiscal" nzLabel="Relatório Situação Fiscal"></nz-option>
         </nz-select>
       </nz-form-control></nz-form-item>
     <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>Arquivo</nz-form-label>
@@ -1014,7 +1017,7 @@ export class ClienteEditarComponent implements OnInit {
         const p = r.pessoa as PessoaData;
         // Injeta o e-mail do usuário de plataforma (vem do Identity, não da tabela Pessoa)
         const emailPlat = (r.userPlat as any)?.email ?? null;
-        this.pessoa = { ...p, usuario: emailPlat };
+        this.pessoa = { ...this.mapPessoa(p), usuario: emailPlat };
         this.endereco = p.endereco ? { ...p.endereco } : {};
         this.statusLogin = p.status === 'bloqueado';
         this.aplicarCertificado(p.certificado);
@@ -1064,6 +1067,32 @@ export class ClienteEditarComponent implements OnInit {
       cidade: end.cidade,
       uf: end.uf,
       cep: end.cep
+    };
+  }
+
+  private mapPessoa(raw: any): PessoaData {
+    return {
+      ...raw,
+      codigo: raw.codigo ?? raw.Codigo,
+      nome: raw.nome ?? raw.Nome,
+      razao: raw.razao ?? raw.Razao,
+      documento: raw.documento ?? raw.Documento,
+      incricaoMunicipal: raw.incricaoMunicipal ?? raw.IncricaoMunicipal,
+      ccm: raw.ccm ?? raw.CCM ?? '',
+      descricaoAtividade: raw.descricaoAtividade ?? raw.DescricaoAtividade,
+      cnae: raw.cnae ?? raw.CNAE,
+      tipoPessoa: raw.tipoPessoa ?? raw.TipoPessoa,
+      fatAtivo: raw.fatAtivo ?? raw.FatAtivo,
+      prolaboreAtivo: raw.prolaboreAtivo ?? raw.ProlaboreAtivo,
+      dASAtivo: raw.dASAtivo ?? raw.DASAtivo,
+      mei: raw.mei ?? raw.MEI,
+      fisica: raw.fisica ?? raw.Fisica,
+      numeroWhats: raw.numeroWhats ?? raw.NumeroWhats,
+      dataInclusao: raw.dataInclusao ?? raw.DataInclusao,
+      dataAtulizacao: raw.dataAtulizacao ?? raw.DataAtulizacao,
+      excluido: raw.excluido ?? raw.Excluido,
+      endereco: raw.endereco ?? raw.Endereco,
+      certificado: raw.certificado ?? raw.Certificado
     };
   }
 
@@ -1127,6 +1156,7 @@ export class ClienteEditarComponent implements OnInit {
         endereco: { ...this.endereco, codigoPessoa: this.codigoPessoa },
         documento: (this.pessoa.documento || '').replace(/\D/g, ''),
         incricaoMunicipal: (this.pessoa.incricaoMunicipal || '').replace(/\D/g, ''),
+        ccm: (this.pessoa.ccm || '').replace(/\D/g, ''),
         cep: (this.endereco.cep || '').replace(/\D/g, ''),
         dataAtulizacao: new Date().toISOString()
       };

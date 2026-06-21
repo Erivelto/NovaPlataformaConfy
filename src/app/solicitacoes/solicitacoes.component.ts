@@ -185,12 +185,16 @@ interface ChamadoUpload {
                 nzAction=""
                 [nzBeforeUpload]="beforeUpload"
                 [nzFileList]="fileList"
+                nzAccept=".pdf"
                 [nzMultiple]="true"
-                (nzRemove)="onRemoveArquivo">
+                [nzRemove]="onRemoveArquivo">
                 <button nz-button type="button">
-                  <span nz-icon nzType="inbox"></span> Selecionar arquivo(s)
+                  <span nz-icon nzType="upload"></span> Selecionar arquivo(s) (.pdf)
                 </button>
               </nz-upload>
+              <div *ngIf="fileList.length > 0" style="margin-top:6px;font-size:.82rem;color:rgba(0,0,0,.45)">
+                {{ fileList.length }} arquivo(s) selecionado(s)
+              </div>
             </nz-form-control>
           </nz-form-item>
 
@@ -297,6 +301,7 @@ export class SolicitacoesClienteComponent implements OnInit {
   novoVisible = false;
   form: { prioridade: number | null; titulo: string | null; mensagem: string } = { prioridade: null, titulo: null, mensagem: '' };
   fileList: NzUploadFile[] = [];
+  private arquivosPendentes: File[] = [];
 
   viewVisible = false;
   selecionado: Chamado | null = null;
@@ -344,6 +349,7 @@ export class SolicitacoesClienteComponent implements OnInit {
       .subscribe({
         next: (chamados) => {
           this.lista = (chamados || [])
+            .map(c => this.normalizarChamado(c))
             .filter(c => c.codigoPessoa === this.codigoPessoa && !c.mensagem?.includes('[Solicitação excluída pelo cliente]'))
             .sort((a, b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime());
           this.loading = false;
@@ -360,26 +366,47 @@ export class SolicitacoesClienteComponent implements OnInit {
   abrirNovo(): void {
     this.form = { prioridade: null, titulo: null, mensagem: '' };
     this.fileList = [];
+    this.arquivosPendentes = [];
     this.novoVisible = true;
     this.cdr.markForCheck();
   }
 
   beforeUpload = (file: NzUploadFile): boolean => {
+    const ext = (file.name || '').split('.').pop()?.toLowerCase();
+    if (ext !== 'pdf') {
+      this.message.error('Apenas arquivos PDF são aceitos.');
+      return false;
+    }
+    const rawFile = this.resolverArquivo(file);
+    if (!rawFile) {
+      this.message.error('Não foi possível ler o arquivo selecionado.');
+      return false;
+    }
+    this.arquivosPendentes = [...this.arquivosPendentes, rawFile];
     this.fileList = [...this.fileList, file];
     this.cdr.markForCheck();
     return false;
   };
 
   onRemoveArquivo = (file: NzUploadFile): boolean => {
+    const idx = this.fileList.findIndex(f => f.uid === file.uid);
     this.fileList = this.fileList.filter(f => f.uid !== file.uid);
+    if (idx >= 0) {
+      this.arquivosPendentes = this.arquivosPendentes.filter((_, i) => i !== idx);
+    }
     this.cdr.markForCheck();
     return true;
   };
 
+  private resolverArquivo(file: NzUploadFile): File | null {
+    if (file.originFileObj instanceof File) return file.originFileObj;
+    if (file instanceof File) return file;
+    const candidate = file as unknown as File;
+    return candidate?.name && candidate?.size != null ? candidate : null;
+  }
+
   private getArquivosSelecionados(): File[] {
-    return this.fileList
-      .map(f => (f as NzUploadFile & { originFileObj?: File }).originFileObj)
-      .filter((f): f is File => !!f);
+    return [...this.arquivosPendentes];
   }
 
   salvarNovo(): void {
@@ -393,6 +420,12 @@ export class SolicitacoesClienteComponent implements OnInit {
     }
     if (!this.form.mensagem?.trim()) {
       this.message.warning('Informe a descrição da solicitação.');
+      return;
+    }
+
+    const arquivos = this.getArquivosSelecionados();
+    if (this.fileList.length > 0 && arquivos.length === 0) {
+      this.message.error('Não foi possível ler os arquivos selecionados. Selecione novamente.');
       return;
     }
 
@@ -420,16 +453,21 @@ export class SolicitacoesClienteComponent implements OnInit {
 
     this.http.post<Chamado>(`${this.api}/Chamado`, payload, { headers: this.h }).subscribe({
       next: (chamado) => {
-        const chamadoId = chamado?.id ?? (chamado as { ID?: number })?.ID;
-        const arquivos = this.getArquivosSelecionados();
-        if (!chamadoId || arquivos.length === 0) {
+        const chamadoId = this.extrairChamadoId(chamado);
+        if (!chamadoId) {
+          this.message.warning('Solicitação criada, mas não foi possível identificar o código para anexar arquivos.');
           this.finalizarCadastro();
           return;
         }
-        this.uploadAnexos(chamadoId, arquivos)
+        if (arquivos.length === 0) {
+          this.finalizarCadastro();
+          return;
+        }
+        this.uploadAnexos(chamadoId, arquivos, this.form.titulo!.trim())
           .then(() => this.finalizarCadastro())
-          .catch(() => {
-            this.message.warning('Solicitação criada, mas houve erro ao enviar um ou mais anexos.');
+          .catch((err) => {
+            const detalhe = err?.status ? ` (${err.status})` : '';
+            this.message.warning(`Solicitação criada, mas houve erro ao enviar um ou mais anexos${detalhe}.`);
             this.finalizarCadastro();
           });
       },
@@ -446,31 +484,45 @@ export class SolicitacoesClienteComponent implements OnInit {
     this.salvando = false;
     this.novoVisible = false;
     this.fileList = [];
+    this.arquivosPendentes = [];
     this.carregar();
   }
 
-  private uploadAnexos(chamadoId: number, arquivos: File[]): Promise<void> {
-    return Promise.all(arquivos.map(arquivo => this.uploadUmAnexo(chamadoId, arquivo))).then(() => undefined);
+  private uploadAnexos(chamadoId: number, arquivos: File[], tipo: string): Promise<void> {
+    return Promise.all(arquivos.map(arquivo => this.uploadUmAnexo(chamadoId, arquivo, tipo))).then(() => undefined);
   }
 
-  private uploadUmAnexo(chamadoId: number, arquivo: File): Promise<void> {
+  private uploadUmAnexo(chamadoId: number, arquivo: File, tipo: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const guid = crypto.randomUUID();
+      const ext = (arquivo.name || '').split('.').pop()?.toLowerCase();
+      if (ext !== 'pdf') {
+        reject(new Error('Apenas arquivos PDF são aceitos.'));
+        return;
+      }
+
+      const arquivoGuid = crypto.randomUUID();
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = (reader.result as string).split(',')[1];
         this.http.post(`${this.api}/ArmazenamentoDeObjeto`, {
-          codigo: guid,
+          codigo: arquivoGuid,
           image: base64,
           pasta: String(this.codigoPessoa)
-        }, { headers: this.h }).pipe(timeout(30000), catchError(() => of(null))).subscribe({
-          next: () => {
+        }, { headers: this.h }).pipe(timeout(60000), catchError(() => of(null))).subscribe({
+          next: (res) => {
+            if (res === null) {
+              reject(new Error('Erro ao enviar arquivo para o armazenamento.'));
+              return;
+            }
+
             const uploadPayload = {
-              chamadoId,
-              dataCriacao: new Date().toISOString(),
-              arquivo: guid,
-              tipo: AREA_FIXA
+              ChamadoId: chamadoId,
+              DataCriacao: new Date().toISOString(),
+              Arquivo: arquivoGuid,
+              Tipo: tipo.trim(),
+              Excluido: false
             };
+
             this.http.post(`${this.api}/Chamado/ChamadoUpload`, uploadPayload, { headers: this.h })
               .pipe(timeout(15000))
               .subscribe({
@@ -481,7 +533,7 @@ export class SolicitacoesClienteComponent implements OnInit {
           error: (e) => reject(e)
         });
       };
-      reader.onerror = () => reject(reader.error);
+      reader.onerror = () => reject(reader.error ?? new Error('Erro ao ler o arquivo selecionado.'));
       reader.readAsDataURL(arquivo);
     });
   }
@@ -514,7 +566,7 @@ export class SolicitacoesClienteComponent implements OnInit {
       .pipe(timeout(8000), catchError(() => of([] as ChamadoUpload[])))
       .subscribe({
         next: (a) => {
-          this.anexos = a || [];
+          this.anexos = (a || []).map(item => this.mapAnexo(item));
           this.carregandoAnexos = false;
           this.cdr.markForCheck();
         },
@@ -526,8 +578,49 @@ export class SolicitacoesClienteComponent implements OnInit {
   }
 
   abrirAnexo(anexo: ChamadoUpload): void {
-    const url = `${ARQUIVO_BASE_URL}?diretorioCompleto=${this.codigoPessoa}&nomeArquivo=${anexo.arquivo}`;
-    window.open(url, '_blank');
+    if (!anexo.arquivo) {
+      this.message.warning('Arquivo não encontrado.');
+      return;
+    }
+    const params = new URLSearchParams({
+      diretorioCompleto: String(this.codigoPessoa),
+      nomeArquivo: anexo.arquivo,
+      tipo: anexo.tipo
+    });
+    window.open(`${ARQUIVO_BASE_URL}?${params.toString()}`, '_blank', 'noopener,noreferrer');
+  }
+
+  private mapAnexo(raw: any): ChamadoUpload {
+    return {
+      codigo: raw.codigo ?? raw.Codigo,
+      chamadoId: raw.chamadoId ?? raw.ChamadoId,
+      tipo: raw.tipo ?? raw.Tipo ?? '',
+      arquivo: String(raw.arquivo ?? raw.Arquivo ?? ''),
+      dataCriacao: raw.dataCriacao ?? raw.DataCriacao
+    };
+  }
+
+  private normalizarChamado(raw: any): Chamado {
+    return {
+      id: raw.id ?? raw.ID ?? raw.Id ?? 0,
+      codigoPessoa: raw.codigoPessoa ?? raw.CodigoPessoa ?? 0,
+      atendente: raw.atendente ?? raw.Atendente ?? '',
+      solicitante: raw.solicitante ?? raw.Solicitante ?? '',
+      titulo: raw.titulo ?? raw.Titulo ?? '',
+      mensagem: raw.mensagem ?? raw.Mensagem ?? '',
+      dataCriacao: raw.dataCriacao ?? raw.DataCriacao ?? '',
+      status: raw.status ?? raw.Status ?? '',
+      prioridade: raw.prioridade ?? raw.Prioridade ?? 0,
+      tipo: raw.tipo ?? raw.Tipo ?? '',
+      slaTempo: raw.slaTempo ?? raw.SLATempo
+    };
+  }
+
+  private extrairChamadoId(chamado: unknown): number {
+    const c = chamado as Record<string, unknown>;
+    const id = c?.['id'] ?? c?.['ID'] ?? c?.['Id'];
+    const n = Number(id);
+    return Number.isFinite(n) && n > 0 ? n : 0;
   }
 
   excluir(c: Chamado): void {
