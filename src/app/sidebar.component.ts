@@ -30,6 +30,10 @@ import { MensalidadeStatusService } from './services/mensalidade-status.service'
           <i nz-icon nzType="file-protect"></i>
           <span>Meu Contrato</span>
         </li>
+        <li nz-menu-item (click)="navigateGuarded('/documentos')" [nzSelected]="isActive('/documentos')" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Documentos Empresa' : '')" nzTooltipPlacement="right">
+          <i nz-icon nzType="folder"></i>
+          <span>Documentos Empresa</span>
+        </li>
         <li nz-menu-item (click)="navigateGuarded('/solicitacao-nfe')" [nzSelected]="isActive('/solicitacao-nfe')" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Solicitação Emissão Nfe' : '')" nzTooltipPlacement="right">
           <i nz-icon nzType="file-add"></i>
           <span>Solicitação Emissão Nfe</span>

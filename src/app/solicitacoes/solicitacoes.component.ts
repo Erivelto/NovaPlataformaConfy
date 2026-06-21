@@ -25,7 +25,6 @@ import { environment } from '../../environments/environment';
 
 const AREA_FIXA = 'Contabilidade';
 const ATENDENTE_FIXO = 'Analista Contabil';
-const ARMAZENAMENTO_URL = 'http://armazemantodearquivocontfy.azurewebsites.net/ArmazenamentoDeObjeto';
 const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
 
 const TIPOS_SOLICITACAO = [
@@ -460,11 +459,11 @@ export class SolicitacoesClienteComponent implements OnInit {
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = (reader.result as string).split(',')[1];
-        this.http.post(ARMAZENAMENTO_URL, {
+        this.http.post(`${this.api}/ArmazenamentoDeObjeto`, {
           codigo: guid,
           image: base64,
           pasta: String(this.codigoPessoa)
-        }).pipe(timeout(30000), catchError(() => of(null))).subscribe({
+        }, { headers: this.h }).pipe(timeout(30000), catchError(() => of(null))).subscribe({
           next: () => {
             const uploadPayload = {
               chamadoId,

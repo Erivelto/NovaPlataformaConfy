@@ -34,6 +34,8 @@ import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
 
+const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
+
 interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; status?: string; dataInclusao?: string; dataAtulizacao?: string; contabilidade?: number; excluido?: boolean; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
 interface PessoaCertificadoData { codigo: number; codigoPessoa: number; validade: string; diretorio: string; codigoAcesso: string; }
 interface EnderecoData { codigo?: number; codigoPessoa?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; excluido?: boolean; }
@@ -45,7 +47,7 @@ interface AnexoContribuinte { codigo: number; codigoDadosDeDAS: number; menu: st
 interface AnexoMenuModel { codigo: number; menu: string; }
 interface AnexoMenuItemModel { codigo: number; item: string; codigoMenu: number; }
 interface Prefeitura { codigo: number; nome: string; }
-interface PessoaUpload { codigo: number; codigoPessoa: number; tipo: string; nomeArquivo: string; dataValidade?: string; }
+interface PessoaUpload { codigo: number; codigoPessoa: number; tipo: string; arquivo: string; dataCriacao?: string; }
 interface DadosCobranca { codigo: number; codigoPessoa: number; tipo: string; diaCobranca: number; mensalidade: number; cpf: string; celular?: string; email: string; excluido?: boolean; dataAlteracao?: string; }
 interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBruto?: number; status?: string; urlBoleto?: string; }
 
@@ -658,17 +660,17 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
             <button nz-button nzType="primary" (click)="abrirUpload()"><i nz-icon nzType="upload"></i> Novo Documento</button>
           </div>
           <nz-table [nzData]="documentos" nzBordered nzSize="middle" [nzShowPagination]="false">
-            <thead><tr><th>Tipo</th><th>Arquivo</th><th nzWidth="130px">Validade</th><th nzWidth="100px" nzAlign="center">Ação</th></tr></thead>
+            <thead><tr><th nzWidth="80px">Código</th><th>Tipo</th><th nzWidth="160px" nzAlign="center">Ação</th></tr></thead>
             <tbody>
               <tr *ngFor="let d of documentos">
+                <td>{{ d.codigo }}</td>
                 <td><nz-tag>{{ d.tipo }}</nz-tag></td>
-                <td>{{ d.nomeArquivo }}</td>
-                <td>{{ d.dataValidade ? (d.dataValidade | date:'dd/MM/yyyy') : '—' }}</td>
                 <td nzAlign="center">
+                  <button nz-button nzType="link" nzSize="small" (click)="abrirDocumento(d)"><i nz-icon nzType="eye"></i> Abrir</button>
                   <button nz-button nzDanger nzSize="small" [nzLoading]="excluindoDoc.has(d.codigo)" (click)="excluirDoc(d)"><i nz-icon nzType="delete"></i></button>
                 </td>
               </tr>
-              <tr *ngIf="documentos.length===0"><td colspan="4" style="text-align:center;padding:24px;color:rgba(0,0,0,.45)">Nenhum documento anexado.</td></tr>
+              <tr *ngIf="documentos.length===0"><td colspan="3" style="text-align:center;padding:24px;color:rgba(0,0,0,.45)">Nenhum documento anexado.</td></tr>
             </tbody>
           </nz-table>
         </div>
@@ -804,9 +806,9 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
         <nz-select [(ngModel)]="uploadForm.tipo" style="width:100%">
           <nz-option nzValue="Nota Fiscal" nzLabel="Nota Fiscal"></nz-option>
           <nz-option nzValue="Contrato Social" nzLabel="Contrato Social"></nz-option>
-          <nz-option nzValue="Cadastro Municipal" nzLabel="Cadastro Municipal"></nz-option>
           <nz-option nzValue="Cartão CNPJ" nzLabel="Cartão CNPJ"></nz-option>
-          <nz-option nzValue="Certificado Digital" nzLabel="Certificado Digital"></nz-option>
+          <nz-option nzValue="Certidão Negativa" nzLabel="Certidão Negativa"></nz-option>
+          <nz-option nzValue="Simples Nacional" nzLabel="Simples Nacional"></nz-option>
         </nz-select>
       </nz-form-control></nz-form-item>
     <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>Arquivo</nz-form-label>
@@ -818,8 +820,6 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
           <i nz-icon nzType="paper-clip"></i> {{ fileList[0].name }}
         </div>
       </nz-form-control></nz-form-item>
-    <nz-form-item *ngIf="uploadForm.tipo === 'Certificado Digital'"><nz-form-label [nzSpan]="24">Data de Validade</nz-form-label>
-      <nz-form-control [nzSpan]="24"><input nz-input [(ngModel)]="uploadForm.dataValidade" placeholder="dd/MM/yyyy" /></nz-form-control></nz-form-item>
   </ng-container>
   <ng-template #ftUpload>
     <button nz-button (click)="uploadVisible=false" [disabled]="fazendoUpload">Fechar</button>
@@ -974,7 +974,7 @@ export class ClienteEditarComponent implements OnInit {
 
   // Upload
   uploadVisible = false; fazendoUpload = false;
-  uploadForm = { tipo: 'Contrato Social', dataValidade: '' };
+  uploadForm = { tipo: 'Contrato Social' };
   fileList: NzUploadFile[] = [];
   selectedFile: File | null = null;
 
@@ -1004,7 +1004,7 @@ export class ClienteEditarComponent implements OnInit {
       pessoa:     safe(this.http.get<any>(`${this.api}/Pessoa/${this.codigoPessoa}`, { headers: this.h })),
       validacao:  safe(this.http.get<any>(`${this.api}/Pessoa/GetValidacaoPessoa/${this.codigoPessoa}`, { headers: this.h })),
       prefeituras: safe(this.http.get<Prefeitura[]>(`${this.api}/Prefeitura`, { headers: this.h })),
-      uploads:    safe(this.http.get<PessoaUpload[]>(`${this.api}/PessoaUpload`, { headers: this.h })),
+      uploads:    safe(this.http.get<PessoaUpload[]>(`${this.api}/PessoaUpload/ObterPorCodigo/${this.codigoPessoa}`, { headers: this.h })),
       emissao:    safe(this.http.get<DadosEmissao[]>(`${this.api}/DadosEmissaoNota`, { headers: this.h })),
       cobranca:   safe(this.http.get<DadosCobranca>(`${this.api}/DadosDeCobranca/${this.codigoPessoa}`, { headers: this.h })),
       faturas:    safe(this.http.get<PessoaCobranca[]>(`${this.api}/PessoaCobranca/ObterPagamentoTresUltimos/${this.codigoPessoa}`, { headers: this.h })),
@@ -1021,7 +1021,9 @@ export class ClienteEditarComponent implements OnInit {
       }
       this.validacao = r.validacao ? (r.validacao as ValidacaoPessoa) : null;
       this.prefeituras = Array.isArray(r.prefeituras) ? r.prefeituras : [];
-      this.documentos = Array.isArray(r.uploads) ? (r.uploads as PessoaUpload[]).filter((u: PessoaUpload) => u.codigoPessoa === this.codigoPessoa) : [];
+      this.documentos = Array.isArray(r.uploads)
+        ? (r.uploads as any[]).map(item => this.mapDocumento(item))
+        : [];
       this.emissoes = Array.isArray(r.emissao) ? (r.emissao as DadosEmissao[]).filter((e: DadosEmissao) => e.codigoPessoa === this.codigoPessoa) : [];
       if (r.cobranca && (r.cobranca as DadosCobranca).codigo) {
         this.cobranca = { ...(r.cobranca as DadosCobranca), codigoPessoa: this.codigoPessoa };
@@ -1338,7 +1340,18 @@ export class ClienteEditarComponent implements OnInit {
     });
   }
 
-  abrirUpload() { this.uploadForm = { tipo: 'Contrato Social', dataValidade: '' }; this.fileList = []; this.selectedFile = null; this.uploadVisible = true; this.cdr.markForCheck(); }
+  abrirUpload() { this.uploadForm = { tipo: 'Contrato Social' }; this.fileList = []; this.selectedFile = null; this.uploadVisible = true; this.cdr.markForCheck(); }
+
+  abrirDocumento(d: PessoaUpload): void {
+    if (!d.arquivo) { this.message.warning('Arquivo não encontrado.'); return; }
+    const params = new URLSearchParams({
+      diretorioCompleto: String(d.codigoPessoa),
+      nomeArquivo: d.arquivo,
+      tipo: d.tipo
+    });
+    window.open(`${ARQUIVO_BASE_URL}?${params.toString()}`, '_blank', 'noopener,noreferrer');
+  }
+
   beforeUpload = (file: NzUploadFile): boolean => {
     const ext = (file.name || '').split('.').pop()?.toLowerCase();
     if (ext !== 'pdf') {
@@ -1353,24 +1366,83 @@ export class ClienteEditarComponent implements OnInit {
     this.cdr.markForCheck();
     return false;
   };
+
   fazerUpload() {
+    if (!this.uploadForm.tipo?.trim()) { this.message.warning('Selecione o tipo do documento.'); return; }
     if (!this.selectedFile) { this.message.warning('Selecione um arquivo PDF.'); return; }
-    const ext = ((this.selectedFile as any).name || '').split('.').pop()?.toLowerCase();
+
+    const ext = (this.selectedFile.name || '').split('.').pop()?.toLowerCase();
     if (ext !== 'pdf') { this.message.error('Apenas arquivos PDF são aceitos.'); return; }
-    this.fazendoUpload = true; this.cdr.markForCheck();
+
+    this.fazendoUpload = true;
+    this.cdr.markForCheck();
+
+    const arquivoGuid = crypto.randomUUID();
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = (e.target?.result as string).split(',')[1];
-      this.http.post(`http://armazemantodearquivocontfy.azurewebsites.net/ArmazenamentoDeObjeto`, { codigo: crypto.randomUUID(), image: base64, pasta: this.codigoPessoa }, { headers: this.h }).pipe(catchError(() => of(null))).subscribe(res => {
-        const nomArquivo = (res as any)?.nomeArquivo || this.selectedFile!.name;
-        const payload = { codigoPessoa: this.codigoPessoa, tipo: this.uploadForm.tipo, nomeArquivo: nomArquivo, dataValidade: this.uploadForm.dataValidade || null };
-        this.http.post(`${this.api}/PessoaUpload`, payload, { headers: this.h }).subscribe({
-          next: () => { this.message.success('Documento enviado!'); this.fazendoUpload = false; this.uploadVisible = false; this.carregar(); },
-          error: (err) => { this.message.error(`Erro (${err.status})`); this.fazendoUpload = false; this.cdr.markForCheck(); }
-        });
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      this.http.post(`${this.api}/ArmazenamentoDeObjeto`, {
+        codigo: arquivoGuid,
+        image: base64,
+        pasta: String(this.codigoPessoa)
+      }, { headers: this.h }).pipe(timeout(60000), catchError(() => of(null))).subscribe({
+        next: (res) => {
+          if (res === null) {
+            this.message.error('Erro ao enviar arquivo para o armazenamento.');
+            this.fazendoUpload = false;
+            this.cdr.markForCheck();
+            return;
+          }
+
+          const payload: Record<string, unknown> = {
+            codigoPessoa: this.codigoPessoa,
+            dataCriacao: new Date().toISOString(),
+            arquivo: arquivoGuid,
+            tipo: this.uploadForm.tipo.trim(),
+            excluido: false
+          };
+
+          this.http.post(`${this.api}/PessoaUpload`, payload, { headers: this.h }).subscribe({
+            next: () => {
+              this.message.success('Documento enviado!');
+              this.fazendoUpload = false;
+              this.uploadVisible = false;
+              this.carregarDocumentos();
+            },
+            error: (err) => {
+              this.message.error(`Erro ao registrar documento (${err.status}).`);
+              this.fazendoUpload = false;
+              this.cdr.markForCheck();
+            }
+          });
+        }
       });
     };
-    reader.readAsDataURL(this.selectedFile as any);
+    reader.onerror = () => {
+      this.message.error('Erro ao ler o arquivo selecionado.');
+      this.fazendoUpload = false;
+      this.cdr.markForCheck();
+    };
+    reader.readAsDataURL(this.selectedFile);
+  }
+
+  carregarDocumentos() {
+    this.http.get<any[]>(`${this.api}/PessoaUpload/ObterPorCodigo/${this.codigoPessoa}`, { headers: this.h })
+      .pipe(timeout(10000), catchError(() => of([])))
+      .subscribe(lista => {
+        this.documentos = (lista || []).map(item => this.mapDocumento(item));
+        this.cdr.markForCheck();
+      });
+  }
+
+  private mapDocumento(raw: any): PessoaUpload {
+    return {
+      codigo: raw.codigo ?? raw.Codigo,
+      codigoPessoa: raw.codigoPessoa ?? raw.CodigoPessoa,
+      tipo: raw.tipo ?? raw.Tipo ?? '',
+      arquivo: String(raw.arquivo ?? raw.Arquivo ?? ''),
+      dataCriacao: raw.dataCriacao ?? raw.DataCriacao
+    };
   }
 
   excluirDoc(d: PessoaUpload) {

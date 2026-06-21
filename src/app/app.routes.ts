@@ -17,6 +17,7 @@ export const routes: Routes = [
 			{ path: 'clients', loadComponent: () => import('./clients/clients.component').then(m => m.ClientsComponent) },
 			{ path: 'meus-dados', loadComponent: () => import('./meus-dados/meus-dados.component').then(m => m.MeusDadosComponent) },
 			{ path: 'meu-contrato', loadComponent: () => import('./meu-contrato/meu-contrato.component').then(m => m.MeuContratoComponent) },
+			{ path: 'documentos', loadComponent: () => import('./documentos/documentos.component').then(m => m.DocumentosComponent) },
 			{ path: 'solicitacao-nfe', loadComponent: () => import('./solicitacao-nfe/solicitacao-nfe.component').then(m => m.SolicitacaoNfeComponent) },
 			{ path: 'solicitacoes', loadComponent: () => import('./solicitacoes/solicitacoes.component').then(m => m.SolicitacoesClienteComponent) },
 			{ path: 'notas-fiscais', loadComponent: () => import('./notas-fiscais/notas-fiscais.component').then(m => m.NotasFiscaisComponent) },
