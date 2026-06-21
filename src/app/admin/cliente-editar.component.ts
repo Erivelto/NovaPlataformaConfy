@@ -50,6 +50,25 @@ interface Prefeitura { codigo: number; nome: string; }
 interface PessoaUpload { codigo: number; codigoPessoa: number; tipo: string; arquivo: string; dataCriacao?: string; }
 interface DadosCobranca { codigo: number; codigoPessoa: number; tipo: string; diaCobranca: number; mensalidade: number; cpf: string; celular?: string; email: string; excluido?: boolean; dataAlteracao?: string; }
 interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBruto?: number; status?: string; urlBoleto?: string; }
+interface PessoaCobrancaAdicional {
+  codigo: number;
+  codigoPessoa: number;
+  dataCadastro?: string;
+  mesReferencia: number;
+  anoReferencia: number;
+  dataVenciemnto: string;
+  dataCancelamento?: string;
+  valor: number;
+  descricao: string;
+  excluido?: boolean;
+  usuarioAlter?: string;
+  transacao?: string;
+}
+interface CobrancaAdicionalForm {
+  valor: number | null;
+  descricao: string;
+  quantidadeRepeticao: number;
+}
 
 @Component({
   selector: 'app-cliente-editar',
@@ -558,7 +577,33 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
             <button nz-button nzType="primary" [nzLoading]="salvandoCobranca" (click)="salvarCobranca()">
               <i nz-icon nzType="save"></i> Salvar Cobrança
             </button>
+            <button nz-button nzType="default" style="margin-left:8px" (click)="abrirModalCobrancaAdicional()">
+              <i nz-icon nzType="plus"></i> Cobrança Adicional
+            </button>
           </div>
+
+          <nz-divider nzText="Cobranças Adicionais" nzOrientation="left"></nz-divider>
+          <nz-table [nzData]="cobrancasAdicionais" nzBordered nzSize="small" [nzShowPagination]="false">
+            <thead>
+              <tr>
+                <th nzWidth="110px">Referência</th>
+                <th nzWidth="130px">Vencimento</th>
+                <th nzWidth="120px">Valor</th>
+                <th>Descrição</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of cobrancasAdicionais">
+                <td>{{ formatMesAno(c.mesReferencia, c.anoReferencia) }}</td>
+                <td>{{ c.dataVenciemnto | date:'dd/MM/yyyy' }}</td>
+                <td>{{ c.valor | currency:'BRL':'symbol':'1.2-2' }}</td>
+                <td>{{ c.descricao || '—' }}</td>
+              </tr>
+              <tr *ngIf="cobrancasAdicionais.length===0">
+                <td colspan="4" style="text-align:center;padding:16px;color:rgba(0,0,0,.45)">Nenhuma cobrança adicional cadastrada.</td>
+              </tr>
+            </tbody>
+          </nz-table>
 
           <nz-divider nzText="Últimas Faturas" nzOrientation="left"></nz-divider>
           <nz-table [nzData]="ultimasFaturas" nzBordered nzSize="small" [nzShowPagination]="false">
@@ -811,6 +856,8 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
           <nz-option nzValue="Certidão Negativa" nzLabel="Certidão Negativa"></nz-option>
           <nz-option nzValue="Simples Nacional" nzLabel="Simples Nacional"></nz-option>
           <nz-option nzValue="Relatório Situação Fiscal" nzLabel="Relatório Situação Fiscal"></nz-option>
+          <nz-option nzValue="Defis Atual" nzLabel="Defis Atual"></nz-option>
+          <nz-option nzValue="FDC - Ficha de dados cadastrais" nzLabel="FDC - Ficha de dados cadastrais"></nz-option>
         </nz-select>
       </nz-form-control></nz-form-item>
     <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>Arquivo</nz-form-label>
@@ -826,6 +873,50 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
   <ng-template #ftUpload>
     <button nz-button (click)="uploadVisible=false" [disabled]="fazendoUpload">Fechar</button>
     <button nz-button nzType="primary" [nzLoading]="fazendoUpload" (click)="fazerUpload()">Enviar</button>
+  </ng-template>
+</nz-modal>
+
+<!-- MODAL: Cobrança Adicional -->
+<nz-modal
+  [(nzVisible)]="cobrancaAdicVisible"
+  nzTitle="Nova Cobrança Adicional"
+  [nzWidth]="480"
+  [nzFooter]="ftCobrancaAdic"
+  (nzOnCancel)="cobrancaAdicVisible = false">
+  <ng-container *nzModalContent>
+    <nz-form-item>
+      <nz-form-label [nzSpan]="24" nzRequired>Valor (R$)</nz-form-label>
+      <nz-form-control [nzSpan]="24">
+        <nz-input-group nzPrefix="R$">
+          <input nz-input type="number" min="0.01" step="0.01" [(ngModel)]="cobrancaAdicForm.valor" />
+        </nz-input-group>
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item>
+      <nz-form-label [nzSpan]="24" nzRequired>Descrição</nz-form-label>
+      <nz-form-control [nzSpan]="24">
+        <textarea nz-input rows="3" [(ngModel)]="cobrancaAdicForm.descricao" placeholder="Ex.: Taxa de serviço extra"></textarea>
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item>
+      <nz-form-label [nzSpan]="24" nzRequired>Quantidade repetição</nz-form-label>
+      <nz-form-control [nzSpan]="24">
+        <input nz-input type="number" min="1" max="24" [(ngModel)]="cobrancaAdicForm.quantidadeRepeticao" />
+      </nz-form-control>
+    </nz-form-item>
+    <nz-alert
+      *ngIf="previewMesesCobrancaAdicional"
+      nzType="info"
+      nzShowIcon
+      [nzMessage]="'Serão lançadas ' + cobrancaAdicForm.quantidadeRepeticao + ' cobrança(s)'"
+      [nzDescription]="'Referência: ' + previewMesesCobrancaAdicional + ' (a partir do mês seguinte ao vigente)'">
+    </nz-alert>
+  </ng-container>
+  <ng-template #ftCobrancaAdic>
+    <button nz-button (click)="cobrancaAdicVisible = false" [disabled]="salvandoCobrancaAdic">Cancelar</button>
+    <button nz-button nzType="primary" [nzLoading]="salvandoCobrancaAdic" (click)="salvarCobrancaAdicional()">
+      <i nz-icon nzType="save"></i> Salvar
+    </button>
   </ng-template>
 </nz-modal>
   `,
@@ -906,6 +997,10 @@ export class ClienteEditarComponent implements OnInit {
   documentos: PessoaUpload[] = [];
   cobranca: DadosCobranca = { codigo: 0, codigoPessoa: 0, tipo: 'Boleto', diaCobranca: 5, mensalidade: 79.90, cpf: '', email: '' };
   ultimasFaturas: PessoaCobranca[] = [];
+  cobrancasAdicionais: PessoaCobrancaAdicional[] = [];
+  cobrancaAdicVisible = false;
+  salvandoCobrancaAdic = false;
+  cobrancaAdicForm: CobrancaAdicionalForm = { valor: null, descricao: '', quantidadeRepeticao: 1 };
   statusLogin = false;
   excluindoDoc = new Set<number>();
   abaAtiva = 0;
@@ -1010,6 +1105,7 @@ export class ClienteEditarComponent implements OnInit {
       emissao:    safe(this.http.get<DadosEmissao[]>(`${this.api}/DadosEmissaoNota`, { headers: this.h })),
       cobranca:   safe(this.http.get<DadosCobranca>(`${this.api}/DadosDeCobranca/${this.codigoPessoa}`, { headers: this.h })),
       faturas:    safe(this.http.get<PessoaCobranca[]>(`${this.api}/PessoaCobranca/ObterPagamentoTresUltimos/${this.codigoPessoa}`, { headers: this.h })),
+      cobrAdic:   safe(this.http.get<PessoaCobrancaAdicional[]>(`${this.api}/PessoaCobrancaAdicional/ObterPorCodigo/${this.codigoPessoa}`, { headers: this.h })),
       userPlat:   safe(this.http.get<{ email: string; existe: boolean }>(`${this.api}/Autenticacao/UsuarioPorPessoa/${this.codigoPessoa}`, { headers: this.h }))
     }).subscribe({ next: (r) => {
       if (r.pessoa) {
@@ -1033,6 +1129,9 @@ export class ClienteEditarComponent implements OnInit {
         this.cobranca = { codigo: 0, codigoPessoa: this.codigoPessoa, tipo: 'Boleto', diaCobranca: 5, mensalidade: 79.90, cpf: '', email: '' };
       }
       this.ultimasFaturas = Array.isArray(r.faturas) ? r.faturas : [];
+      this.cobrancasAdicionais = Array.isArray(r.cobrAdic)
+        ? (r.cobrAdic as any[]).map(item => this.mapCobrancaAdicional(item)).sort((a, b) => (b.anoReferencia - a.anoReferencia) || (b.mesReferencia - a.mesReferencia))
+        : [];
       this.carregarRepresentantes();
       this.carregarDAS();
     }, error: () => { this.loading = false; this.cdr.markForCheck(); }});
@@ -1190,6 +1289,114 @@ export class ClienteEditarComponent implements OnInit {
       next: () => { this.message.success('Cobrança salva!'); this.salvandoCobranca = false; this.cdr.markForCheck(); },
       error: (e) => { this.message.error(`Erro (${e.status})`); this.salvandoCobranca = false; this.cdr.markForCheck(); }
     });
+  }
+
+  get previewMesesCobrancaAdicional(): string {
+    const qtd = Math.floor(this.cobrancaAdicForm.quantidadeRepeticao || 0);
+    if (qtd < 1) return '';
+    return Array.from({ length: qtd }, (_, i) => {
+      const ref = this.referenciaMesSeguinte(i + 1);
+      return `${this.nomeMesReferencia(ref.mes)}/${ref.ano}`;
+    }).join(', ');
+  }
+
+  abrirModalCobrancaAdicional() {
+    this.cobrancaAdicForm = { valor: null, descricao: '', quantidadeRepeticao: 1 };
+    this.cobrancaAdicVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  salvarCobrancaAdicional() {
+    const valor = Number(this.cobrancaAdicForm.valor);
+    const descricao = (this.cobrancaAdicForm.descricao || '').trim();
+    const quantidade = Math.floor(this.cobrancaAdicForm.quantidadeRepeticao || 0);
+
+    if (!valor || valor <= 0) { this.message.warning('Informe um valor válido.'); return; }
+    if (!descricao) { this.message.warning('Informe a descrição.'); return; }
+    if (quantidade < 1 || quantidade > 24) { this.message.warning('Quantidade repetição deve ser entre 1 e 24.'); return; }
+
+    const payloads = Array.from({ length: quantidade }, (_, i) => this.montarPayloadCobrancaAdicional(valor, descricao, i + 1));
+    this.salvandoCobrancaAdic = true;
+    this.cdr.markForCheck();
+
+    forkJoin(payloads.map(p => this.http.post<PessoaCobrancaAdicional>(`${this.api}/PessoaCobrancaAdicional`, p, { headers: this.h }))).subscribe({
+      next: (criados) => {
+        const novos = (criados || []).map(item => this.mapCobrancaAdicional(item));
+        this.cobrancasAdicionais = [...novos, ...this.cobrancasAdicionais]
+          .sort((a, b) => (b.anoReferencia - a.anoReferencia) || (b.mesReferencia - a.mesReferencia));
+        this.message.success(`${novos.length} cobrança(s) adicional(is) cadastrada(s)!`);
+        this.cobrancaAdicVisible = false;
+        this.salvandoCobrancaAdic = false;
+        this.cdr.markForCheck();
+      },
+      error: (e) => {
+        this.message.error(`Erro ao cadastrar cobrança adicional (${e.status})`);
+        this.salvandoCobrancaAdic = false;
+        this.carregarCobrancasAdicionais();
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private carregarCobrancasAdicionais() {
+    this.http.get<PessoaCobrancaAdicional[]>(`${this.api}/PessoaCobrancaAdicional/ObterPorCodigo/${this.codigoPessoa}`, { headers: this.h })
+      .pipe(catchError(() => of([])))
+      .subscribe(lista => {
+        this.cobrancasAdicionais = (lista || []).map(item => this.mapCobrancaAdicional(item));
+        this.cdr.markForCheck();
+      });
+  }
+
+  private montarPayloadCobrancaAdicional(valor: number, descricao: string, offsetMes: number) {
+    const ref = this.referenciaMesSeguinte(offsetMes);
+    return {
+      codigo: 0,
+      codigoPessoa: this.codigoPessoa,
+      mesReferencia: ref.mes,
+      anoReferencia: ref.ano,
+      dataVenciemnto: ref.vencimento.toISOString(),
+      dataCancelamento: '1900-01-01T00:00:00',
+      valor,
+      descricao,
+      excluido: false,
+      usuarioAlter: 'Admin',
+      transacao: ''
+    };
+  }
+
+  private referenciaMesSeguinte(offset: number): { mes: number; ano: number; vencimento: Date } {
+    const hoje = new Date();
+    const ref = new Date(hoje.getFullYear(), hoje.getMonth() + offset, 1);
+    const ultimoDia = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
+    const dia = Math.min(this.cobranca.diaCobranca || 5, ultimoDia);
+    const vencimento = new Date(ref.getFullYear(), ref.getMonth(), dia, 12, 0, 0);
+    return { mes: ref.getMonth() + 1, ano: ref.getFullYear(), vencimento };
+  }
+
+  private nomeMesReferencia(mes: number): string {
+    return ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][mes - 1] || String(mes);
+  }
+
+  formatMesAno(mes: number, ano: number): string {
+    const m = String(mes || 0).padStart(2, '0');
+    return `${m}/${ano || ''}`;
+  }
+
+  private mapCobrancaAdicional(raw: any): PessoaCobrancaAdicional {
+    return {
+      codigo: raw?.codigo ?? raw?.Codigo ?? 0,
+      codigoPessoa: raw?.codigoPessoa ?? raw?.CodigoPessoa ?? this.codigoPessoa,
+      dataCadastro: raw?.dataCadastro ?? raw?.DataCadastro,
+      mesReferencia: raw?.mesReferencia ?? raw?.MesReferencia ?? 0,
+      anoReferencia: raw?.anoReferencia ?? raw?.AnoReferencia ?? 0,
+      dataVenciemnto: raw?.dataVenciemnto ?? raw?.DataVenciemnto ?? '',
+      dataCancelamento: raw?.dataCancelamento ?? raw?.DataCancelamento,
+      valor: raw?.valor ?? raw?.Valor ?? 0,
+      descricao: raw?.descricao ?? raw?.Descricao ?? '',
+      excluido: raw?.excluido ?? raw?.Excluido ?? false,
+      usuarioAlter: raw?.usuarioAlter ?? raw?.UsuarioAlter,
+      transacao: raw?.transacao ?? raw?.Transacao
+    };
   }
 
   abrirNovoRep() { this.repSelecionado = null; this.repForm = { codigoPessoa: this.codigoPessoa }; this.repVisible = true; this.cdr.markForCheck(); }

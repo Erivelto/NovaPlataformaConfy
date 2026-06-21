@@ -1,31 +1,29 @@
 import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { of } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
-import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzMessageModule } from 'ng-zorro-antd/message';
+import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
 import { PageTitleComponent } from '../page-title.component';
 import { LoginService } from '../services/login.service';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 
-interface InssItem {
-  mes: string;
-  dataVencimento: string;
-  valorParcela: number;
-}
+const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
+const AREA_FIXA = 'Contabilidade';
+const ATENDENTE_FIXO = 'Analista Contabil';
+const PRIORIDADE_PADRAO = 2;
+const TIPO_GUIA_PAGAMENTO = 'Atualização guia pagamento';
 
-interface ParcelamentoDas {
-  parcela: number;
-  dataVencimento: string;
-  valorParcela: number;
-}
+type AbaImposto = 'das' | 'parcelamentoReceita' | 'parcelamentoPrefeitura' | 'inss' | 'tfe';
 
 interface DasItem {
   codigo: number;
@@ -43,20 +41,38 @@ interface DasItem {
   razao: string | null;
 }
 
+interface ArquivoDebito {
+  codigo: number;
+  codigoPessoa: number;
+  parcela?: number;
+  tipo: string;
+  dataVencimento?: string;
+  dataCriacao?: string;
+  arquivo: string;
+}
+
+interface AbaConfig {
+  id: AbaImposto;
+  titulo: string;
+  modoDas: boolean;
+  endpoint?: string;
+  filtroTipo?: string;
+}
+
 @Component({
   selector: 'app-receita-imposto',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
-    NzCardModule, NzTableModule, NzTagModule,
+    NzCardModule, NzTabsModule, NzTableModule, NzTagModule,
     NzAlertModule, NzIconModule, NzButtonModule,
     NzSkeletonModule, NzMessageModule,
     PageTitleComponent
   ],
   template: `
     <div class="receita-imposto">
-      <app-page-title title="Impostos" subtitle="Impostos e Obrigações"></app-page-title>
+      <app-page-title title="Impostos/Debitos" subtitle="Impostos e Obrigações"></app-page-title>
 
       <nz-alert
         nzType="warning"
@@ -66,160 +82,188 @@ interface DasItem {
         style="margin-top:16px">
       </nz-alert>
 
-      <nz-card nzTitle="DAS">
-        <nz-alert
-          *ngIf="erro"
-          nzType="error"
-          [nzMessage]="erro"
-          nzShowIcon
-          style="margin-bottom:12px">
-        </nz-alert>
+      <nz-card style="margin-top:16px">
+        <nz-tabset [(nzSelectedIndex)]="abaIndex" (nzSelectedIndexChange)="onAbaChange($event)">
+          <nz-tab *ngFor="let aba of abas" [nzTitle]="aba.titulo">
+            <div class="tab-content">
+              <nz-alert
+                *ngIf="aba.modoDas && erro"
+                nzType="error"
+                [nzMessage]="erro"
+                nzShowIcon
+                style="margin-bottom:12px">
+              </nz-alert>
 
-        <ng-container *ngIf="loading">
-          <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 4 }"></nz-skeleton>
-        </ng-container>
+              <ng-container *ngIf="carregando.has(aba.id)">
+                <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 4 }"></nz-skeleton>
+              </ng-container>
 
-        <nz-table
-          *ngIf="!loading"
-          [nzData]="lista"
-          nzBordered
-          nzSize="middle"
-          [nzShowPagination]="lista.length > 10">
-          <thead>
-            <tr>
-              <th>Período</th>
-              <th>Data Vencimento</th>
-              <th>Valor Tributado</th>
-              <th>Valor Tributo</th>
-              <th nzAlign="center">Status</th>
-              <th nzAlign="center">Ação</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of lista">
-              <td>{{ item.periodo }}</td>
-              <td>{{ vencimento(item.periodo) | date:'dd/MM/yyyy' }}</td>
-              <td>{{ parseBrl(item.valorTributado) | currency:'BRL':'symbol':'1.2-2' }}</td>
-              <td>{{ item.valorTributo }}</td>
-              <td nzAlign="center">
-                <nz-tag *ngIf="item.status !== 'Pago'" [nzColor]="statusDas() === 'Disponível' ? 'green' : 'red'">{{ statusDas() }}</nz-tag>
-              </td>
-              <td nzAlign="center">
-                <!-- Valores zerados: apenas botão Visualizar -->
-                <ng-container *ngIf="item.status !== 'Pago' && isValorZero(item)">
-                  <button nz-button nzType="default" nzSize="small" (click)="gerarBoleto(item)">
-                    <i nz-icon nzType="eye"></i> Visualizar
-                  </button>
-                </ng-container>
-                <!-- Valores preenchidos: Gerar Boleto + Marcar como paga -->
-                <ng-container *ngIf="item.status !== 'Pago' && !isValorZero(item)">
-                  <button nz-button nzType="primary" nzSize="small" (click)="gerarBoleto(item)" style="margin-right:8px">
-                    <i nz-icon nzType="file-text"></i> Gerar Boleto
-                  </button>
-                  <button nz-button nzType="default" nzSize="small"
-                    [nzLoading]="salvando.has(item.codigo)"
-                    (click)="marcarComoPaga(item)">
-                    <i nz-icon nzType="check-circle"></i> Marca como paga
-                  </button>
-                </ng-container>
-                <nz-tag *ngIf="item.status === 'Pago'" nzColor="green">Pago</nz-tag>
-              </td>
-            </tr>
-            <tr *ngIf="lista.length === 0">
-              <td colspan="6" style="text-align:center; color:rgba(0,0,0,0.45); padding:32px 0;">
-                Nenhum DAS encontrado.
-              </td>
-            </tr>
-          </tbody>
-        </nz-table>
-      </nz-card>
+              <!-- Aba DAS -->
+              <ng-container *ngIf="aba.modoDas && !carregando.has(aba.id)">
+                <nz-table
+                  #dasTable
+                  [nzData]="listaDas"
+                  nzBordered
+                  nzSize="middle"
+                  [nzShowPagination]="listaDas.length > pageSize"
+                  [nzPageSize]="pageSize"
+                  [nzFrontPagination]="true"
+                  [(nzPageIndex)]="pageIndex[aba.id]">
+                  <thead>
+                    <tr>
+                      <th>Período</th>
+                      <th>Data Vencimento</th>
+                      <th>Valor Tributado</th>
+                      <th>Valor Tributo</th>
+                      <th nzAlign="center">Status</th>
+                      <th nzAlign="center">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of dasTable.data">
+                      <td>{{ item.periodo }}</td>
+                      <td>{{ vencimento(item.periodo) | date:'dd/MM/yyyy' }}</td>
+                      <td>{{ parseBrl(item.valorTributado) | currency:'BRL':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.valorTributo }}</td>
+                      <td nzAlign="center">
+                        <nz-tag *ngIf="item.status !== 'Pago'" [nzColor]="statusDas() === 'Disponível' ? 'green' : 'red'">{{ statusDas() }}</nz-tag>
+                      </td>
+                      <td nzAlign="center">
+                        <ng-container *ngIf="item.status !== 'Pago' && isValorZero(item)">
+                          <button nz-button nzType="default" nzSize="small" (click)="gerarBoletoDas(item)">
+                            <i nz-icon nzType="eye"></i> Visualizar
+                          </button>
+                        </ng-container>
+                        <ng-container *ngIf="item.status !== 'Pago' && !isValorZero(item)">
+                          <button nz-button nzType="primary" nzSize="small" (click)="gerarBoletoDas(item)" style="margin-right:8px">
+                            <i nz-icon nzType="file-text"></i> Gerar Boleto
+                          </button>
+                          <button nz-button nzType="default" nzSize="small"
+                            [nzLoading]="salvando.has(item.codigo)"
+                            (click)="marcarComoPaga(item)">
+                            <i nz-icon nzType="check-circle"></i> Marca como paga
+                          </button>
+                        </ng-container>
+                        <nz-tag *ngIf="item.status === 'Pago'" nzColor="green">Pago</nz-tag>
+                      </td>
+                    </tr>
+                    <tr *ngIf="listaDas.length === 0">
+                      <td colspan="6" class="empty">Nenhum DAS encontrado.</td>
+                    </tr>
+                  </tbody>
+                </nz-table>
+              </ng-container>
 
-      <nz-card nzTitle="Parcelamento DAS" style="margin-top:16px">
-        <nz-table
-          [nzData]="listaParcelamento"
-          nzBordered
-          nzSize="middle"
-          [nzShowPagination]="listaParcelamento.length > 10">
-          <thead>
-            <tr>
-              <th>Parcela</th>
-              <th>Data Vencimento</th>
-              <th>Valor Parcela</th>
-              <th nzAlign="center">Ação</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of listaParcelamento">
-              <td>{{ item.parcela }}</td>
-              <td>{{ item.dataVencimento | date:'dd/MM/yyyy' }}</td>
-              <td>{{ parseBrl(item.valorParcela) | currency:'BRL':'symbol':'1.2-2' }}</td>
-              <td nzAlign="center">
-                <button nz-button nzType="primary" nzSize="small" (click)="gerarBoletoParcela(item)">
-                  <i nz-icon nzType="file-text"></i> Gerar Boleto
-                </button>
-              </td>
-            </tr>
-            <tr *ngIf="listaParcelamento.length === 0">
-              <td colspan="4" style="text-align:center; color:rgba(0,0,0,0.45); padding:32px 0;">
-                Nenhum parcelamento encontrado.
-              </td>
-            </tr>
-          </tbody>
-        </nz-table>
-      </nz-card>
-
-      <nz-card nzTitle="INSS" style="margin-top:16px">
-        <nz-table
-          [nzData]="listaInss"
-          nzBordered
-          nzSize="middle"
-          [nzShowPagination]="listaInss.length > 10">
-          <thead>
-            <tr>
-              <th>Mês</th>
-              <th>Data Vencimento</th>
-              <th>Valor Parcela</th>
-              <th nzAlign="center">Ação</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of listaInss">
-              <td>{{ item.mes }}</td>
-              <td>{{ item.dataVencimento | date:'dd/MM/yyyy' }}</td>
-              <td>{{ parseBrl(item.valorParcela) | currency:'BRL':'symbol':'1.2-2' }}</td>
-              <td nzAlign="center">
-                <button nz-button nzType="primary" nzSize="small" (click)="gerarBoletoInss(item)">
-                  <i nz-icon nzType="file-text"></i> Gerar Boleto
-                </button>
-              </td>
-            </tr>
-            <tr *ngIf="listaInss.length === 0">
-              <td colspan="4" style="text-align:center; color:rgba(0,0,0,0.45); padding:32px 0;">
-                Nenhum registro de INSS encontrado.
-              </td>
-            </tr>
-          </tbody>
-        </nz-table>
+              <!-- Abas de documentos -->
+              <ng-container *ngIf="!aba.modoDas && !carregando.has(aba.id)">
+                <nz-table
+                  #arquivoTable
+                  [nzData]="listas[aba.id]"
+                  nzBordered
+                  nzSize="middle"
+                  [nzShowPagination]="listas[aba.id].length > pageSize"
+                  [nzPageSize]="pageSize"
+                  [nzFrontPagination]="true"
+                  [(nzPageIndex)]="pageIndex[aba.id]">
+                  <thead>
+                    <tr>
+                      <th *ngIf="aba.id === 'parcelamentoReceita' || aba.id === 'parcelamentoPrefeitura'" nzWidth="80px">Parcela</th>
+                      <th *ngIf="aba.id !== 'parcelamentoReceita' && aba.id !== 'parcelamentoPrefeitura'">Tipo</th>
+                      <th nzWidth="120px">Vencimento</th>
+                      <th nzWidth="120px">Cadastro</th>
+                      <th>Mensagem</th>
+                      <th nzWidth="200px" nzAlign="center">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of arquivoTable.data">
+                      <td *ngIf="aba.id === 'parcelamentoReceita' || aba.id === 'parcelamentoPrefeitura'">{{ item.parcela ?? '—' }}</td>
+                      <td *ngIf="aba.id !== 'parcelamentoReceita' && aba.id !== 'parcelamentoPrefeitura'"><nz-tag>{{ item.tipo || '—' }}</nz-tag></td>
+                      <td>{{ formatarData(item.dataVencimento) }}</td>
+                      <td>{{ formatarData(item.dataCriacao) }}</td>
+                      <td>
+                        <span *ngIf="estaVencida(item)" class="msg-vencida">
+                          Vencida, não pode ser paga, solicite uma nova!
+                        </span>
+                        <span *ngIf="!estaVencida(item)">—</span>
+                      </td>
+                      <td nzAlign="center" class="acoes-arquivo">
+                        <button
+                          nz-button
+                          nzType="primary"
+                          nzSize="small"
+                          [disabled]="estaVencida(item)"
+                          (click)="abrirArquivo(item)">
+                          <i nz-icon nzType="eye"></i> Visualizar
+                        </button>
+                        <button
+                          *ngIf="estaVencida(item)"
+                          nz-button
+                          nzType="default"
+                          nzSize="small"
+                          [nzLoading]="solicitando.has(item.codigo)"
+                          (click)="solicitarNovo(aba, item)">
+                          <i nz-icon nzType="plus"></i> Solicitar Novo
+                        </button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="listas[aba.id].length === 0">
+                      <td [attr.colspan]="5" class="empty">
+                        Nenhum documento encontrado.
+                      </td>
+                    </tr>
+                  </tbody>
+                </nz-table>
+              </ng-container>
+            </div>
+          </nz-tab>
+        </nz-tabset>
       </nz-card>
     </div>
   `,
   styles: [`
     .receita-imposto { padding: 8px 4px; }
-    nz-card { margin-top: 16px; }
+    .tab-content { padding: 8px 4px; }
+    .empty { text-align: center; color: rgba(0,0,0,.45); padding: 32px 0; }
+    .acoes-arquivo { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+    .msg-vencida { color: #ff4d4f; font-weight: 600; font-size: 0.88rem; }
   `]
 })
 export class ReceitaImpostoComponent implements OnInit {
-  private readonly dasApiUrl = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api/DAS';
   private readonly apiBase = environment.apiUrl;
 
-  lista: DasItem[] = [];
-  listaParcelamento: ParcelamentoDas[] = [];
-  listaInss: InssItem[] = [];
-  loading = true;
+  readonly abas: AbaConfig[] = [
+    { id: 'das', titulo: 'DAS', modoDas: true },
+    { id: 'parcelamentoReceita', titulo: 'Parcelamento Receita', modoDas: false, endpoint: 'PessoaPrefeituraDASDebitos', filtroTipo: 'Receita' },
+    { id: 'parcelamentoPrefeitura', titulo: 'Parcelamento Prefeitura', modoDas: false, endpoint: 'PessoaPrefeituraDASDebitos', filtroTipo: 'Prefeitura' },
+    { id: 'inss', titulo: 'Prolabore/INSS', modoDas: false, endpoint: 'PessoaINSS' },
+    { id: 'tfe', titulo: 'TFE', modoDas: false, endpoint: 'PessoaTFE' }
+  ];
+
+  abaIndex = 0;
+  listaDas: DasItem[] = [];
+  listas: Record<AbaImposto, ArquivoDebito[]> = {
+    das: [],
+    parcelamentoReceita: [],
+    parcelamentoPrefeitura: [],
+    inss: [],
+    tfe: []
+  };
+  pageIndex: Record<AbaImposto, number> = {
+    das: 1,
+    parcelamentoReceita: 1,
+    parcelamentoPrefeitura: 1,
+    inss: 1,
+    tfe: 1
+  };
+  readonly pageSize = 6;
+  carregando = new Set<AbaImposto>();
   erro = '';
   salvando = new Set<number>();
+  solicitando = new Set<number>();
 
   private codigoPessoa = 0;
+  private solicitante = '';
 
   constructor(
     private http: HttpClient,
@@ -230,6 +274,7 @@ export class ReceitaImpostoComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const usuario = this.loginService.obterUsuario();
     const pessoa = this.loginService.obterPessoa();
     if (!pessoa?.codigo) {
       this.loginService.logout();
@@ -237,7 +282,8 @@ export class ReceitaImpostoComponent implements OnInit {
       return;
     }
     this.codigoPessoa = pessoa.codigo;
-    this.carregar();
+    this.solicitante = usuario?.email || usuario?.nome || '';
+    this.carregarAba('das');
   }
 
   private get headers(): HttpHeaders {
@@ -247,24 +293,94 @@ export class ReceitaImpostoComponent implements OnInit {
       : new HttpHeaders();
   }
 
-  carregar(): void {
-    this.loading = true;
+  onAbaChange(_index: number): void {
+    const aba = this.abas[this.abaIndex];
+    if (!aba) return;
+    const jaCarregou = aba.modoDas
+      ? this.listaDas.length > 0
+      : this.listas[aba.id].length > 0;
+    if (!jaCarregou && !this.carregando.has(aba.id)) {
+      this.carregarAba(aba.id);
+    }
+  }
+
+  carregarAba(abaId: AbaImposto): void {
+    const aba = this.abas.find(a => a.id === abaId);
+    if (!aba) return;
+
+    this.carregando.add(abaId);
+    this.cdr.markForCheck();
+
+    if (aba.modoDas) {
+      this.carregarDas(abaId);
+      return;
+    }
+    this.carregarArquivos(abaId, aba);
+  }
+
+  private carregarDas(abaId: AbaImposto): void {
     this.erro = '';
-    this.http.get<DasItem | DasItem[]>(
+    this.http.get<DasItem | DasItem | null>(
       `${this.apiBase}/DAS/ObterListaEnvio/codigoPessoa/${this.codigoPessoa}`,
       { headers: this.headers }
-    ).subscribe({
+    ).pipe(timeout(10000), catchError(() => of(null))).subscribe({
       next: (res) => {
-        this.lista = Array.isArray(res) ? res : [res];
-        this.loading = false;
+        if (res == null) {
+          this.erro = 'Erro ao carregar os dados. Tente novamente.';
+          this.listaDas = [];
+        } else {
+          const raw = Array.isArray(res) ? res : [res];
+          this.listaDas = raw.filter(Boolean) as DasItem[];
+        }
+        this.pageIndex[abaId] = 1;
+        this.carregando.delete(abaId);
         this.cdr.markForCheck();
       },
       error: (err) => {
         this.erro = `Erro ao carregar os dados (${err.status}). Tente novamente.`;
-        this.loading = false;
+        this.listaDas = [];
+        this.carregando.delete(abaId);
         this.cdr.markForCheck();
       }
     });
+  }
+
+  private carregarArquivos(abaId: AbaImposto, aba: AbaConfig): void {
+    this.http.get<unknown[]>(
+      `${this.apiBase}/${aba.endpoint}/ObterPorCodigo/${this.codigoPessoa}`,
+      { headers: this.headers }
+    ).pipe(timeout(10000), catchError(() => of([]))).subscribe({
+      next: (raw) => {
+        let itens = (raw || []).map(item => this.mapArquivo(item));
+        if (aba.filtroTipo) {
+          itens = itens.filter(i => i.tipo.toLowerCase() === aba.filtroTipo!.toLowerCase());
+        }
+        const key = abaId;
+        this.listas[key] = this.ordenarArquivos(itens);
+        this.pageIndex[abaId] = 1;
+        this.carregando.delete(abaId);
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.listas[abaId] = [];
+        this.carregando.delete(abaId);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  abrirArquivo(item: ArquivoDebito): void {
+    if (this.estaVencida(item)) return;
+    if (!item.arquivo) {
+      this.message.warning('Arquivo não encontrado.');
+      return;
+    }
+    const params = new URLSearchParams({
+      diretorioCompleto: String(item.codigoPessoa),
+      nomeArquivo: item.arquivo,
+      tipo: item.tipo || 'pdf'
+    });
+    window.open(`${ARQUIVO_BASE_URL}?${params.toString()}`, '_blank', 'noopener,noreferrer');
   }
 
   statusDas(): string {
@@ -276,6 +392,73 @@ export class ReceitaImpostoComponent implements OnInit {
     return new Date(hoje.getFullYear(), hoje.getMonth(), 20);
   }
 
+  formatarData(data?: string): string {
+    if (!data) return '—';
+    const d = new Date(data);
+    return isNaN(d.getTime()) ? data : d.toLocaleDateString('pt-BR');
+  }
+
+  estaVencida(item: ArquivoDebito): boolean {
+    if (!item.dataVencimento) return false;
+    const venc = new Date(item.dataVencimento);
+    if (isNaN(venc.getTime())) return false;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    venc.setHours(0, 0, 0, 0);
+    return venc < hoje;
+  }
+
+  solicitarNovo(aba: AbaConfig, item: ArquivoDebito): void {
+    if (this.solicitando.has(item.codigo)) return;
+
+    this.solicitando.add(item.codigo);
+    this.cdr.markForCheck();
+
+    const agora = new Date().toISOString();
+    const mensagem = `Gerar uma nova guia para pagamento do ${aba.titulo}`;
+    const payload = {
+      codigoPessoa: this.codigoPessoa,
+      atendente: ATENDENTE_FIXO,
+      solicitante: this.solicitante,
+      titulo: TIPO_GUIA_PAGAMENTO,
+      mensagem,
+      status: 'N',
+      prioridade: PRIORIDADE_PADRAO,
+      tipo: AREA_FIXA,
+      slaTempo: this.slaPorPrioridade(PRIORIDADE_PADRAO),
+      dataCriacao: agora,
+      chamadoHistoricos: [{
+        dataHistorico: agora,
+        descricao: 'Criação de solicitação',
+        usuario: this.solicitante
+      }]
+    };
+
+    this.http.post(`${this.apiBase}/Chamado`, payload, { headers: this.headers })
+      .pipe(timeout(30000), catchError(() => of(null)))
+      .subscribe({
+        next: (res) => {
+          this.solicitando.delete(item.codigo);
+          if (res === null) {
+            this.message.error('Erro ao criar solicitação. Tente novamente.');
+          } else {
+            this.message.success('Solicitação criada com sucesso!');
+            this.router.navigate(['/solicitacoes']);
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.solicitando.delete(item.codigo);
+          this.message.error(`Erro ao criar solicitação (${err.status}).`);
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private slaPorPrioridade(p: number): number {
+    return ({ 1: 2, 2: 8, 3: 120 } as Record<number, number>)[p] ?? 8;
+  }
+
   parseBrl(valor: string | number | undefined | null): number {
     if (valor == null) return 0;
     if (typeof valor === 'number') return valor;
@@ -284,30 +467,20 @@ export class ReceitaImpostoComponent implements OnInit {
     return parseFloat(s) || 0;
   }
 
-  gerarBoletoInss(item: InssItem): void {
-    // Implementação futura
-    console.log('Gerar boleto INSS:', item);
-  }
-
-  gerarBoletoParcela(item: ParcelamentoDas): void {
-    // Implementação futura
-    console.log('Gerar boleto parcela:', item);
-  }
-
   isValorZero(item: DasItem): boolean {
     return this.parseBrl(item.valorTributado) === 0 && this.parseBrl(item.valorTributo) === 0;
   }
 
-  gerarBoleto(item: DasItem): void {
-    const url = `https://armazenamento.contfy.com.br/Arquivos/Resultado?diretorioCompleto=${item.codigoPessoa}&nomeArquivo=${item.nomeArquivo}`;
-    window.open(url, '_blank');
+  gerarBoletoDas(item: DasItem): void {
+    const url = `${ARQUIVO_BASE_URL}?diretorioCompleto=${item.codigoPessoa}&nomeArquivo=${item.nomeArquivo}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   marcarComoPaga(item: DasItem): void {
     if (this.salvando.has(item.codigo)) return;
     this.salvando.add(item.codigo);
     const payload: DasItem = { ...item, status: 'Pago' };
-    this.http.put<DasItem>(this.dasApiUrl, payload, { headers: this.headers })
+    this.http.put<DasItem>(`${this.apiBase}/DAS`, payload, { headers: this.headers })
       .subscribe({
         next: () => {
           item.status = 'Pago';
@@ -321,5 +494,32 @@ export class ReceitaImpostoComponent implements OnInit {
           this.cdr.markForCheck();
         }
       });
+  }
+
+  private ordenarArquivos(itens: ArquivoDebito[]): ArquivoDebito[] {
+    return [...itens].sort((a, b) => {
+      const diff = this.dataOrdenacao(b) - this.dataOrdenacao(a);
+      return diff !== 0 ? diff : b.codigo - a.codigo;
+    });
+  }
+
+  private dataOrdenacao(item: ArquivoDebito): number {
+    const raw = item.dataCriacao;
+    if (!raw) return 0;
+    const t = new Date(raw).getTime();
+    return isNaN(t) ? 0 : t;
+  }
+
+  private mapArquivo(raw: unknown): ArquivoDebito {
+    const r = raw as Record<string, unknown>;
+    return {
+      codigo: Number(r['codigo'] ?? r['Codigo'] ?? 0),
+      codigoPessoa: Number(r['codigoPessoa'] ?? r['CodigoPessoa'] ?? 0),
+      parcela: r['parcela'] != null || r['Parcela'] != null ? Number(r['parcela'] ?? r['Parcela']) : undefined,
+      tipo: String(r['tipo'] ?? r['Tipo'] ?? ''),
+      dataVencimento: String(r['dataVencimento'] ?? r['DataVencimento'] ?? ''),
+      dataCriacao: String(r['dataCriacao'] ?? r['DataCriacao'] ?? ''),
+      arquivo: String(r['arquivo'] ?? r['Arquivo'] ?? '')
+    };
   }
 }

@@ -25,6 +25,7 @@ import { environment } from '../../environments/environment';
 
 const AREA_FIXA = 'Contabilidade';
 const ATENDENTE_FIXO = 'Analista Contabil';
+const PRIORIDADE_PADRAO = 2; // Média
 const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
 
 const TIPOS_SOLICITACAO = [
@@ -33,6 +34,7 @@ const TIPOS_SOLICITACAO = [
   'Imposto de Renda',
   'Alteração na Empresa',
   'Problemas no Pagamento',
+  'Atualização guia pagamento',
   'Solitação de Documento',
   'Envio de Documento',
   'Problema com Impostos',
@@ -138,17 +140,6 @@ interface ChamadoUpload {
     <nz-modal [(nzVisible)]="novoVisible" nzTitle="Nova Solicitação" [nzWidth]="720" [nzFooter]="ftNovo" (nzOnCancel)="novoVisible=false">
       <ng-container *nzModalContent>
         <div class="modal-form">
-          <nz-form-item>
-            <nz-form-label [nzSpan]="24" nzRequired>Prioridade</nz-form-label>
-            <nz-form-control [nzSpan]="24">
-              <nz-select [(ngModel)]="form.prioridade" nzPlaceHolder="Selecione" style="width:100%">
-                <nz-option [nzValue]="1" nzLabel="Alta"></nz-option>
-                <nz-option [nzValue]="2" nzLabel="Média"></nz-option>
-                <nz-option [nzValue]="3" nzLabel="Baixa"></nz-option>
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
-
           <nz-form-item class="campo-tipo">
             <nz-form-label [nzSpan]="24" nzRequired>Tipo de Solicitação</nz-form-label>
             <nz-form-control [nzSpan]="24">
@@ -299,7 +290,7 @@ export class SolicitacoesClienteComponent implements OnInit {
   solicitante = '';
 
   novoVisible = false;
-  form: { prioridade: number | null; titulo: string | null; mensagem: string } = { prioridade: null, titulo: null, mensagem: '' };
+  form: { titulo: string | null; mensagem: string } = { titulo: null, mensagem: '' };
   fileList: NzUploadFile[] = [];
   private arquivosPendentes: File[] = [];
 
@@ -364,7 +355,7 @@ export class SolicitacoesClienteComponent implements OnInit {
   }
 
   abrirNovo(): void {
-    this.form = { prioridade: null, titulo: null, mensagem: '' };
+    this.form = { titulo: null, mensagem: '' };
     this.fileList = [];
     this.arquivosPendentes = [];
     this.novoVisible = true;
@@ -410,10 +401,6 @@ export class SolicitacoesClienteComponent implements OnInit {
   }
 
   salvarNovo(): void {
-    if (!this.form.prioridade || this.form.prioridade < 1) {
-      this.message.warning('Selecione a prioridade.');
-      return;
-    }
     if (!this.form.titulo?.trim()) {
       this.message.warning('Selecione o tipo de solicitação.');
       return;
@@ -440,9 +427,9 @@ export class SolicitacoesClienteComponent implements OnInit {
       titulo: this.form.titulo,
       mensagem: this.form.mensagem.trim(),
       status: 'N',
-      prioridade: this.form.prioridade,
+      prioridade: PRIORIDADE_PADRAO,
       tipo: AREA_FIXA,
-      slaTempo: this.slaPorPrioridade(this.form.prioridade),
+      slaTempo: this.slaPorPrioridade(PRIORIDADE_PADRAO),
       dataCriacao: agora,
       chamadoHistoricos: [{
         dataHistorico: agora,

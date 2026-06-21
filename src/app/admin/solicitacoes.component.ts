@@ -30,6 +30,7 @@ const TIPOS_SOLICITACAO = [
   'Imposto de Renda',
   'Alteração na Empresa',
   'Problemas no Pagamento',
+  'Atualização guia pagamento',
   'Solitação de Documento',
   'Envio de Documento',
   'Problema com Impostos',

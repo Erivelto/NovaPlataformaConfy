@@ -42,9 +42,9 @@ import { MensalidadeStatusService } from './services/mensalidade-status.service'
           <i nz-icon nzType="file-text"></i>
           <span>Notas Fiscais</span>
         </li>
-        <li nz-menu-item (click)="navigateGuarded('/receita-imposto')" [nzSelected]="isActive('/receita-imposto')" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Receita/Imposto' : '')" nzTooltipPlacement="right">
+        <li nz-menu-item (click)="navigateGuarded('/receita-imposto')" [nzSelected]="isActive('/receita-imposto')" [nzDisabled]="mensalidadeStatus.bloqueado" [class.menu-bloqueado]="mensalidadeStatus.bloqueado" nz-tooltip [nzTooltipTitle]="mensalidadeStatus.bloqueado ? 'Acesso bloqueado — regularize sua mensalidade' : (collapsed ? 'Impostos/Debitos' : '')" nzTooltipPlacement="right">
           <i nz-icon nzType="bar-chart"></i>
-          <span>Impostos</span>
+          <span>Impostos/Debitos</span>
         </li>
         <li nz-menu-item (click)="navigate('/mensalidade')" [nzSelected]="isActive('/mensalidade')" nz-tooltip [nzTooltipTitle]="collapsed ? 'Mensalidade' : ''" nzTooltipPlacement="right">
           <i nz-icon nzType="credit-card"></i>
