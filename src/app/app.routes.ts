@@ -53,6 +53,7 @@ export const routes: Routes = [
 			{ path: 'blog', loadComponent: () => import('./admin/blog.component').then(m => m.BlogComponent) },
 			{ path: 'solicitacoes', loadComponent: () => import('./admin/solicitacoes.component').then(m => m.SolicitacoesComponent) },
 			{ path: 'solicitacoes-dashboard', loadComponent: () => import('./admin/solicitacoes-dashboard.component').then(m => m.SolicitacoesDashboardComponent) },
+			{ path: 'agendamento-nfe/detalhe/:codigo', loadComponent: () => import('./admin/agendamento-nfe-detalhe.component').then(m => m.AgendamentoNfeDetalheComponent) },
 			{ path: 'agendamento-nfe', loadComponent: () => import('./admin/agendamento-nfe.component').then(m => m.AgendamentoNfeComponent) },
 
 			// Rotas legadas mantidas

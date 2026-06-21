@@ -1,21 +1,17 @@
 import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzTableModule } from 'ng-zorro-antd/table';
-import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
-import { NzModalModule } from 'ng-zorro-antd/modal';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { NzGridModule } from 'ng-zorro-antd/grid';
-import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
 
@@ -36,57 +32,14 @@ interface ListaStatusAgendamento {
   status: string;
 }
 
-interface CorpoEmissaoNota {
-  codigo: number;
-  codigoEmissaoNota: number;
-  codigoPessoa: number;
-  codigoTomador: number;
-  descricao: string;
-  valor: string;
-  dataPrimeiraEmissao: string;
-  repetir: boolean;
-  codigoServico: string;
-  excluido: boolean;
-  status: string;
-}
-
-interface Pessoa {
-  codigo: number;
-  nome?: string;
-  razao?: string;
-  documento?: string;
-  incricaoMunicipal?: string;
-  descricaoAtividade?: string;
-  cnae?: string;
-}
-
-interface TomadorEmissaoNota {
-  codigo: number;
-  documento?: string;
-  razao?: string;
-  nome?: string;
-  email?: string;
-  telefone?: string;
-}
-
-interface DadosEmissaoNota {
-  codigo: number;
-  codigoPessoa: number;
-  usuario?: string;
-  senha?: string;
-  pessoaCodigoServico?: string;
-  excluido?: boolean;
-}
-
 @Component({
   selector: 'app-agendamento-nfe',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule, FormsModule,
-    NzCardModule, NzTableModule, NzTagModule, NzIconModule, NzButtonModule,
-    NzSkeletonModule, NzInputModule, NzMessageModule, NzModalModule,
-    NzDividerModule, NzGridModule, NzPopconfirmModule, PageTitleComponent
+    CommonModule, FormsModule, RouterModule,
+    NzCardModule, NzTableModule, NzIconModule, NzButtonModule,
+    NzSkeletonModule, NzInputModule, NzMessageModule, PageTitleComponent
   ],
   template: `
     <div class="page">
@@ -144,7 +97,7 @@ interface DadosEmissaoNota {
               <td>{{ item.status }}</td>
               <td nzAlign="center">
                 <button nz-button nzType="primary" nzSize="small" nzShape="round" (click)="abrirDetalhes(item)">
-                  <i nz-icon nzType="edit"></i> Detalhes
+                  <i nz-icon nzType="eye"></i> Detalhes
                 </button>
               </td>
             </tr>
@@ -155,73 +108,6 @@ interface DadosEmissaoNota {
         </nz-table>
       </nz-card>
     </div>
-
-    <nz-modal
-      *ngIf="modalVisible"
-      [(nzVisible)]="modalVisible"
-      nzTitle="Interação ao Agendamento"
-      [nzWidth]="900"
-      [nzFooter]="ftDetalhe"
-      (nzOnCancel)="fecharDetalhes()">
-      <ng-container *nzModalContent>
-        <ng-container *ngIf="carregandoDetalhe">
-          <nz-skeleton [nzActive]="true" [nzParagraph]="{rows:10}"></nz-skeleton>
-        </ng-container>
-
-        <ng-container *ngIf="!carregandoDetalhe && detalhe">
-          <h4 class="sec-title"><i nz-icon nzType="bank"></i> Empresa</h4>
-          <div nz-row [nzGutter]="16">
-            <div nz-col [nzSpan]="12"><label class="fld-label">Nome</label><div class="fld-value">{{ detalhe.pessoa?.nome || '—' }}</div></div>
-            <div nz-col [nzSpan]="12"><label class="fld-label">Razão Social</label><div class="fld-value">{{ detalhe.pessoa?.razao || '—' }}</div></div>
-            <div nz-col [nzSpan]="12"><label class="fld-label">Documento</label><div class="fld-value">{{ detalhe.pessoa?.documento || '—' }}</div></div>
-            <div nz-col [nzSpan]="12"><label class="fld-label">Inscrição Municipal</label><div class="fld-value">{{ detalhe.pessoa?.incricaoMunicipal || '—' }}</div></div>
-            <div nz-col [nzSpan]="12"><label class="fld-label">Atividade</label><div class="fld-value">{{ detalhe.pessoa?.descricaoAtividade || '—' }}</div></div>
-            <div nz-col [nzSpan]="12"><label class="fld-label">CNAE</label><div class="fld-value">{{ detalhe.pessoa?.cnae || '—' }}</div></div>
-          </div>
-
-          <nz-divider></nz-divider>
-          <h4 class="sec-title"><i nz-icon nzType="user"></i> Tomador</h4>
-          <div nz-row [nzGutter]="16">
-            <div nz-col [nzSpan]="8"><label class="fld-label">Documento</label><div class="fld-value">{{ detalhe.tomador?.documento || '—' }}</div></div>
-            <div nz-col [nzSpan]="8"><label class="fld-label">Razão / Nome</label><div class="fld-value">{{ detalhe.tomador?.razao || detalhe.tomador?.nome || '—' }}</div></div>
-            <div nz-col [nzSpan]="8"><label class="fld-label">E-mail</label><div class="fld-value">{{ detalhe.tomador?.email || '—' }}</div></div>
-          </div>
-
-          <nz-divider></nz-divider>
-          <h4 class="sec-title"><i nz-icon nzType="file-text"></i> Emissão</h4>
-          <div nz-row [nzGutter]="16">
-            <div nz-col [nzSpan]="8"><label class="fld-label">Usuário Prefeitura</label><div class="fld-value">{{ detalhe.dadosEmissao?.usuario || '—' }}</div></div>
-            <div nz-col [nzSpan]="8"><label class="fld-label">Código Prefeitura</label><div class="fld-value">{{ detalhe.dadosEmissao?.pessoaCodigoServico || '—' }}</div></div>
-            <div nz-col [nzSpan]="8"><label class="fld-label">Status</label><div class="fld-value" [style.color]="corStatus(detalhe.statusLabel)">{{ detalhe.statusLabel }}</div></div>
-            <div nz-col [nzSpan]="24"><label class="fld-label">Descrição</label><div class="fld-value">{{ detalhe.corpo?.descricao || '—' }}</div></div>
-            <div nz-col [nzSpan]="12"><label class="fld-label">Data</label><div class="fld-value">{{ formatarData(detalhe.corpo?.dataPrimeiraEmissao) }}</div></div>
-            <div nz-col [nzSpan]="12"><label class="fld-label">Valor</label><div class="fld-value">{{ detalhe.corpo?.valor || '—' }}</div></div>
-          </div>
-
-          <div *ngIf="detalhe.corpo?.status !== 'O'" class="erro-banner">
-            <i nz-icon nzType="warning" nzTheme="fill"></i> Agendamento com erro ou pendente
-          </div>
-        </ng-container>
-      </ng-container>
-
-      <ng-template #ftDetalhe>
-        <button nz-button (click)="fecharDetalhes()" [disabled]="acaoEmAndamento">Fechar</button>
-        <ng-container *ngIf="detalhe?.corpo?.status !== 'O'">
-          <button nz-button nzType="default" (click)="reenviarAgendamento()" [nzLoading]="acaoEmAndamento">Reenviar Agendamento</button>
-          <button nz-button nzType="primary" (click)="emitidoManualmente()" [nzLoading]="acaoEmAndamento">Emitido Manualmente</button>
-          <button
-            nz-button
-            nzType="primary"
-            nzDanger
-            nz-popconfirm
-            nzPopconfirmTitle="Remover este agendamento?"
-            (nzOnConfirm)="removerAgendamento()"
-            [nzLoading]="acaoEmAndamento">
-            Remover Agendamento
-          </button>
-        </ng-container>
-      </ng-template>
-    </nz-modal>
   `,
   styles: [`
     .page { padding: 8px 4px; }
@@ -232,10 +118,6 @@ interface DadosEmissaoNota {
     .kpi-value { font-size: 1.4rem; font-weight: 800; margin: 4px 0; }
     .toolbar { margin-bottom: 12px; }
     .empty { text-align: center; padding: 32px; color: rgba(0,0,0,.45); }
-    .sec-title { font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-    .fld-label { display: block; color: rgba(0,0,0,.45); font-size: .82rem; margin-bottom: 4px; }
-    .fld-value { margin-bottom: 12px; word-break: break-word; }
-    .erro-banner { margin-top: 16px; padding: 12px; background: #fff2f0; border: 1px solid #ffccc7; border-radius: 6px; color: #cf1322; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   `]
 })
 export class AgendamentoNfeComponent implements OnInit {
@@ -249,17 +131,6 @@ export class AgendamentoNfeComponent implements OnInit {
 
   kpiStats: { label: string; value: number; icon: string; color: string }[] = [];
 
-  modalVisible = false;
-  carregandoDetalhe = false;
-  acaoEmAndamento = false;
-  detalhe: {
-    corpo: CorpoEmissaoNota;
-    pessoa?: Pessoa;
-    tomador?: TomadorEmissaoNota;
-    dadosEmissao?: DadosEmissaoNota;
-    statusLabel: string;
-  } | null = null;
-
   sortValor = (a: ListaStatusAgendamento, b: ListaStatusAgendamento) =>
     this.parseValor(a.valor) - this.parseValor(b.valor);
 
@@ -271,6 +142,7 @@ export class AgendamentoNfeComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private message: NzMessageService,
+    private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -299,7 +171,7 @@ export class AgendamentoNfeComponent implements OnInit {
           { label: 'Sucesso', value: s.sucesso ?? 0, icon: 'check-circle', color: '#52c41a' },
           { label: 'Aguardando', value: s.aguardando ?? 0, icon: 'clock-circle', color: '#1890ff' }
         ];
-        this.lista = lista.map((item: ListaStatusAgendamento | Record<string, unknown>) => this.normalizarItem(item));
+        this.lista = lista.map((item: unknown) => this.normalizarItem(item));
         this.ordenarPorValor();
         this.aplicarFiltro();
         this.loading = false;
@@ -344,142 +216,21 @@ export class AgendamentoNfeComponent implements OnInit {
   }
 
   abrirDetalhes(item: ListaStatusAgendamento): void {
-    this.modalVisible = true;
-    this.carregandoDetalhe = true;
-    this.detalhe = null;
-    this.cdr.markForCheck();
-
-    const codigo = item.codigo;
-    this.http.get<CorpoEmissaoNota>(`${this.api}/CorpoEmissaoNota/${codigo}`, { headers: this.h })
-      .pipe(catchError(() => of(null)))
-      .subscribe(corpo => {
-        if (!corpo) {
-          this.message.error('Agendamento não encontrado.');
-          this.carregandoDetalhe = false;
-          this.cdr.markForCheck();
-          return;
-        }
-
-        forkJoin({
-          pessoa: this.http.get<Pessoa>(`${this.api}/Pessoa/${corpo.codigoPessoa}`, { headers: this.h }).pipe(catchError(() => of(null))),
-          tomadores: this.http.get<TomadorEmissaoNota[]>(`${this.api}/TomadorEmissaoNota/${corpo.codigoPessoa}`, { headers: this.h }).pipe(catchError(() => of([]))),
-          dadosLista: this.http.get<DadosEmissaoNota[]>(`${this.api}/DadosEmissaoNota`, { headers: this.h }).pipe(catchError(() => of([])))
-        }).subscribe(({ pessoa, tomadores, dadosLista }) => {
-          const tomador = (tomadores || []).find(t => t.codigo === corpo.codigoTomador);
-          const dadosEmissao = (dadosLista || []).find(d => d.codigoPessoa === corpo.codigoPessoa && !d.excluido);
-          this.detalhe = {
-            corpo,
-            pessoa: pessoa || undefined,
-            tomador,
-            dadosEmissao,
-            statusLabel: item.status
-          };
-          this.carregandoDetalhe = false;
-          this.cdr.markForCheck();
-        });
-      });
-  }
-
-  fecharDetalhes(): void {
-    this.modalVisible = false;
-    this.detalhe = null;
-    this.cdr.markForCheck();
-  }
-
-  reenviarAgendamento(): void {
-    if (!this.detalhe?.corpo) return;
-    this.acaoEmAndamento = true;
-    const corpo = { ...this.detalhe.corpo, status: 'C', dataPrimeiraEmissao: new Date().toISOString() };
-    this.http.put<CorpoEmissaoNota>(`${this.api}/CorpoEmissaoNota`, corpo, { headers: this.h }).subscribe({
-      next: () => {
-        this.message.success('Agendamento reenviado.');
-        this.acaoEmAndamento = false;
-        this.fecharDetalhes();
-        this.carregar();
-      },
-      error: () => {
-        this.message.error('Erro ao reenviar agendamento.');
-        this.acaoEmAndamento = false;
-        this.cdr.markForCheck();
-      }
+    this.router.navigate(['/administrativo/agendamento-nfe/detalhe', item.codigo], {
+      queryParams: { status: item.status }
     });
   }
 
-  emitidoManualmente(): void {
-    if (!this.detalhe?.corpo) return;
-    const codigo = this.detalhe.corpo.codigo;
-    const codigoPessoa = this.detalhe.corpo.codigoPessoa;
-    this.acaoEmAndamento = true;
-
-    this.http.get<boolean>(`${this.api}/NotaFiscal/AdicionarDeAgendamento/${codigo}`, { headers: this.h })
-      .pipe(catchError(() => of(false)))
-      .subscribe(ok => {
-        if (!ok) {
-          this.message.error('Não foi possível registrar a emissão manual.');
-          this.acaoEmAndamento = false;
-          this.cdr.markForCheck();
-          return;
-        }
-        this.http.get<number>(`${this.api}/NotaFiscal/NotaFiscal/UltimaNfe/${codigoPessoa}`, { headers: this.h })
-          .pipe(catchError(() => of(0)))
-          .subscribe(ultimaNfe => {
-            const corpo = {
-              ...this.detalhe!.corpo,
-              status: 'O',
-              dataPrimeiraEmissao: new Date().toISOString(),
-              codigoEmissaoNota: ultimaNfe || this.detalhe!.corpo.codigoEmissaoNota
-            };
-            this.http.put<CorpoEmissaoNota>(`${this.api}/CorpoEmissaoNota`, corpo, { headers: this.h }).subscribe({
-              next: () => {
-                this.message.success('Agendamento marcado como emitido manualmente.');
-                this.acaoEmAndamento = false;
-                this.fecharDetalhes();
-                this.carregar();
-              },
-              error: () => {
-                this.message.error('Erro ao atualizar status do agendamento.');
-                this.acaoEmAndamento = false;
-                this.cdr.markForCheck();
-              }
-            });
-          });
-      });
-  }
-
-  removerAgendamento(): void {
-    if (!this.detalhe?.corpo) return;
-    this.acaoEmAndamento = true;
-    this.http.delete(`${this.api}/CorpoEmissaoNota/${this.detalhe.corpo.codigo}`, { headers: this.h }).subscribe({
-      next: () => {
-        this.message.success('Agendamento removido.');
-        this.acaoEmAndamento = false;
-        this.fecharDetalhes();
-        this.carregar();
-      },
-      error: () => {
-        this.message.error('Erro ao remover agendamento.');
-        this.acaoEmAndamento = false;
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  formatarData(data?: string): string {
-    if (!data) return '—';
-    const d = new Date(data);
-    if (isNaN(d.getTime())) return data;
-    return d.toLocaleDateString('pt-BR');
-  }
-
-  private normalizarItem(item: any): ListaStatusAgendamento {
+  private normalizarItem(item: unknown): ListaStatusAgendamento {
+    const r = item as Record<string, unknown>;
     return {
-      codigo: item.codigo ?? item.Codigo,
-      codigoPessoa: item.codigoPessoa ?? item.CodigoPessoa,
-      documento: item.documento ?? item.Documento ?? '',
-      razao: item.razao ?? item.Razao ?? '',
-      dataPrimeiraEmissao: item.dataPrimeiraEmissao ?? item.DataPrimeiraEmissao ?? '',
-      valor: item.valor ?? item.Valor ?? '',
-      status: item.status ?? item.Status ?? ''
+      codigo: Number(r['codigo'] ?? r['Codigo']),
+      codigoPessoa: Number(r['codigoPessoa'] ?? r['CodigoPessoa']),
+      documento: String(r['documento'] ?? r['Documento'] ?? ''),
+      razao: String(r['razao'] ?? r['Razao'] ?? ''),
+      dataPrimeiraEmissao: String(r['dataPrimeiraEmissao'] ?? r['DataPrimeiraEmissao'] ?? ''),
+      valor: String(r['valor'] ?? r['Valor'] ?? ''),
+      status: String(r['status'] ?? r['Status'] ?? '')
     };
   }
 

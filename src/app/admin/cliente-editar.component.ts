@@ -806,7 +806,6 @@ interface PessoaCobranca { transacao?: string; dateVencimento?: string; valorBru
     <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>Tipo</nz-form-label>
       <nz-form-control [nzSpan]="24">
         <nz-select [(ngModel)]="uploadForm.tipo" style="width:100%">
-          <nz-option nzValue="Nota Fiscal" nzLabel="Nota Fiscal"></nz-option>
           <nz-option nzValue="Contrato Social" nzLabel="Contrato Social"></nz-option>
           <nz-option nzValue="Cartão CNPJ" nzLabel="Cartão CNPJ"></nz-option>
           <nz-option nzValue="Certidão Negativa" nzLabel="Certidão Negativa"></nz-option>
