@@ -60,6 +60,7 @@ interface AbaConfig {
   tipoPadrao: string;
   comParcela: boolean;
   modoDas: boolean;
+  comTipoSelect?: boolean;
 }
 
 @Component({
@@ -204,7 +205,16 @@ interface AbaConfig {
             <nz-input-number [(ngModel)]="uploadParcela" [nzMin]="1" [nzStep]="1" style="width:100%"></nz-input-number>
           </nz-form-control>
         </nz-form-item>
-        <nz-form-item *ngIf="!uploadAbaConfig?.modoDas">
+        <nz-form-item *ngIf="uploadAbaConfig?.comTipoSelect">
+          <nz-form-label [nzSpan]="24" nzRequired>Tipo</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <nz-select [(ngModel)]="uploadTipo" style="width:100%">
+              <nz-option nzValue="Prefeitura" nzLabel="Prefeitura"></nz-option>
+              <nz-option nzValue="Receita" nzLabel="Receita"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item *ngIf="!uploadAbaConfig?.modoDas && !uploadAbaConfig?.comTipoSelect">
           <nz-form-label [nzSpan]="24" nzRequired>Tipo</nz-form-label>
           <nz-form-control [nzSpan]="24">
             <input nz-input [(ngModel)]="uploadTipo" />
@@ -256,12 +266,13 @@ export class EditarDebitosComponent implements OnInit {
   readonly abas: AbaConfig[] = [
     {
       id: 'parcelamento',
-      titulo: 'Parcelamento DAS/Prefeitura',
+      titulo: 'Parcelamento Receita/Prefeitura',
       endpoint: 'PessoaPrefeituraDASDebitos',
       listPath: (id) => `PessoaPrefeituraDASDebitos/ObterPorCodigo/${id}`,
-      tipoPadrao: 'Parcelamento DAS/Prefeitura',
+      tipoPadrao: 'Receita',
       comParcela: true,
-      modoDas: false
+      modoDas: false,
+      comTipoSelect: true
     },
     {
       id: 'das',
