@@ -19,6 +19,9 @@ import { NzMessageModule } from 'ng-zorro-antd/message';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtDate } from '../utils/excel-export.helpers';
 import { LoginService } from '../services/login.service';
 import { environment } from '../../environments/environment';
 
@@ -55,11 +58,17 @@ interface PessoaCobranca {
     NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule,
     NzModalModule, NzMessageModule, NzFormModule, NzSelectModule,
-    PageTitleComponent
+    PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="clientes-online">
-      <app-page-title title="Clientes Online" subtitle="Clientes Plataforma"></app-page-title>
+      <app-page-title title="Clientes Online" subtitle="Clientes Plataforma">
+        <app-export-excel-button
+          [data]="$any(clientesFiltrados)"
+          [columns]="exportColumns"
+          fileName="clientes-online"
+          [loading]="loading" />
+      </app-page-title>
 
       <!-- KPIs -->
       <div class="kpis">
@@ -93,7 +102,7 @@ interface PessoaCobranca {
 
       <!-- Tabela -->
       <nz-card style="margin-top:14px">
-        <div style="margin-bottom:12px">
+        <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <nz-input-group [nzPrefix]="prefixSearch" style="max-width:380px">
             <input nz-input placeholder="Buscar por CNPJ, razão social ou código..." [(ngModel)]="filtro" (ngModelChange)="filtrar()" />
           </nz-input-group>
@@ -273,6 +282,15 @@ export class ClientesOnlineComponent implements OnInit {
   // Modal novo cliente
   adicionarVisible = false;
   novoCliente = { cnpj: '', celular: '', email: '', razao: '' };
+
+  readonly exportColumns: ExcelExportColumn<Pessoa>[] = [
+    { key: 'codigo', title: 'Código' },
+    { key: 'documento', title: 'CNPJ' },
+    { key: 'razao', title: 'Razão Social' },
+    { key: 'prefeitura', title: 'Prefeitura' },
+    { key: 'numeroWhats', title: 'WhatsApp' },
+    { key: 'dataInclusao', title: 'Data Cadastro', format: fmtDate }
+  ];
 
   private get headers(): HttpHeaders {
     const token = localStorage.getItem('auth_token');

@@ -15,6 +15,9 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtDate } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
 
 interface Pessoa {
@@ -44,7 +47,7 @@ interface DadosEmissaoNota {
     CommonModule, FormsModule,
     NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule,
-    NzSelectModule, PageTitleComponent
+    NzSelectModule, PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="gestao-debitos">
@@ -104,6 +107,7 @@ interface DadosEmissaoNota {
           <button nz-button (click)="carregar()" [nzLoading]="loading">
             <i nz-icon nzType="reload"></i> Atualizar
           </button>
+          <app-export-excel-button [data]="$any(clientesFiltrados)" [columns]="exportColumns" fileName="gestao-debitos" />
         </div>
 
         <ng-container *ngIf="loading">
@@ -199,6 +203,16 @@ export class GestaoDebitosComponent implements OnInit {
   totalOnline = 0;
   totalFisica = 0;
   clientesNovos = 0;
+
+  readonly exportColumns: ExcelExportColumn<Pessoa>[] = [
+    { key: 'codigo', title: 'Código' },
+    { key: 'tipoCliente', title: 'Tipo' },
+    { key: 'documento', title: 'Documento' },
+    { key: 'razao', title: 'Nome / Razão Social', format: (_v, row) => row.razao || row.nome || '' },
+    { key: 'prefeitura', title: 'Prefeitura' },
+    { key: 'numeroWhats', title: 'WhatsApp' },
+    { key: 'dataInclusao', title: 'Cadastro', format: fmtDate }
+  ];
 
   private get headers(): HttpHeaders {
     const token = localStorage.getItem('auth_token');

@@ -21,6 +21,9 @@ import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { Router } from '@angular/router';
 import { LoginService } from '../services/login.service';
 import { environment } from '../../environments/environment';
@@ -73,7 +76,7 @@ interface Tomador {
     NzInputModule, NzDatePickerModule,
     NzCheckboxModule, NzDividerModule, NzPopconfirmModule,
     NzSkeletonModule, NzStepsModule, NzSpinModule, NzRadioModule,
-    PageTitleComponent
+    PageTitleComponent, ExportExcelButtonComponent
   ],
   providers: [NzMessageService],
   template: `
@@ -89,7 +92,8 @@ interface Tomador {
       </nz-alert>
 
       <nz-card>
-        <div style="margin-bottom:16px; display:flex; justify-content:flex-end;">
+        <div style="margin-bottom:16px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
+          <app-export-excel-button [data]="$any(rows)" [columns]="exportColumns" fileName="solicitacao-nfe" />
           <button nz-button nzType="primary" (click)="openWizard()">
             <i nz-icon nzType="plus"></i> Nova Solicitação
           </button>
@@ -522,6 +526,15 @@ export class SolicitacaoNfeComponent implements OnInit {
   erro = '';
   lista: EmissaoNfe[] = [];
   rows: NfeRow[] = [];
+
+  readonly exportColumns: ExcelExportColumn<NfeRow>[] = [
+    { key: 'codigo', title: 'Código' },
+    { key: 'descricao', title: 'Descrição' },
+    { key: 'data', title: 'Data', format: fmtDate },
+    { key: 'valor', title: 'Valor', format: fmtCurrency },
+    { key: 'codigoEmissaoNota', title: 'Nº da Nota', format: v => (v ? String(v) : '-') },
+    { key: 'executado', title: 'Status', format: v => v ? 'Executado com Sucesso' : 'Aguardando execução' }
+  ];
 
   // Wizard
   wizardVisible = false;

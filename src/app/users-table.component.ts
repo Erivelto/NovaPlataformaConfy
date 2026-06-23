@@ -10,6 +10,9 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { UsersService } from './users.service';
 import { Router } from '@angular/router';
 import { PageTitleComponent } from './page-title.component';
+import { ExportExcelButtonComponent } from './components/export-excel-button.component';
+import { ExcelExportColumn } from './services/excel-export.service';
+import { fmtBool } from './utils/excel-export.helpers';
 
 interface User {
   id: number;
@@ -22,13 +25,14 @@ interface User {
 @Component({
   selector: 'app-users-table',
   standalone: true,
-  imports: [CommonModule, FormsModule, NzTableModule, NzButtonModule, NzTagModule, NzInputModule, NzIconModule, NzPaginationModule, PageTitleComponent],
+  imports: [CommonModule, FormsModule, NzTableModule, NzButtonModule, NzTagModule, NzInputModule, NzIconModule, NzPaginationModule, PageTitleComponent, ExportExcelButtonComponent],
   template: `
     <div class="users-page" style="padding:16px">
       <app-page-title title="Usuários" subtitle="Lista de usuários">
         <nz-input-group nzSuffixIcon="search">
           <input nz-input placeholder="Pesquisar por nome ou email" [(ngModel)]="searchTerm" (ngModelChange)="applyFilter()" />
         </nz-input-group>
+        <app-export-excel-button [data]="$any(filteredData)" [columns]="exportColumns" fileName="usuarios" />
         <button nz-button nzType="primary" (click)="newUser()">Novo</button>
       </app-page-title>
 
@@ -92,6 +96,14 @@ export class UsersTableComponent implements OnInit {
   pageIndex = 1;
   pageSize = 10;
   pageSizeOptions = [6, 10, 20, 50];
+
+  readonly exportColumns: ExcelExportColumn<User>[] = [
+    { key: 'id', title: 'ID' },
+    { key: 'name', title: 'Nome' },
+    { key: 'email', title: 'Email' },
+    { key: 'role', title: 'Função' },
+    { key: 'active', title: 'Ativo', format: fmtBool }
+  ];
 
   constructor(private usersService: UsersService, private router: Router) {}
 

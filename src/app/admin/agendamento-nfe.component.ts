@@ -13,6 +13,8 @@ import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
 import { environment } from '../../environments/environment';
 
 interface StatusAgendamento {
@@ -39,7 +41,7 @@ interface ListaStatusAgendamento {
   imports: [
     CommonModule, FormsModule, RouterModule,
     NzCardModule, NzTableModule, NzIconModule, NzButtonModule,
-    NzSkeletonModule, NzInputModule, NzMessageModule, PageTitleComponent
+    NzSkeletonModule, NzInputModule, NzMessageModule, PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="page">
@@ -59,6 +61,7 @@ interface ListaStatusAgendamento {
             <input nz-input placeholder="Pesquisar..." [(ngModel)]="busca" (ngModelChange)="onBuscaChange()" />
           </nz-input-group>
           <ng-template #prefixIcon><i nz-icon nzType="search"></i></ng-template>
+          <app-export-excel-button [data]="$any(listaFiltrada)" [columns]="exportColumns" fileName="agendamento-nfe" />
         </div>
 
         <ng-container *ngIf="loading">
@@ -130,6 +133,16 @@ export class AgendamentoNfeComponent implements OnInit {
   busca = '';
 
   kpiStats: { label: string; value: number; icon: string; color: string }[] = [];
+
+  readonly exportColumns: ExcelExportColumn<ListaStatusAgendamento>[] = [
+    { key: 'codigo', title: 'Código' },
+    { key: 'codigoPessoa', title: 'Cód. Cliente' },
+    { key: 'documento', title: 'CNPJ' },
+    { key: 'razao', title: 'Nome' },
+    { key: 'dataPrimeiraEmissao', title: 'Data' },
+    { key: 'valor', title: 'Valor' },
+    { key: 'status', title: 'Status' }
+  ];
 
   sortValor = (a: ListaStatusAgendamento, b: ListaStatusAgendamento) =>
     this.parseValor(a.valor) - this.parseValor(b.valor);

@@ -9,6 +9,9 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { LoginService } from '../services/login.service';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
@@ -35,13 +38,16 @@ interface CobrancaItem {
     NzCardModule, NzTableModule, NzTagModule,
     NzAlertModule, NzIconModule, NzButtonModule,
     NzSkeletonModule,
-    PageTitleComponent
+    PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="mensalidade">
       <app-page-title title="Mensalidade" subtitle="Acompanhe suas mensalidades e situação financeira"></app-page-title>
 
-      <nz-card nzTitle="Mensalidades" style="margin-top:16px">
+      <nz-card nzTitle="Mensalidades" style="margin-top:16px" [nzExtra]="exportTpl">
+        <ng-template #exportTpl>
+          <app-export-excel-button [data]="$any(lista)" [columns]="exportColumns" fileName="mensalidades" />
+        </ng-template>
         <nz-alert
           *ngIf="erro"
           nzType="error"
@@ -103,6 +109,13 @@ export class MensalidadeComponent implements OnInit {
   lista: CobrancaItem[] = [];
   loading = true;
   erro = '';
+
+  readonly exportColumns: ExcelExportColumn<CobrancaItem>[] = [
+    { key: 'valorBruto', title: 'Valor', format: fmtCurrency },
+    { key: 'dateVencimento', title: 'Vencimento', format: fmtDate },
+    { key: 'dataPagamento', title: 'Pagamento', format: fmtDate },
+    { key: 'status', title: 'Status', format: v => this.statusLabel(String(v ?? '')) }
+  ];
 
   private codigoPessoa = 0;
 

@@ -11,6 +11,8 @@ import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
 import { LoginService } from '../services/login.service';
 import { environment } from '../../environments/environment';
 import { catchError, of, timeout } from 'rxjs';
@@ -38,13 +40,16 @@ interface PessoaUpload {
     NzIconModule,
     NzSkeletonModule,
     NzButtonModule,
-    PageTitleComponent
+    PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="documentos">
       <app-page-title title="Documentos Empresa" subtitle="Consulte os documentos anexados à sua conta"></app-page-title>
 
-      <nz-card>
+      <nz-card [nzExtra]="exportTpl">
+        <ng-template #exportTpl>
+          <app-export-excel-button [data]="$any(documentos)" [columns]="exportColumns" fileName="documentos-empresa" />
+        </ng-template>
         <nz-alert
           *ngIf="erro"
           nzType="error"
@@ -101,6 +106,12 @@ export class DocumentosComponent implements OnInit {
   loading = true;
   erro = '';
   documentos: PessoaUpload[] = [];
+
+  readonly exportColumns: ExcelExportColumn<PessoaUpload>[] = [
+    { key: 'codigo', title: 'Código' },
+    { key: 'tipo', title: 'Tipo' }
+  ];
+
   private codigoPessoa = 0;
 
   constructor(

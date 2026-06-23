@@ -18,6 +18,9 @@ import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtDate } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
 
 interface Pessoa {
@@ -32,10 +35,16 @@ interface Pessoa {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule, NzModalModule,
-    NzMessageModule, NzFormModule, NzSelectModule, PageTitleComponent],
+    NzMessageModule, NzFormModule, NzSelectModule, PageTitleComponent, ExportExcelButtonComponent],
   template: `
     <div class="page">
-      <app-page-title title="Clientes Física" subtitle="Clientes Pessoa Física na Plataforma"></app-page-title>
+      <app-page-title title="Clientes Física" subtitle="Clientes Pessoa Física na Plataforma">
+        <app-export-excel-button
+          [data]="$any(clientesFiltrados)"
+          [columns]="exportColumns"
+          fileName="clientes-fisica"
+          [loading]="loading" />
+      </app-page-title>
       <div class="kpis">
         <nz-card class="kpi" nzBordered>
           <div class="kpi-icon"><i nz-icon nzType="user" style="color:#52c41a"></i></div>
@@ -55,7 +64,7 @@ interface Pessoa {
         </nz-card>
       </div>
       <nz-card style="margin-top:14px">
-        <div style="margin-bottom:12px">
+        <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <nz-input-group [nzPrefix]="pfx" style="max-width:380px">
             <input nz-input placeholder="Buscar por CPF, nome ou código..." [(ngModel)]="filtro" (ngModelChange)="filtrar()" />
           </nz-input-group>
@@ -140,6 +149,13 @@ export class ClientesFisicaComponent implements OnInit {
     'Fechamento da Empresa'
   ];
   adicionarVisible = false; novo = { cnpj: '', celular: '', email: '', razao: '' };
+
+  readonly exportColumns: ExcelExportColumn<Pessoa>[] = [
+    { key: 'codigo', title: 'Código' },
+    { key: 'documento', title: 'CPF' },
+    { key: 'razao', title: 'Nome', format: (_v, row) => row.razao || row.nome || '' },
+    { key: 'dataInclusao', title: 'Data Cadastro', format: fmtDate }
+  ];
 
   private get h(): HttpHeaders {
     const t = localStorage.getItem('auth_token');

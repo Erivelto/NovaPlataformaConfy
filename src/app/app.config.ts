@@ -56,6 +56,7 @@ import {
   LoadingOutline,
   ReloadOutline,
   SearchOutline,
+  DownloadOutline,
   StarOutline,
   StarFill,
   FolderOutline,
@@ -82,7 +83,7 @@ export const appConfig: ApplicationConfig = {
       ScheduleOutline, TeamOutline, ContactsOutline, DashboardOutline, PlusOutline,
       SaveOutline, DeleteOutline, InboxOutline, PaperClipOutline, ArrowLeftOutline,
       CheckCircleOutline, CloseCircleOutline, ExclamationCircleOutline, InfoCircleOutline,
-      LoadingOutline, ReloadOutline, SearchOutline, StarOutline, StarFill,
+      LoadingOutline, ReloadOutline, SearchOutline, DownloadOutline, StarOutline, StarFill,
       FolderOutline, NumberOutline, ClienteExcluidoOutline
     ] }
   ]

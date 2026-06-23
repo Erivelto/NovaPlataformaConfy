@@ -20,6 +20,9 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtDateTime } from '../utils/excel-export.helpers';
 import { LoginService } from '../services/login.service';
 import { environment } from '../../environments/environment';
 
@@ -80,7 +83,7 @@ interface ChamadoUpload {
     CommonModule, FormsModule,
     NzCardModule, NzTableModule, NzTagModule, NzIconModule, NzButtonModule,
     NzSkeletonModule, NzModalModule, NzFormModule, NzSelectModule, NzInputModule,
-    NzPopconfirmModule, NzMessageModule, NzDividerModule, NzGridModule, NzUploadModule, PageTitleComponent
+    NzPopconfirmModule, NzMessageModule, NzDividerModule, NzGridModule, NzUploadModule, PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="page">
@@ -91,6 +94,7 @@ interface ChamadoUpload {
           <button nz-button nzType="primary" (click)="abrirNovo()">
             <span nz-icon nzType="plus"></span> Nova Solicitação
           </button>
+          <app-export-excel-button [data]="$any(lista)" [columns]="exportColumns" fileName="solicitacoes-cliente" />
           <span class="hint" *ngIf="!loading">{{ lista.length }} solicitação(ões)</span>
         </div>
 
@@ -288,6 +292,14 @@ export class SolicitacoesClienteComponent implements OnInit {
   lista: Chamado[] = [];
   codigoPessoa = 0;
   solicitante = '';
+
+  readonly exportColumns: ExcelExportColumn[] = [
+    { key: 'id', title: 'Código' },
+    { key: 'titulo', title: 'Tipo' },
+    { key: 'prioridade', title: 'Prioridade', format: v => this.prioLabel(Number(v)) },
+    { key: 'status', title: 'Status', format: v => this.statusLabel(String(v ?? '')) },
+    { key: 'dataCriacao', title: 'Data', format: fmtDateTime }
+  ];
 
   novoVisible = false;
   form: { titulo: string | null; mensagem: string } = { titulo: null, mensagem: '' };

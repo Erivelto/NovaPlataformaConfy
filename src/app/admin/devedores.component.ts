@@ -11,6 +11,9 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
 
 interface Devedor {
@@ -32,10 +35,16 @@ interface Devedor {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
-    NzSkeletonModule, NzInputModule, PageTitleComponent],
+    NzSkeletonModule, NzInputModule, PageTitleComponent, ExportExcelButtonComponent],
   template: `
     <div class="page">
-      <app-page-title title="Clientes Devedores — Mês Atual"></app-page-title>
+      <app-page-title title="Clientes Devedores — Mês Atual">
+        <app-export-excel-button
+          [data]="$any(listaFiltrada)"
+          [columns]="exportColumns"
+          fileName="devedores-mes-atual"
+          [loading]="loading" />
+      </app-page-title>
 
       <!-- Tile total (igual ao legado) -->
       <div class="tiles-row">
@@ -114,6 +123,14 @@ export class DevedoresComponent implements OnInit {
   private readonly api = environment.apiUrl;
   loading = true; lista: Devedor[] = []; listaFiltrada: Devedor[] = [];
   filtro = ''; valorTotal = 0;
+
+  readonly exportColumns: ExcelExportColumn<Devedor>[] = [
+    { key: 'codigoPessoa', title: 'Codigo' },
+    { key: 'documento', title: 'CNPJ' },
+    { key: 'razao', title: 'Razão Social' },
+    { key: 'valorBruto', title: 'Valor', format: fmtCurrency },
+    { key: 'dateVencimento', title: 'Vencimento', format: fmtDate }
+  ];
 
   sortCodigo = (a: Devedor, b: Devedor) => (a.codigoPessoa ?? 0) - (b.codigoPessoa ?? 0);
   sortValor   = (a: Devedor, b: Devedor) => (a.valorBruto || 0) - (b.valorBruto || 0);

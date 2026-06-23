@@ -13,6 +13,9 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { PageTitleComponent } from './page-title.component';
+import { ExportExcelButtonComponent } from './components/export-excel-button.component';
+import { ExcelExportColumn } from './services/excel-export.service';
+import { fmtCurrency, fmtDate } from './utils/excel-export.helpers';
 import { LoginService, UsuarioLogado } from './services/login.service';
 import { MensalidadeStatusService } from './services/mensalidade-status.service';
 import { Router } from '@angular/router';
@@ -39,7 +42,7 @@ interface NotaFiscal {
   selector: 'app-dashboard',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, RouterModule, NzCardModule, NzGridModule, NzTableModule, NzTagModule, NzIconModule, NzAvatarModule, NzSkeletonModule, NzDividerModule, NzAlertModule, NzButtonModule, PageTitleComponent],
+  imports: [CommonModule, RouterModule, NzCardModule, NzGridModule, NzTableModule, NzTagModule, NzIconModule, NzAvatarModule, NzSkeletonModule, NzDividerModule, NzAlertModule, NzButtonModule, PageTitleComponent, ExportExcelButtonComponent],
   template: `
     <div class="dashboard">
       <app-page-title title="Painel" subtitle="Visão geral das suas notas fiscais"></app-page-title>
@@ -123,7 +126,10 @@ interface NotaFiscal {
       </div>
 
       <!-- Últimas notas -->
-      <nz-card nzTitle="Últimas Notas Fiscais" style="margin-top:12px">
+      <nz-card nzTitle="Últimas Notas Fiscais" style="margin-top:12px" [nzExtra]="exportNotasTpl">
+        <ng-template #exportNotasTpl>
+          <app-export-excel-button [data]="$any(ultimasNotas)" [columns]="exportColumnsNotas" fileName="ultimas-notas-fiscais" />
+        </ng-template>
         <ng-container *ngIf="loadingNotas">
           <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 5 }"></nz-skeleton>
         </ng-container>
@@ -224,6 +230,13 @@ export class DashboardComponent implements OnInit {
   faturamentoAnoAtual = 0;
   faturamentoAnoAnterior = 0;
   ultimasNotas: NotaFiscal[] = [];
+
+  readonly exportColumnsNotas: ExcelExportColumn[] = [
+    { key: 'numeroNFE', title: 'Nº da Nota' },
+    { key: 'dataEmissao', title: 'Data de Emissão', format: fmtDate },
+    { key: 'valor', title: 'Valor', format: v => fmtCurrency(this.parseBrl(v as string | number)) },
+    { key: 'cancelada', title: 'Status', format: v => v ? 'Cancelada' : 'Emitida' }
+  ];
 
   readonly anoAtual = new Date().getFullYear();
   readonly anoAnterior = new Date().getFullYear() - 1;

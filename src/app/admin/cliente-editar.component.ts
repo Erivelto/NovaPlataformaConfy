@@ -32,6 +32,9 @@ import { NzTreeModule, NzTreeNode, NzFormatEmitEvent } from 'ng-zorro-antd/tree'
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
 
 const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
@@ -80,7 +83,7 @@ interface CobrancaAdicionalForm {
     NzSelectModule, NzCheckboxModule, NzSwitchModule, NzIconModule, NzAlertModule,
     NzTableModule, NzTagModule, NzModalModule, NzSkeletonModule, NzMessageModule,
     NzDividerModule, NzToolTipModule, NzUploadModule, NzCollapseModule, NzBadgeModule,
-    NzSpinModule, NzTreeModule, NzPopconfirmModule, NzDatePickerModule, PageTitleComponent
+    NzSpinModule, NzTreeModule, NzPopconfirmModule, NzDatePickerModule, PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
 <div class="page">
@@ -280,7 +283,8 @@ interface CobrancaAdicionalForm {
       <!-- ABA 3: REPRESENTANTE LEGAL -->
       <nz-tab nzTitle="Rep. Legal">
         <div class="form-section">
-          <div style="text-align:right;margin-bottom:12px">
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <app-export-excel-button [data]="$any(representantes)" [columns]="exportColumnsRepresentantes" fileName="cliente-representantes" />
             <button nz-button nzType="primary" (click)="abrirNovoRep()"><i nz-icon nzType="plus"></i> Novo Representante</button>
           </div>
           <nz-table [nzData]="representantes" nzBordered nzSize="middle" [nzShowPagination]="false">
@@ -583,6 +587,9 @@ interface CobrancaAdicionalForm {
           </div>
 
           <nz-divider nzText="Cobranças Adicionais" nzOrientation="left"></nz-divider>
+          <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+            <app-export-excel-button [data]="$any(cobrancasAdicionais)" [columns]="exportColumnsCobrAdic" fileName="cliente-cobrancas-adicionais" />
+          </div>
           <nz-table [nzData]="cobrancasAdicionais" nzBordered nzSize="small" [nzShowPagination]="false">
             <thead>
               <tr>
@@ -606,6 +613,9 @@ interface CobrancaAdicionalForm {
           </nz-table>
 
           <nz-divider nzText="Últimas Faturas" nzOrientation="left"></nz-divider>
+          <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+            <app-export-excel-button [data]="$any(ultimasFaturas)" [columns]="exportColumnsFaturas" fileName="cliente-ultimas-faturas" />
+          </div>
           <nz-table [nzData]="ultimasFaturas" nzBordered nzSize="small" [nzShowPagination]="false">
             <thead><tr><th nzWidth="130px">Vencimento</th><th nzWidth="130px">Valor</th><th nzWidth="120px" nzAlign="center">Status</th><th nzWidth="100px" nzAlign="center"></th></tr></thead>
             <tbody>
@@ -703,7 +713,8 @@ interface CobrancaAdicionalForm {
       <!-- ABA 6: DOCUMENTOS -->
       <nz-tab nzTitle="Documentos">
         <div class="form-section">
-          <div style="text-align:right;margin-bottom:12px">
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <app-export-excel-button [data]="$any(documentos)" [columns]="exportColumnsDocumentos" fileName="cliente-documentos" />
             <button nz-button nzType="primary" (click)="abrirUpload()"><i nz-icon nzType="upload"></i> Novo Documento</button>
           </div>
           <nz-table [nzData]="documentos" nzBordered nzSize="middle" [nzShowPagination]="false">
@@ -1004,6 +1015,37 @@ export class ClienteEditarComponent implements OnInit {
   statusLogin = false;
   excluindoDoc = new Set<number>();
   abaAtiva = 0;
+
+  readonly exportColumnsRepresentantes: ExcelExportColumn[] = [
+    { key: 'nome', title: 'Nome' },
+    { key: 'cpf', title: 'CPF' },
+    { key: 'dataContfy', title: 'Data Cadastro', format: fmtDate },
+    { key: 'cidade', title: 'Cidade/UF', format: (_v, row) => {
+      const r = row as Record<string, unknown>;
+      return r['cidade'] ? `${r['cidade']}/${r['uf']}` : '';
+    }}
+  ];
+
+  readonly exportColumnsCobrAdic: ExcelExportColumn[] = [
+    { key: 'mesReferencia', title: 'Referência', format: (_v, row) => {
+      const r = row as { mesReferencia?: number; anoReferencia?: number };
+      return this.formatMesAno(r.mesReferencia ?? 0, r.anoReferencia ?? 0);
+    }},
+    { key: 'dataVenciemnto', title: 'Vencimento', format: fmtDate },
+    { key: 'valor', title: 'Valor', format: fmtCurrency },
+    { key: 'descricao', title: 'Descrição' }
+  ];
+
+  readonly exportColumnsFaturas: ExcelExportColumn[] = [
+    { key: 'dateVencimento', title: 'Vencimento', format: fmtDate },
+    { key: 'valorBruto', title: 'Valor', format: fmtCurrency },
+    { key: 'status', title: 'Status', format: v => this.statusCobrancaLabel(String(v ?? '')) }
+  ];
+
+  readonly exportColumnsDocumentos: ExcelExportColumn[] = [
+    { key: 'codigo', title: 'Código' },
+    { key: 'tipo', title: 'Tipo' }
+  ];
 
   get temWhats(): boolean { return !!(this.pessoa.numeroWhats?.trim()); }
   get temEndereco(): boolean { return !!(this.endereco.logradouro?.trim()); }

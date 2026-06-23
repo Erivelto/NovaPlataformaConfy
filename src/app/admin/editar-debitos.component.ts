@@ -22,6 +22,9 @@ import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtDate } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
 
 const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
@@ -72,7 +75,7 @@ interface AbaConfig {
     NzCardModule, NzTabsModule, NzFormModule, NzInputModule, NzButtonModule,
     NzIconModule, NzTableModule, NzTagModule, NzModalModule, NzSkeletonModule,
     NzMessageModule, NzUploadModule, NzDatePickerModule, NzInputNumberModule,
-    NzPopconfirmModule, NzSelectModule, PageTitleComponent
+    NzPopconfirmModule, NzSelectModule, PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="page">
@@ -107,6 +110,10 @@ interface AbaConfig {
                 <button nz-button (click)="carregarLista(aba.id)" [nzLoading]="carregandoLista.has(aba.id)">
                   <i nz-icon nzType="reload"></i> Atualizar
                 </button>
+                <app-export-excel-button
+                  [data]="$any(listas[aba.id])"
+                  [columns]="exportColumnsFor(aba)"
+                  [fileName]="exportFileNameFor(aba)" />
               </div>
 
               <nz-table
@@ -604,6 +611,33 @@ export class EditarDebitosComponent implements OnInit {
       case 'aguardando': return 'cyan';
       default: return 'default';
     }
+  }
+
+  exportColumnsFor(aba: AbaConfig): ExcelExportColumn[] {
+    if (aba.modoDas) {
+      return [
+        { key: 'codigo', title: 'Código' },
+        { key: 'periodo', title: 'Período' },
+        { key: 'status', title: 'Status' },
+        { key: 'valorTributado', title: 'Valor Trib.' },
+        { key: 'valorTributo', title: 'Valor Tributo' },
+        { key: 'data', title: 'Data', format: fmtDate }
+      ];
+    }
+    const cols: ExcelExportColumn[] = [
+      { key: 'codigo', title: 'Código' }
+    ];
+    if (aba.comParcela) cols.push({ key: 'parcela', title: 'Parcela' });
+    cols.push(
+      { key: 'tipo', title: 'Tipo' },
+      { key: 'dataVencimento', title: 'Vencimento', format: fmtDate },
+      { key: 'dataCriacao', title: 'Cadastro', format: fmtDate }
+    );
+    return cols;
+  }
+
+  exportFileNameFor(aba: AbaConfig): string {
+    return `editar-debitos-${aba.id}`;
   }
 
   formatarData(data?: string): string {

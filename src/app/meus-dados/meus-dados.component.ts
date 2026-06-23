@@ -15,6 +15,8 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
 import { PessoaService } from '../services/pessoa.service';
 import { LoginService } from '../services/login.service';
 
@@ -25,7 +27,7 @@ import { LoginService } from '../services/login.service';
     CommonModule, FormsModule,
     NzCardModule, NzDescriptionsModule, NzTableModule, NzButtonModule,
     NzModalModule, NzInputModule, NzSpinModule, NzAlertModule, NzIconModule, NzTagModule,
-    PageTitleComponent
+    PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="meus-dados">
@@ -80,9 +82,12 @@ import { LoginService } from '../services/login.service';
           </div>
         </nz-card>
 
-        <nz-card [nzTitle]="tContatos" class="sc" *ngIf="contatos.length > 0">
+        <nz-card [nzTitle]="tContatos" class="sc" *ngIf="contatos.length > 0" [nzExtra]="exportContatosTpl">
           <ng-template #tContatos>
             <i nz-icon nzType="phone" style="margin-right:6px"></i>Contatos
+          </ng-template>
+          <ng-template #exportContatosTpl>
+            <app-export-excel-button [data]="$any(contatos)" [columns]="exportColumnsContatos" fileName="meus-dados-contatos" />
           </ng-template>
           <nz-table [nzData]="contatos" nzBordered nzSize="middle" [nzShowPagination]="false">
             <thead>
@@ -142,6 +147,20 @@ export class MeusDadosComponent implements OnInit {
   rep: any = null;
   enderecoRep: any = null;
   contatos: any[] = [];
+
+  readonly exportColumnsContatos: ExcelExportColumn[] = [
+    { key: 'codigo', title: 'Codigo' },
+    { key: 'email', title: 'E-mail' },
+    { key: 'telefone', title: 'Telefone', format: (_v, row) => {
+      const r = row as Record<string, unknown>;
+      return r['ddd'] ? `${r['ddd']} - ${r['telefone']}` : String(r['telefone'] ?? '-');
+    }},
+    { key: 'celular', title: 'Celular', format: (_v, row) => {
+      const r = row as Record<string, unknown>;
+      return r['dddc'] ? `${r['dddc']} - ${r['celular']}` : String(r['celular'] ?? '-');
+    }}
+  ];
+
   modalVisible = false;
   modalSecao = '';
   mensagem = '';

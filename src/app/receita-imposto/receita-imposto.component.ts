@@ -13,6 +13,9 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { LoginService } from '../services/login.service';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
@@ -68,7 +71,7 @@ interface AbaConfig {
     NzCardModule, NzTabsModule, NzTableModule, NzTagModule,
     NzAlertModule, NzIconModule, NzButtonModule,
     NzSkeletonModule, NzMessageModule,
-    PageTitleComponent
+    PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="receita-imposto">
@@ -100,6 +103,9 @@ interface AbaConfig {
 
               <!-- Aba DAS -->
               <ng-container *ngIf="aba.modoDas && !carregando.has(aba.id)">
+                <div style="margin-bottom:12px;display:flex;justify-content:flex-end">
+                  <app-export-excel-button [data]="$any(listaDas)" [columns]="exportColumnsDas" fileName="impostos-das" />
+                </div>
                 <nz-table
                   #dasTable
                   [nzData]="listaDas"
@@ -156,6 +162,12 @@ interface AbaConfig {
 
               <!-- Abas de documentos -->
               <ng-container *ngIf="!aba.modoDas && !carregando.has(aba.id)">
+                <div style="margin-bottom:12px;display:flex;justify-content:flex-end">
+                  <app-export-excel-button
+                    [data]="$any(listas[aba.id])"
+                    [columns]="exportColumnsArquivo(aba)"
+                    [fileName]="'impostos-' + aba.id" />
+                </div>
                 <nz-table
                   #arquivoTable
                   [nzData]="listas[aba.id]"
@@ -261,6 +273,32 @@ export class ReceitaImpostoComponent implements OnInit {
   erro = '';
   salvando = new Set<number>();
   solicitando = new Set<number>();
+
+  readonly exportColumnsDas: ExcelExportColumn[] = [
+    { key: 'periodo', title: 'Período' },
+    { key: 'periodo', title: 'Data Vencimento', format: v => fmtDate(this.vencimento(String(v ?? ''))) },
+    { key: 'valorTributado', title: 'Valor Tributado', format: v => fmtCurrency(this.parseBrl(String(v ?? ''))) },
+    { key: 'valorTributo', title: 'Valor Tributo' },
+    { key: 'status', title: 'Status', format: (_v, row) => {
+      const item = row as unknown as DasItem;
+      return item.status === 'Pago' ? 'Pago' : this.statusDas();
+    }}
+  ];
+
+  exportColumnsArquivo(aba: AbaConfig): ExcelExportColumn[] {
+    const cols: ExcelExportColumn[] = [];
+    if (aba.id === 'parcelamentoReceita' || aba.id === 'parcelamentoPrefeitura') {
+      cols.push({ key: 'parcela', title: 'Parcela' });
+    } else {
+      cols.push({ key: 'tipo', title: 'Tipo' });
+    }
+    cols.push(
+      { key: 'dataVencimento', title: 'Vencimento', format: fmtDate },
+      { key: 'dataCriacao', title: 'Cadastro', format: fmtDate },
+      { key: 'dataVencimento', title: 'Mensagem', format: (_v, row) => this.estaVencida(row as unknown as ArquivoDebito) ? 'Vencida, não pode ser paga, solicite uma nova!' : '—' }
+    );
+    return cols;
+  }
 
   private codigoPessoa = 0;
   private solicitante = '';

@@ -14,6 +14,8 @@ import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
 import { environment } from '../../environments/environment';
 
 interface DasAcumulado { codigoPessoa: number; tipo: string; periodo: string; valorTributado?: string; valorTributo?: string; status?: string; razao?: string; }
@@ -31,17 +33,18 @@ const STATUS_LABELS: Record<string, { label: string; color: string; desc: string
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
-    NzButtonModule, NzSkeletonModule, NzInputModule, NzAlertModule, PageTitleComponent],
+    NzButtonModule, NzSkeletonModule, NzInputModule, NzAlertModule, PageTitleComponent, ExportExcelButtonComponent],
   template: `
     <div class="page">
       <app-page-title [title]="pageTitle" [subtitle]="pageSubtitle"></app-page-title>
       <nz-alert *ngIf="statusInfo" [nzType]="alertType" [nzMessage]="pageSubtitle" nzShowIcon style="margin:12px 0"></nz-alert>
       <nz-card>
-        <div style="margin-bottom:12px">
+        <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <nz-input-group [nzPrefix]="pfx" style="max-width:380px">
             <input nz-input placeholder="Buscar por razão social ou período..." [(ngModel)]="filtro" (ngModelChange)="filtrar()" />
           </nz-input-group>
           <ng-template #pfx><i nz-icon nzType="search"></i></ng-template>
+          <app-export-excel-button [data]="$any(listaFiltrada)" [columns]="exportColumns" [fileName]="exportFileName" />
         </div>
         <ng-container *ngIf="loading"><nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{rows:8}"></nz-skeleton></ng-container>
         <nz-table *ngIf="!loading" [nzData]="listaFiltrada" nzBordered nzSize="middle" [nzShowPagination]="true" [nzPageSize]="15">
@@ -68,6 +71,19 @@ export class ValidacaoDasComponent implements OnInit {
   private readonly api = environment.apiUrl;
   loading = true; lista: DasAcumulado[] = []; listaFiltrada: DasAcumulado[] = [];
   filtro = ''; statusParam = 'E';
+
+  readonly exportColumns: ExcelExportColumn<DasAcumulado>[] = [
+    { key: 'razao', title: 'Razão Social' },
+    { key: 'periodo', title: 'Período' },
+    { key: 'valorTributado', title: 'Val. Tributado' },
+    { key: 'valorTributo', title: 'Val. Tributo' },
+    { key: 'tipo', title: 'Status', format: () => this.statusTagLabel }
+  ];
+
+  get exportFileName(): string {
+    return `validacao-das-${this.statusParam.toLowerCase()}`;
+  }
+
   get statusInfo() { return STATUS_LABELS[this.statusParam]; }
   get alertType(): any { const m: any = { E:'error', A:'warning', O:'success', V:'warning', Z:'info' }; return m[this.statusParam]||'info'; }
   get pageTitle(): string { return 'Validação DAS — ' + (this.statusInfo ? this.statusInfo.label : ''); }

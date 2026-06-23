@@ -12,6 +12,8 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
 import { environment } from '../../environments/environment';
 
 interface Pendencia { codigoPessoa: number; tipo: string; valor: string; apuracao: string; status: string; razao?: string; }
@@ -21,7 +23,7 @@ interface Pendencia { codigoPessoa: number; tipo: string; valor: string; apuraca
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
-    NzButtonModule, NzSkeletonModule, NzInputModule, PageTitleComponent],
+    NzButtonModule, NzSkeletonModule, NzInputModule, PageTitleComponent, ExportExcelButtonComponent],
   template: `
     <div class="page">
       <app-page-title title="Pendências Clientes DAS" subtitle="Clientes com pendências de DAS consolidadas"></app-page-title>
@@ -32,11 +34,12 @@ interface Pendencia { codigoPessoa: number; tipo: string; valor: string; apuraca
           <div class="kpi-value primary" *ngIf="!loading">{{ clientesUnicos }}</div><div class="kpi-label">Clientes Afetados</div></nz-card>
       </div>
       <nz-card style="margin-top:14px">
-        <div style="margin-bottom:12px">
+        <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <nz-input-group [nzPrefix]="pfx" style="max-width:380px">
             <input nz-input placeholder="Buscar por razão social, tipo ou apuração..." [(ngModel)]="filtro" (ngModelChange)="filtrar()" />
           </nz-input-group>
           <ng-template #pfx><i nz-icon nzType="search"></i></ng-template>
+          <app-export-excel-button [data]="$any(listaFiltrada)" [columns]="exportColumns" fileName="pendencias-das" />
         </div>
         <ng-container *ngIf="loading"><nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{rows:8}"></nz-skeleton></ng-container>
         <nz-table *ngIf="!loading" [nzData]="listaFiltrada" nzBordered nzSize="middle" [nzShowPagination]="true" [nzPageSize]="15">
@@ -62,6 +65,15 @@ interface Pendencia { codigoPessoa: number; tipo: string; valor: string; apuraca
 export class PendenciasDasComponent implements OnInit {
   private readonly api = environment.apiUrl;
   loading = true; lista: Pendencia[] = []; listaFiltrada: Pendencia[] = []; filtro = ''; clientesUnicos = 0;
+
+  readonly exportColumns: ExcelExportColumn<Pendencia>[] = [
+    { key: 'razao', title: 'Razão Social' },
+    { key: 'apuracao', title: 'Apuração' },
+    { key: 'tipo', title: 'Tipo' },
+    { key: 'valor', title: 'Valor' },
+    { key: 'status', title: 'Status', format: v => (v as string) || 'Pendente' }
+  ];
+
   private get h(): HttpHeaders { const t = localStorage.getItem('auth_token'); return t ? new HttpHeaders({ Authorization: `Bearer ${t}` }) : new HttpHeaders(); }
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
   ngOnInit() { this.carregar(); }

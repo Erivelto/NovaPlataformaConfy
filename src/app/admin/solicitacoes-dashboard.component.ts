@@ -11,6 +11,9 @@ import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzStatisticModule } from 'ng-zorro-antd/statistic';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtDateTime } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
 
 interface Chamado { id: number; codigoPessoa: number; atendente: string; solicitante: string; titulo: string; status: string; prioridade: number; dataCriacao: string; sLATempo?: number; razao?: string; }
@@ -20,7 +23,7 @@ interface Chamado { id: number; codigoPessoa: number; atendente: string; solicit
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
-    NzSkeletonModule, NzStatisticModule, NzDividerModule, PageTitleComponent],
+    NzSkeletonModule, NzStatisticModule, NzDividerModule, PageTitleComponent, ExportExcelButtonComponent],
   template: `
     <div class="page">
       <app-page-title title="Dashboard de Solicitações" subtitle="Visão geral do atendimento e SLA"></app-page-title>
@@ -37,6 +40,10 @@ interface Chamado { id: number; codigoPessoa: number; atendente: string; solicit
       <ng-container *ngIf="loading"><nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{rows:3}"></nz-skeleton></ng-container>
 
       <nz-divider nzText="Chamados Recentes"></nz-divider>
+
+      <div style="margin-bottom:12px;display:flex;justify-content:flex-end" *ngIf="!loading">
+        <app-export-excel-button [data]="$any(lista)" [columns]="exportColumns" fileName="solicitacoes-dashboard" />
+      </div>
 
       <ng-container *ngIf="loading"><nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{rows:8}"></nz-skeleton></ng-container>
       <nz-table *ngIf="!loading" [nzData]="lista" nzBordered nzSize="middle" [nzShowPagination]="true" [nzPageSize]="10">
@@ -71,6 +78,21 @@ export class SolicitacoesDashboardComponent implements OnInit {
   private readonly api = environment.apiUrl;
   loading = true; lista: Chamado[] = [];
   stats = { novos:0, emAtendimento:0, concluidos:0, slaVencido:0, alta:0, media:0, normal:0 };
+
+  readonly exportColumns: ExcelExportColumn[] = [
+    { key: 'id', title: 'ID' },
+    { key: 'titulo', title: 'Título' },
+    { key: 'razao', title: 'Cliente', format: (_v, row) => {
+      const c = row as unknown as Chamado;
+      return c.razao || c.solicitante || '';
+    }},
+    { key: 'atendente', title: 'Atendente' },
+    { key: 'dataCriacao', title: 'Abertura', format: fmtDateTime },
+    { key: 'status', title: 'Status', format: v => this.statusLabel(String(v ?? '')) },
+    { key: 'prioridade', title: 'Prio.', format: v => this.prioLabel(Number(v)) },
+    { key: 'sLATempo', title: 'SLA', format: v => (v != null && Number(v) < 0) ? 'Vencido' : 'OK' }
+  ];
+
   private get h(): HttpHeaders { const t = localStorage.getItem('auth_token'); return t ? new HttpHeaders({ Authorization: `Bearer ${t}` }) : new HttpHeaders(); }
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
   ngOnInit() { this.carregar(); }

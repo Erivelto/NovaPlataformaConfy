@@ -15,6 +15,9 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageModule, NzMessageService } from 'ng-zorro-antd/message';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtDate } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
 
 interface PessoaExcluida {
@@ -41,11 +44,17 @@ interface PessoaExcluida {
     NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule,
     NzModalModule, NzMessageModule,
-    PageTitleComponent
+    PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="page">
-      <app-page-title title="Clientes Excluídos" subtitle="Clientes online e pessoa física cancelados"></app-page-title>
+      <app-page-title title="Clientes Excluídos" subtitle="Clientes online e pessoa física cancelados">
+        <app-export-excel-button
+          [data]="$any(clientesFiltrados)"
+          [columns]="exportColumns"
+          fileName="clientes-excluidos"
+          [loading]="loading" />
+      </app-page-title>
 
       <div class="kpis">
         <nz-card class="kpi" nzBordered>
@@ -69,7 +78,7 @@ interface PessoaExcluida {
       </div>
 
       <nz-card style="margin-top:14px">
-        <div style="margin-bottom:12px">
+        <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <nz-input-group [nzPrefix]="pfx" style="max-width:420px">
             <input nz-input placeholder="Buscar por documento, nome, código ou motivo..." [(ngModel)]="filtro" (ngModelChange)="filtrar()" />
           </nz-input-group>
@@ -177,6 +186,15 @@ export class ClientesExcluidosComponent implements OnInit {
 
   reativarVisible = false;
   selecionado: PessoaExcluida | null = null;
+
+  readonly exportColumns: ExcelExportColumn<PessoaExcluida>[] = [
+    { key: 'codigo', title: 'Código' },
+    { key: 'fisica', title: 'Tipo', format: v => v ? 'Física' : 'Online' },
+    { key: 'documento', title: 'Documento' },
+    { key: 'razao', title: 'Nome / Razão Social', format: (_v, row) => row.razao || row.nome || '' },
+    { key: 'dataCancelamento', title: 'Data Cancelamento', format: (_v, row) => fmtDate(this.dataCancelamentoExibicao(row)) },
+    { key: 'motivoExcluido', title: 'Motivo' }
+  ];
 
   private get headers(): HttpHeaders {
     const token = localStorage.getItem('auth_token');

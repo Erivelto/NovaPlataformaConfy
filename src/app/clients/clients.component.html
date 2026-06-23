@@ -1,9 +1,10 @@
 <nz-card>
-  <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:12px">
+  <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap">
     <input nz-input placeholder="Nome" [(ngModel)]="newClient.name" style="width:220px" />
     <input nz-input placeholder="E-mail" [(ngModel)]="newClient.email" style="width:220px" />
     <input nz-input placeholder="Telefone" [(ngModel)]="newClient.phone" style="width:160px" />
     <button nz-button nzType="primary" (click)="create()">Adicionar</button>
+    <app-export-excel-button [data]="$any(clients)" [columns]="exportColumns" fileName="clientes" />
   </div>
   <nz-table [nzData]="clients" [nzLoading]="loading">
     <thead>

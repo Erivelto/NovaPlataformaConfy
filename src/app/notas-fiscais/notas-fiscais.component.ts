@@ -15,6 +15,9 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { Router } from '@angular/router';
 import { LoginService } from '../services/login.service';
 import { environment } from '../../environments/environment';
@@ -41,7 +44,7 @@ interface NotaFiscal {
     NzAlertModule, NzIconModule, NzModalModule,
     NzSkeletonModule, NzDividerModule, NzButtonModule,
     NzFormModule, NzInputModule,
-    PageTitleComponent
+    PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="notas-fiscais">
@@ -56,7 +59,8 @@ interface NotaFiscal {
           style="margin-bottom:12px">
         </nz-alert>
 
-        <div style="margin-bottom:12px; text-align:right;">
+        <div style="margin-bottom:12px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
+          <app-export-excel-button [data]="$any(notas)" [columns]="exportColumns" fileName="notas-fiscais" />
           <button nz-button nzType="primary" (click)="abrirAdicionarModal()">
             <i nz-icon nzType="plus"></i> Adic. Total NF
           </button>
@@ -227,6 +231,13 @@ export class NotasFiscaisComponent implements OnInit {
   loading = true;
   erro = '';
   notas: NotaFiscal[] = [];
+
+  readonly exportColumns: ExcelExportColumn[] = [
+    { key: 'numeroNFE', title: 'Nº da Nota' },
+    { key: 'dataEmissao', title: 'Data de Emissão', format: fmtDate },
+    { key: 'valor', title: 'Valor', format: v => fmtCurrency(this.parseBrl(v as string | number)) },
+    { key: 'cancelada', title: 'Status', format: v => v ? 'Cancelada' : 'Emitida' }
+  ];
 
   detalheVisible = false;
   notaSelecionada: NotaFiscal | null = null;

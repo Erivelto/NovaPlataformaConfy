@@ -20,6 +20,9 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtDateTime } from '../utils/excel-export.helpers';
 import { LoginService } from '../services/login.service';
 import { environment } from '../../environments/environment';
 
@@ -103,7 +106,7 @@ interface FormAtendimento {
     CommonModule, FormsModule,
     NzCardModule, NzTableModule, NzTagModule, NzIconModule, NzButtonModule,
     NzSkeletonModule, NzInputModule, NzToolTipModule, NzModalModule, NzMessageModule,
-    NzFormModule, NzSelectModule, NzDividerModule, NzGridModule, NzUploadModule, PageTitleComponent
+    NzFormModule, NzSelectModule, NzDividerModule, NzGridModule, NzUploadModule, PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="page">
@@ -133,6 +136,7 @@ interface FormAtendimento {
           <button nz-button nzType="primary" (click)="abrirNovo()">
             <i nz-icon nzType="plus"></i> Novo Chamado
           </button>
+          <app-export-excel-button [data]="$any(listaFiltrada)" [columns]="exportColumns" fileName="solicitacoes-admin" />
         </div>
 
         <ng-container *ngIf="loading">
@@ -433,6 +437,20 @@ export class SolicitacoesComponent implements OnInit {
     { label: 'Em Atendimento', icon: 'clock-circle', color: '#fa8c16', value: 0 },
     { label: 'Concluídos', icon: 'check-circle', color: '#52c41a', value: 0 },
     { label: 'Abertos', icon: 'message', color: '#722ed1', value: 0 }
+  ];
+
+  readonly exportColumns: ExcelExportColumn[] = [
+    { key: 'id', title: 'ID' },
+    { key: 'titulo', title: 'Tipo' },
+    { key: 'razao', title: 'Cliente', format: (_v, row) => {
+      const c = row as unknown as Chamado;
+      return c.razao || c.solicitante || '';
+    }},
+    { key: 'atendente', title: 'Atendente', format: v => this.atendenteNome(String(v ?? '')) },
+    { key: 'dataCriacao', title: 'Data', format: fmtDateTime },
+    { key: 'status', title: 'Status', format: v => this.statusLabel(String(v ?? '')) },
+    { key: 'prioridade', title: 'Prioridade', format: v => this.prioLabel(Number(v)) },
+    { key: 'tipo', title: 'Área' }
   ];
 
   atendVisible = false;

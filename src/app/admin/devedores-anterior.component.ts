@@ -11,6 +11,9 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
 
 interface Devedor {
@@ -41,10 +44,23 @@ interface DevedorGrupo {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
-    NzSkeletonModule, NzInputModule, PageTitleComponent],
+    NzSkeletonModule, NzInputModule, PageTitleComponent, ExportExcelButtonComponent],
   template: `
     <div class="page">
-      <app-page-title title="Clientes Devedores — Todos os Meses"></app-page-title>
+      <app-page-title title="Clientes Devedores — Todos os Meses">
+        <app-export-excel-button
+          [data]="$any(gruposFiltrados)"
+          [columns]="exportColumnsGrupos"
+          fileName="devedores-grupos"
+          label="Exportar Clientes"
+          [loading]="loading" />
+        <app-export-excel-button
+          [data]="$any(exportDebitosData)"
+          [columns]="exportColumnsDebitos"
+          fileName="devedores-debitos"
+          label="Exportar Débitos"
+          [loading]="loading" />
+      </app-page-title>
 
       <div class="tiles-row">
         <div class="tile-stats">
@@ -159,6 +175,34 @@ export class DevedoresAnteriorComponent implements OnInit {
   filtro = '';
   valorTotal = 0;
   totalDebitosFiltrados = 0;
+
+  readonly exportColumnsGrupos: ExcelExportColumn<DevedorGrupo>[] = [
+    { key: 'codigoPessoa', title: 'Codigo' },
+    { key: 'documento', title: 'CNPJ' },
+    { key: 'razao', title: 'Razão Social' },
+    { key: 'valorTotal', title: 'Total Dívida', format: fmtCurrency },
+    { key: 'qtdDebitos', title: 'Débitos' }
+  ];
+
+  readonly exportColumnsDebitos: ExcelExportColumn[] = [
+    { key: 'codigoPessoa', title: 'Codigo' },
+    { key: 'documento', title: 'CNPJ' },
+    { key: 'razao', title: 'Razão Social' },
+    { key: 'dateVencimento', title: 'Vencimento', format: fmtDate },
+    { key: 'valorBruto', title: 'Valor', format: fmtCurrency }
+  ];
+
+  get exportDebitosData(): Record<string, unknown>[] {
+    return this.gruposFiltrados.flatMap(g =>
+      g.debitos.map(d => ({
+        codigoPessoa: g.codigoPessoa,
+        documento: g.documento,
+        razao: g.razao,
+        dateVencimento: d.dateVencimento,
+        valorBruto: d.valorBruto
+      }))
+    );
+  }
 
   sortCodigo = (a: DevedorGrupo, b: DevedorGrupo) => a.codigoPessoa - b.codigoPessoa;
   sortValorTotal = (a: DevedorGrupo, b: DevedorGrupo) => a.valorTotal - b.valorTotal;

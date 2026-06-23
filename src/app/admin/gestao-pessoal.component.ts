@@ -19,6 +19,9 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzUploadModule } from 'ng-zorro-antd/upload';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtDate } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
 
 interface Prolabore { codigo: number; codigoPessoa: number; tipo: string; status: string; nomeArquivo?: string; dateVencimento?: string; mes?: number; ano?: number; razao?: string; }
@@ -29,16 +32,17 @@ interface Prolabore { codigo: number; codigoPessoa: number; tipo: string; status
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule, NzMessageModule,
-    NzModalModule, NzFormModule, NzSelectModule, NzUploadModule, PageTitleComponent],
+    NzModalModule, NzFormModule, NzSelectModule, NzUploadModule, PageTitleComponent, ExportExcelButtonComponent],
   template: `
     <div class="page">
       <app-page-title title="Gestão Pessoal" subtitle="Gerenciamento de Pró-Labore e GPS/SEFIP dos clientes"></app-page-title>
       <nz-card>
-        <div style="margin-bottom:12px">
+        <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <nz-input-group [nzPrefix]="pfx" style="max-width:380px">
             <input nz-input placeholder="Buscar por razão social ou tipo..." [(ngModel)]="filtro" (ngModelChange)="filtrar()" />
           </nz-input-group>
           <ng-template #pfx><i nz-icon nzType="search"></i></ng-template>
+          <app-export-excel-button [data]="$any(listaFiltrada)" [columns]="exportColumns" fileName="gestao-pessoal" />
         </div>
         <ng-container *ngIf="loading"><nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{rows:8}"></nz-skeleton></ng-container>
         <nz-table *ngIf="!loading" [nzData]="listaFiltrada" nzBordered nzSize="middle" [nzShowPagination]="true" [nzPageSize]="10">
@@ -81,6 +85,15 @@ export class GestaoPessoalComponent implements OnInit {
   private readonly api = environment.apiUrl;
   loading = true; lista: Prolabore[] = []; listaFiltrada: Prolabore[] = [];
   filtro = ''; enviando = new Set<number>(); excluindo = new Set<number>();
+
+  readonly exportColumns: ExcelExportColumn<Prolabore>[] = [
+    { key: 'razao', title: 'Razão Social' },
+    { key: 'tipo', title: 'Tipo' },
+    { key: 'mes', title: 'Mês/Ano', format: (_v, row) => row.mes ? `${String(row.mes).padStart(2, '0')}/${row.ano}` : '' },
+    { key: 'dateVencimento', title: 'Vencimento', format: fmtDate },
+    { key: 'status', title: 'Status' }
+  ];
+
   private get h(): HttpHeaders { const t = localStorage.getItem('auth_token'); return t ? new HttpHeaders({ Authorization: `Bearer ${t}` }) : new HttpHeaders(); }
   constructor(private http: HttpClient, private message: NzMessageService, private cdr: ChangeDetectorRef) {}
   ngOnInit() { this.carregar(); }

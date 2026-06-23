@@ -14,6 +14,9 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { PageTitleComponent } from '../page-title.component';
+import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ExcelExportColumn } from '../services/excel-export.service';
+import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
 
 interface NotaFiscal {
@@ -52,7 +55,7 @@ type FiltroPeriodo = 'mes' | 'ano' | 'anoAnterior';
   imports: [
     CommonModule, NzCardModule, NzButtonModule, NzIconModule,
     NzSkeletonModule, NzMessageModule, NzDividerModule,
-    NzModalModule, NzTableModule, NzTagModule, PageTitleComponent
+    NzModalModule, NzTableModule, NzTagModule, PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="page">
@@ -129,6 +132,7 @@ type FiltroPeriodo = 'mes' | 'ano' | 'anoAnterior';
         <div class="modal-resumo">
           <span>{{ notasModal.length }} nota(s)</span>
           <span class="modal-total">Total: {{ totalModal | currency:'BRL':'symbol':'1.2-2' }}</span>
+          <app-export-excel-button [data]="$any(notasModal)" [columns]="exportColumns" fileName="receitas-notas-fiscais" />
         </div>
 
         <nz-table
@@ -276,6 +280,13 @@ export class DashboardFiscalAdminComponent implements OnInit {
   modalPageIndex = 1;
   notasModal: NotaFiscal[] = [];
   totalModal = 0;
+
+  readonly exportColumns: ExcelExportColumn<NotaFiscal>[] = [
+    { key: 'numeroNFE', title: 'Nº Nota' },
+    { key: 'dataEmissao', title: 'Emissão', format: fmtDate },
+    { key: 'valorTotal', title: 'Valor', format: fmtCurrency },
+    { key: 'cancelada', title: 'Status', format: v => v ? 'Cancelada' : 'Emitida' }
+  ];
 
   private readonly nomesMes = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
