@@ -186,21 +186,25 @@ export class ClientesFisicaComponent implements OnInit {
   salvarCancelamento() {
     if (!this.cancelMotivo.trim()) { this.message.warning('Selecione o motivo do cancelamento.'); return; }
     this.salvando = true; this.cdr.markForCheck();
-    const agora = new Date().toISOString();
-    this.http.get<any>(`${this.api}/Pessoa/${this.selecionado!.codigo}`, { headers: this.h }).subscribe({ next: (p) => {
-      this.http.put(`${this.api}/Pessoa`, {
-        ...p,
-        excluido: true,
-        Excluido: true,
-        motivoExcluido: this.cancelMotivo,
-        MotivoExcluido: this.cancelMotivo,
-        dataCancelamento: agora,
-        DataCancelamento: agora
-      }, { headers: this.h }).subscribe({
-        next: () => { this.message.success('Cancelado com sucesso.'); this.clientes = this.clientes.filter(c => c.codigo !== this.selecionado!.codigo); this.filtrar(); this.salvando = false; this.cancelVisible = false; this.cdr.markForCheck(); },
-        error: (e) => { this.message.error(`Erro (${e.status})`); this.salvando = false; this.cdr.markForCheck(); }
-      });
-    }, error: (e) => { this.message.error(`Erro (${e.status})`); this.salvando = false; this.cdr.markForCheck(); }});
+    const codigo = this.selecionado!.codigo;
+    this.http.put(`${this.api}/Pessoa/Cancelar`, {
+      codigo,
+      motivoExcluido: this.cancelMotivo
+    }, { headers: this.h }).subscribe({
+      next: () => {
+        this.message.success('Cancelado com sucesso.');
+        this.clientes = this.clientes.filter(c => c.codigo !== codigo);
+        this.filtrar();
+        this.salvando = false;
+        this.cancelVisible = false;
+        this.cdr.markForCheck();
+      },
+      error: (e) => {
+        this.message.error(`Erro ao cancelar (${e.status ?? 'sem resposta'}).`);
+        this.salvando = false;
+        this.cdr.markForCheck();
+      }
+    });
   }
   abrirModalAdicionar() { this.novo = { cnpj: '', celular: '', email: '', razao: '' }; this.adicionarVisible = true; this.cdr.markForCheck(); }
   salvarNovo() {

@@ -396,38 +396,22 @@ export class ClientesOnlineComponent implements OnInit {
     this.cdr.markForCheck();
 
     const codigo = this.clienteSelecionado!.codigo;
-    const agora = new Date().toISOString();
 
-    this.http.get<any>(`${this.api}/Pessoa/${codigo}`, { headers: this.headers }).subscribe({
-      next: (pessoa) => {
-        const payload = {
-          ...pessoa,
-          excluido: true,
-          Excluido: true,
-          motivoExcluido: this.cancelMotivo,
-          MotivoExcluido: this.cancelMotivo,
-          dataCancelamento: agora,
-          DataCancelamento: agora
-        };
-        this.http.put(`${this.api}/Pessoa`, payload, { headers: this.headers }).subscribe({
-          next: () => {
-            this.message.success('Cliente cancelado com sucesso.');
-            this.clientes = this.clientes.filter(c => c.codigo !== codigo);
-            this.filtrar();
-            this.salvando = false;
-            this.cancelamentoVisible = false;
-            this.clienteSelecionado = null;
-            this.cdr.markForCheck();
-          },
-          error: (err) => {
-            this.message.error(`Erro ao cancelar cliente (${err.status}).`);
-            this.salvando = false;
-            this.cdr.markForCheck();
-          }
-        });
+    this.http.put(`${this.api}/Pessoa/Cancelar`, {
+      codigo,
+      motivoExcluido: this.cancelMotivo
+    }, { headers: this.headers }).subscribe({
+      next: () => {
+        this.message.success('Cliente cancelado com sucesso.');
+        this.clientes = this.clientes.filter(c => c.codigo !== codigo);
+        this.filtrar();
+        this.salvando = false;
+        this.cancelamentoVisible = false;
+        this.clienteSelecionado = null;
+        this.cdr.markForCheck();
       },
       error: (err) => {
-        this.message.error(`Erro ao buscar dados do cliente (${err.status}).`);
+        this.message.error(`Erro ao cancelar cliente (${err.status ?? 'sem resposta'}).`);
         this.salvando = false;
         this.cdr.markForCheck();
       }
