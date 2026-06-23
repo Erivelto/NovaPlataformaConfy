@@ -196,6 +196,21 @@ interface CobrancaAdicionalForm {
             <nz-form-item class="flex1"><nz-form-label>WhatsApp / Telegram</nz-form-label>
               <nz-form-control><input nz-input [(ngModel)]="pessoa.numeroWhats" placeholder="5511900000000" /></nz-form-control></nz-form-item>
           </div>
+          <div class="form-row mensagem-cliente-row">
+            <button
+              nz-button
+              nzType="primary"
+              nzGhost
+              [disabled]="!podeEnviarMensagemCliente"
+              nz-tooltip
+              [nzTooltipTitle]="!podeEnviarMensagemCliente ? 'Preencha WhatsApp / Telegram e cadastre o Usuário da Plataforma' : 'Enviar mensagem por e-mail ou WhatsApp'"
+              (click)="abrirModalMensagemCliente()">
+              <i nz-icon nzType="message"></i> Mensagem ao Cliente
+            </button>
+            <span *ngIf="!podeEnviarMensagemCliente" class="mensagem-cliente-hint">
+              Preencha o WhatsApp acima e cadastre o Usuário da Plataforma (aba User Plataforma).
+            </span>
+          </div>
           <div class="form-row" *ngIf="!pessoa.fisica">
             <nz-form-item class="flex1"><nz-form-label>Tipo de Pessoa</nz-form-label>
               <nz-form-control>
@@ -778,6 +793,45 @@ interface CobrancaAdicionalForm {
   </ng-template>
 </nz-modal>
 
+<!-- MODAL: Mensagem ao Cliente -->
+<nz-modal
+  [(nzVisible)]="mensagemClienteVisible"
+  nzTitle="Mensagem ao Cliente"
+  [nzWidth]="520"
+  [nzFooter]="ftMensagemCliente"
+  (nzOnCancel)="mensagemClienteVisible = false">
+  <ng-container *nzModalContent>
+    <div class="form-row">
+      <nz-form-item class="flex1">
+        <nz-form-label nzRequired>Tipo de mensagem</nz-form-label>
+        <nz-form-control>
+          <nz-select [(ngModel)]="mensagemClienteForm.tipoMensagem" style="width:100%">
+            <nz-option *ngFor="let t of tiposMensagemCliente" [nzValue]="t.value" [nzLabel]="t.label"></nz-option>
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+    </div>
+    <div class="form-row">
+      <nz-form-item class="flex1">
+        <nz-form-label nzRequired>Mensagem</nz-form-label>
+        <nz-form-control>
+          <textarea
+            nz-input
+            [(ngModel)]="mensagemClienteForm.mensagem"
+            rows="6"
+            placeholder="Digite a mensagem que será enviada ao cliente"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+    </div>
+  </ng-container>
+  <ng-template #ftMensagemCliente>
+    <button nz-button (click)="mensagemClienteVisible = false">Cancelar</button>
+    <button nz-button nzType="primary" [nzLoading]="enviandoMensagemCliente" (click)="enviarMensagemCliente()">
+      <i nz-icon nzType="send"></i> Enviar
+    </button>
+  </ng-template>
+</nz-modal>
+
 <!-- MODAL: Representante Legal -->
 <nz-modal [(nzVisible)]="repVisible" [nzTitle]="repSelecionado?.codigo ? 'Editar Representante' : 'Novo Representante'"
   [nzWidth]="680" [nzFooter]="ftRep" (nzOnCancel)="repVisible=false">
@@ -861,15 +915,17 @@ interface CobrancaAdicionalForm {
   <ng-container *nzModalContent>
     <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>Tipo</nz-form-label>
       <nz-form-control [nzSpan]="24">
-        <nz-select [(ngModel)]="uploadForm.tipo" style="width:100%">
-          <nz-option nzValue="Contrato Social" nzLabel="Contrato Social"></nz-option>
-          <nz-option nzValue="Cartão CNPJ" nzLabel="Cartão CNPJ"></nz-option>
-          <nz-option nzValue="Certidão Negativa" nzLabel="Certidão Negativa"></nz-option>
-          <nz-option nzValue="Simples Nacional" nzLabel="Simples Nacional"></nz-option>
-          <nz-option nzValue="Relatório Situação Fiscal" nzLabel="Relatório Situação Fiscal"></nz-option>
-          <nz-option nzValue="Defis Atual" nzLabel="Defis Atual"></nz-option>
-          <nz-option nzValue="FDC - Ficha de dados cadastrais" nzLabel="FDC - Ficha de dados cadastrais"></nz-option>
+        <nz-select [(ngModel)]="uploadForm.tipo" nzShowSearch nzAllowClear style="width:100%">
+          <nz-option *ngFor="let t of tiposDocumento" [nzValue]="t" [nzLabel]="t"></nz-option>
         </nz-select>
+        <button nz-button nzType="link" nzSize="small" style="padding-left:0;margin-top:4px" (click)="novoTipoVisible = !novoTipoVisible">
+          <i nz-icon [nzType]="novoTipoVisible ? 'minus' : 'plus'"></i>
+          {{ novoTipoVisible ? 'Cancelar novo tipo' : 'Cadastrar novo tipo' }}
+        </button>
+        <div *ngIf="novoTipoVisible" class="novo-tipo-doc-box">
+          <input nz-input [(ngModel)]="novoTipoDocumento" placeholder="Nome do novo tipo de documento" (keyup.enter)="cadastrarNovoTipoDocumento()" />
+          <button nz-button nzType="primary" nzSize="small" (click)="cadastrarNovoTipoDocumento()">Adicionar</button>
+        </div>
       </nz-form-control></nz-form-item>
     <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>Arquivo</nz-form-label>
       <nz-form-control [nzSpan]="24">
@@ -988,6 +1044,10 @@ interface CobrancaAdicionalForm {
     .flag-item label { font-size: .82rem; color: rgba(0,0,0,.55); font-weight: 600; text-align: center; }
     .flag-danger { color: #ff4d4f !important; }
     .form-actions { margin-top: 8px; border-top: 1px solid #f0f0f0; padding-top: 16px; text-align: right; }
+    .mensagem-cliente-row { align-items: center; gap: 12px; margin-top: 4px; margin-bottom: 8px; }
+    .mensagem-cliente-hint { font-size: .85rem; color: rgba(0,0,0,.45); }
+    .novo-tipo-doc-box { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+    .novo-tipo-doc-box input { flex: 1; }
     .btn-boleto { display:inline-block;padding:4px 14px;background:#1890ff;color:#fff;border-radius:20px;font-size:.85rem;font-weight:500;text-decoration:none; }
     .btn-boleto:hover { background:#40a9ff;color:#fff; }
   `]
@@ -1012,6 +1072,13 @@ export class ClienteEditarComponent implements OnInit {
   cobrancaAdicVisible = false;
   salvandoCobrancaAdic = false;
   cobrancaAdicForm: CobrancaAdicionalForm = { valor: null, descricao: '', quantidadeRepeticao: 1 };
+  mensagemClienteVisible = false;
+  enviandoMensagemCliente = false;
+  mensagemClienteForm = { tipoMensagem: 'Email' as 'Email' | 'Whatsapp', mensagem: '' };
+  readonly tiposMensagemCliente = [
+    { value: 'Email' as const, label: 'Email' },
+    { value: 'Whatsapp' as const, label: 'Whatsapp' }
+  ];
   statusLogin = false;
   excluindoDoc = new Set<number>();
   abaAtiva = 0;
@@ -1050,6 +1117,7 @@ export class ClienteEditarComponent implements OnInit {
   get temWhats(): boolean { return !!(this.pessoa.numeroWhats?.trim()); }
   get temEndereco(): boolean { return !!(this.endereco.logradouro?.trim()); }
   get temUsuario(): boolean { return !!(this.pessoa.usuario?.trim()); }
+  get podeEnviarMensagemCliente(): boolean { return this.temWhats && this.temUsuario; }
   get temRepresentante(): boolean { return this.representantes.length > 0; }
   get temDadosRobo(): boolean { return this.emissoes.length > 0 || this.dadosDasList.length > 0; }
   get temCobranca(): boolean { return this.cobranca.codigo > 0; }
@@ -1116,6 +1184,19 @@ export class ClienteEditarComponent implements OnInit {
   uploadForm = { tipo: 'Contrato Social' };
   fileList: NzUploadFile[] = [];
   selectedFile: File | null = null;
+  novoTipoVisible = false;
+  novoTipoDocumento = '';
+  readonly tiposDocumentoPadrao = [
+    'Contrato Social',
+    'Cartão CNPJ',
+    'Certidão Negativa',
+    'Simples Nacional',
+    'Relatório Situação Fiscal',
+    'Defis Atual',
+    'FDC - Ficha de dados cadastrais'
+  ];
+  tiposDocumento: string[] = [...this.tiposDocumentoPadrao];
+  private readonly tiposDocumentoStorageKey = 'contfy-tipos-documento';
 
   // Certificado Digital
   certificado: PessoaCertificadoData | null = null;
@@ -1133,6 +1214,7 @@ export class ClienteEditarComponent implements OnInit {
 
   ngOnInit() {
     this.codigoPessoa = +this.route.snapshot.paramMap.get('id')!;
+    this.inicializarTiposDocumento();
     this.carregar();
   }
 
@@ -1164,6 +1246,7 @@ export class ClienteEditarComponent implements OnInit {
       this.documentos = Array.isArray(r.uploads)
         ? (r.uploads as any[]).map(item => this.mapDocumento(item))
         : [];
+      this.mesclarTiposDosDocumentos();
       this.emissoes = Array.isArray(r.emissao) ? (r.emissao as DadosEmissao[]).filter((e: DadosEmissao) => e.codigoPessoa === this.codigoPessoa) : [];
       if (r.cobranca && (r.cobranca as DadosCobranca).codigo) {
         this.cobranca = { ...(r.cobranca as DadosCobranca), codigoPessoa: this.codigoPessoa };
@@ -1282,6 +1365,38 @@ export class ClienteEditarComponent implements OnInit {
         }
         this.cdr.markForCheck();
       });
+  }
+
+  abrirModalMensagemCliente(): void {
+    this.mensagemClienteForm = { tipoMensagem: 'Email', mensagem: '' };
+    this.mensagemClienteVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  enviarMensagemCliente(): void {
+    if (!this.mensagemClienteForm.mensagem.trim()) {
+      this.message.warning('Digite a mensagem.');
+      return;
+    }
+    this.enviandoMensagemCliente = true;
+    this.cdr.markForCheck();
+    this.http.post(`${this.api}/Pessoa/MensagemCliente`, {
+      codigoPessoa: this.codigoPessoa,
+      tipoMensagem: this.mensagemClienteForm.tipoMensagem,
+      mensagem: this.mensagemClienteForm.mensagem.trim()
+    }, { headers: this.h }).subscribe({
+      next: () => {
+        this.message.success('Mensagem enviada com sucesso.');
+        this.mensagemClienteVisible = false;
+        this.enviandoMensagemCliente = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.message.error(err.error?.message || `Erro ao enviar mensagem (${err.status}).`);
+        this.enviandoMensagemCliente = false;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   salvar() {
@@ -1618,7 +1733,79 @@ export class ClienteEditarComponent implements OnInit {
     });
   }
 
-  abrirUpload() { this.uploadForm = { tipo: 'Contrato Social' }; this.fileList = []; this.selectedFile = null; this.uploadVisible = true; this.cdr.markForCheck(); }
+  abrirUpload() {
+    this.uploadForm = { tipo: this.tiposDocumento[0] || 'Contrato Social' };
+    this.fileList = [];
+    this.selectedFile = null;
+    this.novoTipoVisible = false;
+    this.novoTipoDocumento = '';
+    this.uploadVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  cadastrarNovoTipoDocumento(): void {
+    const nome = this.novoTipoDocumento.trim();
+    if (!nome) {
+      this.message.warning('Informe o nome do novo tipo.');
+      return;
+    }
+    const existente = this.tiposDocumento.find(t => t.toLowerCase() === nome.toLowerCase());
+    if (existente) {
+      this.uploadForm.tipo = existente;
+      this.message.info('Este tipo já existe e foi selecionado.');
+    } else {
+      this.tiposDocumento = [...this.tiposDocumento, nome];
+      this.uploadForm.tipo = nome;
+      this.salvarTiposDocumentoCustomizados();
+      this.message.success(`Tipo "${nome}" cadastrado.`);
+    }
+    this.novoTipoDocumento = '';
+    this.novoTipoVisible = false;
+    this.cdr.markForCheck();
+  }
+
+  private inicializarTiposDocumento(): void {
+    const salvos = this.carregarTiposDocumentoSalvos();
+    this.tiposDocumento = this.unificarTiposDocumento([...this.tiposDocumentoPadrao, ...salvos]);
+  }
+
+  private mesclarTiposDosDocumentos(): void {
+    const tiposDocs = this.documentos.map(d => d.tipo).filter(Boolean) as string[];
+    this.tiposDocumento = this.unificarTiposDocumento([...this.tiposDocumento, ...tiposDocs]);
+    this.salvarTiposDocumentoCustomizados();
+  }
+
+  private unificarTiposDocumento(lista: string[]): string[] {
+    const vistos = new Set<string>();
+    const resultado: string[] = [];
+    for (const t of lista) {
+      const norm = t?.trim();
+      if (!norm) continue;
+      const key = norm.toLowerCase();
+      if (vistos.has(key)) continue;
+      vistos.add(key);
+      resultado.push(norm);
+    }
+    return resultado;
+  }
+
+  private carregarTiposDocumentoSalvos(): string[] {
+    try {
+      const raw = localStorage.getItem(this.tiposDocumentoStorageKey);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private salvarTiposDocumentoCustomizados(): void {
+    const custom = this.tiposDocumento.filter(
+      t => !this.tiposDocumentoPadrao.some(p => p.toLowerCase() === t.toLowerCase())
+    );
+    localStorage.setItem(this.tiposDocumentoStorageKey, JSON.stringify(custom));
+  }
 
   abrirDocumento(d: PessoaUpload): void {
     if (!d.arquivo) { this.message.warning('Arquivo não encontrado.'); return; }
