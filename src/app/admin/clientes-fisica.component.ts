@@ -16,7 +16,7 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
 import { NzFormModule } from 'ng-zorro-antd/form';
-import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
 
@@ -32,7 +32,7 @@ interface Pessoa {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule, NzModalModule,
-    NzMessageModule, NzFormModule, NzDatePickerModule, PageTitleComponent],
+    NzMessageModule, NzFormModule, NzSelectModule, PageTitleComponent],
   template: `
     <div class="page">
       <app-page-title title="Clientes Física" subtitle="Clientes Pessoa Física na Plataforma"></app-page-title>
@@ -98,10 +98,14 @@ interface Pessoa {
     <nz-modal [(nzVisible)]="cancelVisible" nzTitle="Cancelamento" [nzWidth]="460" [nzFooter]="ftCancel" (nzOnCancel)="cancelVisible=false">
       <ng-container *nzModalContent>
         <p *ngIf="selecionado"><strong>{{ selecionado.razao || selecionado.nome }}</strong></p>
-        <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>Data Cancelamento</nz-form-label>
-          <nz-form-control [nzSpan]="24"><nz-date-picker style="width:100%" [(ngModel)]="cancelData" nzFormat="dd/MM/yyyy"></nz-date-picker></nz-form-control></nz-form-item>
-        <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>Motivo</nz-form-label>
-          <nz-form-control [nzSpan]="24"><textarea nz-input [(ngModel)]="cancelMotivo" [nzAutosize]="{minRows:3}"></textarea></nz-form-control></nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" nzRequired>Motivo do cancelamento</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <nz-select [(ngModel)]="cancelMotivo" nzPlaceHolder="Selecione o motivo" style="width:100%">
+              <nz-option *ngFor="let m of motivosCancelamento" [nzValue]="m" [nzLabel]="m"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
       </ng-container>
       <ng-template #ftCancel>
         <button nz-button (click)="cancelVisible=false" [disabled]="salvando">Fechar</button>
@@ -128,7 +132,13 @@ export class ClientesFisicaComponent implements OnInit {
   private readonly api = environment.apiUrl;
   loading = true; clientes: Pessoa[] = []; clientesFiltrados: Pessoa[] = [];
   filtro = ''; pageIndex = 1; clientesNovos = 0; salvando = false;
-  cancelVisible = false; selecionado: Pessoa | null = null; cancelData: Date | null = null; cancelMotivo = '';
+  cancelVisible = false; selecionado: Pessoa | null = null; cancelMotivo = '';
+  readonly motivosCancelamento = [
+    'Mudança de Contabilidade',
+    'Inadimplente',
+    'Fora do Simples',
+    'Fechamento da Empresa'
+  ];
   adicionarVisible = false; novo = { cnpj: '', celular: '', email: '', razao: '' };
 
   private get h(): HttpHeaders {
@@ -172,12 +182,21 @@ export class ClientesFisicaComponent implements OnInit {
     this.cdr.markForCheck();
   }
   editar(c: Pessoa): void { this.router.navigate(['/administrativo/cliente', c.codigo, 'editar']); }
-  abrirCancelamento(c: Pessoa) { this.selecionado = c; this.cancelData = null; this.cancelMotivo = ''; this.cancelVisible = true; this.cdr.markForCheck(); }
+  abrirCancelamento(c: Pessoa) { this.selecionado = c; this.cancelMotivo = ''; this.cancelVisible = true; this.cdr.markForCheck(); }
   salvarCancelamento() {
-    if (!this.cancelData || !this.cancelMotivo.trim()) { this.message.warning('Preencha data e motivo.'); return; }
+    if (!this.cancelMotivo.trim()) { this.message.warning('Selecione o motivo do cancelamento.'); return; }
     this.salvando = true; this.cdr.markForCheck();
+    const agora = new Date().toISOString();
     this.http.get<any>(`${this.api}/Pessoa/${this.selecionado!.codigo}`, { headers: this.h }).subscribe({ next: (p) => {
-      this.http.put(`${this.api}/Pessoa`, { ...p, excluido: true, Excluido: true }, { headers: this.h }).subscribe({
+      this.http.put(`${this.api}/Pessoa`, {
+        ...p,
+        excluido: true,
+        Excluido: true,
+        motivoExcluido: this.cancelMotivo,
+        MotivoExcluido: this.cancelMotivo,
+        dataCancelamento: agora,
+        DataCancelamento: agora
+      }, { headers: this.h }).subscribe({
         next: () => { this.message.success('Cancelado com sucesso.'); this.clientes = this.clientes.filter(c => c.codigo !== this.selecionado!.codigo); this.filtrar(); this.salvando = false; this.cancelVisible = false; this.cdr.markForCheck(); },
         error: (e) => { this.message.error(`Erro (${e.status})`); this.salvando = false; this.cdr.markForCheck(); }
       });

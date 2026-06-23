@@ -17,7 +17,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzMessageModule } from 'ng-zorro-antd/message';
 import { NzFormModule } from 'ng-zorro-antd/form';
-import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { PageTitleComponent } from '../page-title.component';
 import { LoginService } from '../services/login.service';
 import { environment } from '../../environments/environment';
@@ -54,7 +54,7 @@ interface PessoaCobranca {
     CommonModule, FormsModule,
     NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule,
-    NzModalModule, NzMessageModule, NzFormModule, NzDatePickerModule,
+    NzModalModule, NzMessageModule, NzFormModule, NzSelectModule,
     PageTitleComponent
   ],
   template: `
@@ -177,15 +177,11 @@ interface PessoaCobranca {
           Cliente: <strong>{{ clienteSelecionado.razao || clienteSelecionado.nome }}</strong> ({{ clienteSelecionado.documento }})
         </p>
         <nz-form-item>
-          <nz-form-label [nzSpan]="24" nzRequired>Data de Cancelamento</nz-form-label>
+          <nz-form-label [nzSpan]="24" nzRequired>Motivo do cancelamento</nz-form-label>
           <nz-form-control [nzSpan]="24">
-            <nz-date-picker style="width:100%" [(ngModel)]="cancelDataCancelamento" nzFormat="dd/MM/yyyy" nzPlaceHolder="Selecione a data"></nz-date-picker>
-          </nz-form-control>
-        </nz-form-item>
-        <nz-form-item>
-          <nz-form-label [nzSpan]="24" nzRequired>Motivo</nz-form-label>
-          <nz-form-control [nzSpan]="24">
-            <textarea nz-input [(ngModel)]="cancelMotivo" [nzAutosize]="{ minRows: 3, maxRows: 5 }" placeholder="Descreva o motivo do cancelamento..."></textarea>
+            <nz-select [(ngModel)]="cancelMotivo" nzPlaceHolder="Selecione o motivo" style="width:100%">
+              <nz-option *ngFor="let m of motivosCancelamento" [nzValue]="m" [nzLabel]="m"></nz-option>
+            </nz-select>
           </nz-form-control>
         </nz-form-item>
       </ng-container>
@@ -266,8 +262,13 @@ export class ClientesOnlineComponent implements OnInit {
   // Modal cancelamento
   cancelamentoVisible = false;
   clienteSelecionado: Pessoa | null = null;
-  cancelDataCancelamento: Date | null = null;
   cancelMotivo = '';
+  readonly motivosCancelamento = [
+    'Mudança de Contabilidade',
+    'Inadimplente',
+    'Fora do Simples',
+    'Fechamento da Empresa'
+  ];
 
   // Modal novo cliente
   adicionarVisible = false;
@@ -375,7 +376,6 @@ export class ClientesOnlineComponent implements OnInit {
   // --- Modal Cancelamento ---
   abrirModalCancelamento(c: Pessoa): void {
     this.clienteSelecionado = c;
-    this.cancelDataCancelamento = null;
     this.cancelMotivo = '';
     this.cancelamentoVisible = true;
     this.cdr.markForCheck();
@@ -388,19 +388,27 @@ export class ClientesOnlineComponent implements OnInit {
   }
 
   salvarCancelamento(): void {
-    if (!this.cancelDataCancelamento || !this.cancelMotivo.trim()) {
-      this.message.warning('Preencha a data e o motivo do cancelamento.');
+    if (!this.cancelMotivo.trim()) {
+      this.message.warning('Selecione o motivo do cancelamento.');
       return;
     }
     this.salvando = true;
     this.cdr.markForCheck();
 
     const codigo = this.clienteSelecionado!.codigo;
+    const agora = new Date().toISOString();
 
-    // Busca pessoa completa, seta Excluido = true e faz PUT (igual ao legado)
     this.http.get<any>(`${this.api}/Pessoa/${codigo}`, { headers: this.headers }).subscribe({
       next: (pessoa) => {
-        const payload = { ...pessoa, excluido: true, Excluido: true };
+        const payload = {
+          ...pessoa,
+          excluido: true,
+          Excluido: true,
+          motivoExcluido: this.cancelMotivo,
+          MotivoExcluido: this.cancelMotivo,
+          dataCancelamento: agora,
+          DataCancelamento: agora
+        };
         this.http.put(`${this.api}/Pessoa`, payload, { headers: this.headers }).subscribe({
           next: () => {
             this.message.success('Cliente cancelado com sucesso.');

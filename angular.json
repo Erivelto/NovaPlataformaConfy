@@ -68,7 +68,8 @@
               "buildTarget": "novoangularbackv2:build:production"
             },
             "development": {
-              "buildTarget": "novoangularbackv2:build:development"
+              "buildTarget": "novoangularbackv2:build:development",
+              "port": 4200
             }
           },
           "defaultConfiguration": "development"

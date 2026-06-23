@@ -2,11 +2,12 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
 import { LoginService } from './login.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class MensalidadeStatusService {
   private readonly apiUrl =
-    'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api/PessoaCobranca/ObterPagamentoTresUltimos';
+    `${environment.apiUrl}/PessoaCobranca/ObterPagamentoTresUltimos`;
 
   private _atrasadas = new BehaviorSubject<number>(0);
   readonly atrasadas$ = this._atrasadas.asObservable();

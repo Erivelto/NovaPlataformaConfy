@@ -11,6 +11,7 @@ import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { PageTitleComponent } from '../page-title.component';
 import { LoginService } from '../services/login.service';
 import { Router } from '@angular/router';
+import { environment } from '../../environments/environment';
 
 interface CobrancaItem {
   codigo: number;
@@ -97,7 +98,7 @@ interface CobrancaItem {
   `]
 })
 export class MensalidadeComponent implements OnInit {
-  private readonly apiUrl = 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api/PessoaCobranca/ObterPagamentoTresUltimos';
+  private readonly apiUrl = `${environment.apiUrl}/PessoaCobranca/ObterPagamentoTresUltimos`;
 
   lista: CobrancaItem[] = [];
   loading = true;

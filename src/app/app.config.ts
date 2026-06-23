@@ -61,6 +61,7 @@ import {
   FolderOutline,
   NumberOutline
 } from '@ant-design/icons-angular/icons';
+import { ClienteExcluidoOutline } from './icons/cliente-excluido.icon';
 
 registerLocaleData(en);
 
@@ -82,7 +83,7 @@ export const appConfig: ApplicationConfig = {
       SaveOutline, DeleteOutline, InboxOutline, PaperClipOutline, ArrowLeftOutline,
       CheckCircleOutline, CloseCircleOutline, ExclamationCircleOutline, InfoCircleOutline,
       LoadingOutline, ReloadOutline, SearchOutline, StarOutline, StarFill,
-      FolderOutline, NumberOutline
+      FolderOutline, NumberOutline, ClienteExcluidoOutline
     ] }
   ]
 };

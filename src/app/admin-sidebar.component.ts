@@ -44,6 +44,9 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
             <li nz-menu-item (click)="go('/administrativo/clientes-fisica')" [nzSelected]="isActive('/administrativo/clientes-fisica')">
               <span nz-icon nzType="user"></span> Clientes Fisica
             </li>
+            <li nz-menu-item (click)="go('/administrativo/clientes-excluidos')" [nzSelected]="isActive('/administrativo/clientes-excluidos')">
+              <span nz-icon nzType="user"></span> Clientes Excluídos
+            </li>
             <li nz-menu-item (click)="go('/administrativo/gestao-debitos')" [nzSelected]="isActive('/administrativo/gestao-debitos')">
               <span nz-icon nzType="idcard"></span> Gestão Débitos
             </li>
