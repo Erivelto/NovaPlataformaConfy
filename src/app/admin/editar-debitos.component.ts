@@ -576,7 +576,8 @@ export class EditarDebitosComponent implements OnInit {
           this.carregarLista(abaId);
         },
         error: (err) => {
-          this.message.error(`Erro ao excluir (${err.status}).`);
+          const msg = typeof err.error === 'string' ? err.error : 'Falha ao excluir registro.';
+          this.message.error(msg || `Erro ao excluir (${err.status}).`);
           this.excluindo.delete(item.codigo);
           this.cdr.markForCheck();
         }
@@ -591,7 +592,8 @@ export class EditarDebitosComponent implements OnInit {
         this.carregarLista(abaId);
       },
       error: (err) => {
-        this.message.error(`Erro ao excluir (${err.status}).`);
+        const msg = typeof err.error === 'string' ? err.error : 'Falha ao excluir registro.';
+        this.message.error(msg || `Erro ao excluir (${err.status}).`);
         this.excluindo.delete(item.codigo);
         this.cdr.markForCheck();
       }

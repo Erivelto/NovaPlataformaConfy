@@ -1914,7 +1914,11 @@ export class ClienteEditarComponent implements OnInit {
     this.excluindoDoc.add(d.codigo); this.cdr.markForCheck();
     this.http.delete(`${this.api}/PessoaUpload/ExcluirUpload/${d.codigo}`, { headers: this.h }).subscribe({
       next: () => { this.message.success('Excluído.'); this.documentos = this.documentos.filter(x => x.codigo !== d.codigo); this.excluindoDoc.delete(d.codigo); this.cdr.markForCheck(); },
-      error: (err) => { this.message.error(`Erro (${err.status})`); this.excluindoDoc.delete(d.codigo); this.cdr.markForCheck(); }
+      error: (err) => {
+        const msg = typeof err.error === 'string' ? err.error : 'Falha ao excluir documento.';
+        this.message.error(msg || `Erro (${err.status})`);
+        this.excluindoDoc.delete(d.codigo); this.cdr.markForCheck();
+      }
     });
   }
 
