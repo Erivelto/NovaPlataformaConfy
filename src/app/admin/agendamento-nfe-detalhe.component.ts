@@ -27,6 +27,7 @@ interface CorpoEmissaoNota {
   dataPrimeiraEmissao: string;
   repetir: boolean;
   codigoServico: string;
+  codigoPrefeitura: string;
   excluido: boolean;
   status: string;
 }
@@ -130,7 +131,7 @@ interface DadosEmissaoNota {
               <div nz-col [nzSpan]="6" [nzXs]="24"><label class="fld-label">Prefeitura</label><div class="fld-value">{{ dadosEmissao?.prefeitura || '—' }}</div></div>
               <div nz-col [nzSpan]="6" [nzXs]="24"><label class="fld-label">Usuário</label><div class="fld-value">{{ dadosEmissao?.usuario || '—' }}</div></div>
               <div nz-col [nzSpan]="6" [nzXs]="24"><label class="fld-label">Senha</label><div class="fld-value">{{ dadosEmissao?.senha || '—' }}</div></div>
-              <div nz-col [nzSpan]="6" [nzXs]="24"><label class="fld-label">Código Prefeitura</label><div class="fld-value">{{ codigoPrefeitura || '—' }}</div></div>
+              <div nz-col [nzSpan]="6" [nzXs]="24"><label class="fld-label">Código Prefeitura</label><div class="fld-value">{{ corpo.codigoPrefeitura || '—' }}</div></div>
               <div nz-col [nzSpan]="24"><label class="fld-label">Descrição</label><div class="fld-value fld-block">{{ corpo.descricao || '—' }}</div></div>
               <div nz-col [nzSpan]="12" [nzXs]="24"><label class="fld-label">Data</label><div class="fld-value">{{ formatarData(corpo.dataPrimeiraEmissao) }}</div></div>
               <div nz-col [nzSpan]="12" [nzXs]="24"><label class="fld-label">Valor</label><div class="fld-value">{{ corpo.valor || '—' }}</div></div>
@@ -198,19 +199,6 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
     const parts = [`Código #${this.corpo.codigo}`];
     if (this.statusLista) parts.push(this.statusLista);
     return parts.join(' · ');
-  }
-
-  get codigoPrefeitura(): string {
-    const d = this.dadosEmissao;
-    if (!d) return '';
-    if (d.codigoPrefeitura) return d.codigoPrefeitura;
-    const svc = d.pessoaCodigoServico;
-    if (typeof svc === 'string') return svc;
-    if (Array.isArray(svc) && svc.length) {
-      const first = svc[0] as Record<string, unknown>;
-      return String(first?.['codigoServico'] ?? first?.['CodigoServico'] ?? first?.['codigo'] ?? first?.['Codigo'] ?? '');
-    }
-    return '';
   }
 
   private get h(): HttpHeaders {
@@ -370,6 +358,7 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
       dataPrimeiraEmissao: String(r['dataPrimeiraEmissao'] ?? r['DataPrimeiraEmissao'] ?? ''),
       repetir: Boolean(r['repetir'] ?? r['Repetir']),
       codigoServico: String(r['codigoServico'] ?? r['CodigoServico'] ?? ''),
+      codigoPrefeitura: String(r['codigoPrefeitura'] ?? r['CodigoPrefeitura'] ?? ''),
       excluido: Boolean(r['excluido'] ?? r['Excluido']),
       status: String(r['status'] ?? r['Status'] ?? '')
     };

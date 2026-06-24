@@ -122,7 +122,8 @@ interface AbaConfig {
                       <th>Valor Tributado</th>
                       <th>Valor Tributo</th>
                       <th nzAlign="center">Status</th>
-                      <th nzAlign="center">Ação</th>
+                      <th>Mensagem</th>
+                      <th nzWidth="220px" nzAlign="center">Ação</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -132,16 +133,24 @@ interface AbaConfig {
                       <td>{{ parseBrl(item.valorTributado) | currency:'BRL':'symbol':'1.2-2' }}</td>
                       <td>{{ item.valorTributo }}</td>
                       <td nzAlign="center">
-                        <nz-tag *ngIf="item.status !== 'Pago'" [nzColor]="statusDas() === 'Disponível' ? 'green' : 'red'">{{ statusDas() }}</nz-tag>
+                        <nz-tag *ngIf="item.status !== 'Pago'" [nzColor]="statusDasItem(item) === 'Disponível' ? 'green' : 'red'">{{ statusDasItem(item) }}</nz-tag>
                       </td>
-                      <td nzAlign="center">
+                      <td>
+                        <span *ngIf="dasVencido(item)" class="msg-vencida">
+                          Vencida, não pode ser paga, solicite uma nova!
+                        </span>
+                        <span *ngIf="!dasVencido(item)">—</span>
+                      </td>
+                      <td nzAlign="center" class="acoes-arquivo">
                         <ng-container *ngIf="item.status !== 'Pago' && isValorZero(item)">
                           <button nz-button nzType="default" nzSize="small" (click)="gerarBoletoDas(item)">
                             <i nz-icon nzType="eye"></i> Visualizar
                           </button>
                         </ng-container>
-                        <ng-container *ngIf="item.status !== 'Pago' && !isValorZero(item)">
-                          <button nz-button nzType="primary" nzSize="small" (click)="gerarBoletoDas(item)" style="margin-right:8px">
+                        <ng-container *ngIf="item.status !== 'Pago' && temTributoDas(item)">
+                          <button nz-button nzType="primary" nzSize="small"
+                            [disabled]="dasVencido(item)"
+                            (click)="gerarBoletoDas(item)">
                             <i nz-icon nzType="file-text"></i> Gerar Boleto
                           </button>
                           <button nz-button nzType="default" nzSize="small"
@@ -149,12 +158,21 @@ interface AbaConfig {
                             (click)="marcarComoPaga(item)">
                             <i nz-icon nzType="check-circle"></i> Marca como paga
                           </button>
+                          <button
+                            *ngIf="dasVencido(item)"
+                            nz-button
+                            nzType="default"
+                            nzSize="small"
+                            [nzLoading]="solicitando.has(item.codigo)"
+                            (click)="solicitarNovaGuiaDas(item)">
+                            <i nz-icon nzType="plus"></i> Solicitar Novo
+                          </button>
                         </ng-container>
                         <nz-tag *ngIf="item.status === 'Pago'" nzColor="green">Pago</nz-tag>
                       </td>
                     </tr>
                     <tr *ngIf="listaDas.length === 0">
-                      <td colspan="6" class="empty">Nenhum DAS encontrado.</td>
+                      <td colspan="7" class="empty">Nenhum DAS encontrado.</td>
                     </tr>
                   </tbody>
                 </nz-table>
@@ -281,7 +299,11 @@ export class ReceitaImpostoComponent implements OnInit {
     { key: 'valorTributo', title: 'Valor Tributo' },
     { key: 'status', title: 'Status', format: (_v, row) => {
       const item = row as unknown as DasItem;
-      return item.status === 'Pago' ? 'Pago' : this.statusDas();
+      return item.status === 'Pago' ? 'Pago' : this.statusDasItem(item);
+    }},
+    { key: 'periodo', title: 'Mensagem', format: (_v, row) => {
+      const item = row as unknown as DasItem;
+      return this.dasVencido(item) ? 'Vencida, não pode ser paga, solicite uma nova!' : '—';
     }}
   ];
 
@@ -421,8 +443,26 @@ export class ReceitaImpostoComponent implements OnInit {
     window.open(`${ARQUIVO_BASE_URL}?${params.toString()}`, '_blank', 'noopener,noreferrer');
   }
 
-  statusDas(): string {
+  statusDasItem(item: DasItem): string {
+    if (this.isSemTributoDas(item)) {
+      return 'Disponível';
+    }
     return new Date().getDate() < 20 ? 'Disponível' : 'Vencido';
+  }
+
+  /** Sem tributo quando Valor Tributado ou Valor Tributo for zero. */
+  isSemTributoDas(item: DasItem): boolean {
+    return this.parseBrl(item.valorTributado) === 0 || this.parseBrl(item.valorTributo) === 0;
+  }
+
+  /** Possui tributo quando Valor Tributado ou Valor Tributo for diferente de zero. */
+  temTributoDas(item: DasItem): boolean {
+    return this.parseBrl(item.valorTributado) !== 0 || this.parseBrl(item.valorTributo) !== 0;
+  }
+
+  dasVencido(item: DasItem): boolean {
+    if (item.status === 'Pago' || !this.temTributoDas(item)) return false;
+    return this.statusDasItem(item) === 'Vencido';
   }
 
   vencimento(_periodo?: string): Date {
@@ -447,13 +487,21 @@ export class ReceitaImpostoComponent implements OnInit {
   }
 
   solicitarNovo(aba: AbaConfig, item: ArquivoDebito): void {
-    if (this.solicitando.has(item.codigo)) return;
+    this.criarSolicitacaoGuia(aba.titulo, item.codigo);
+  }
 
-    this.solicitando.add(item.codigo);
+  solicitarNovaGuiaDas(item: DasItem): void {
+    this.criarSolicitacaoGuia(`DAS - ${item.periodo}`, item.codigo);
+  }
+
+  private criarSolicitacaoGuia(tituloGuia: string, codigo: number): void {
+    if (this.solicitando.has(codigo)) return;
+
+    this.solicitando.add(codigo);
     this.cdr.markForCheck();
 
     const agora = new Date().toISOString();
-    const mensagem = `Gerar uma nova guia para pagamento do ${aba.titulo}`;
+    const mensagem = `Gerar uma nova guia para pagamento do ${tituloGuia}`;
     const payload = {
       codigoPessoa: this.codigoPessoa,
       atendente: ATENDENTE_FIXO,
@@ -476,7 +524,7 @@ export class ReceitaImpostoComponent implements OnInit {
       .pipe(timeout(30000), catchError(() => of(null)))
       .subscribe({
         next: (res) => {
-          this.solicitando.delete(item.codigo);
+          this.solicitando.delete(codigo);
           if (res === null) {
             this.message.error('Erro ao criar solicitação. Tente novamente.');
           } else {
@@ -486,7 +534,7 @@ export class ReceitaImpostoComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (err) => {
-          this.solicitando.delete(item.codigo);
+          this.solicitando.delete(codigo);
           this.message.error(`Erro ao criar solicitação (${err.status}).`);
           this.cdr.markForCheck();
         }
@@ -510,6 +558,7 @@ export class ReceitaImpostoComponent implements OnInit {
   }
 
   gerarBoletoDas(item: DasItem): void {
+    if (this.dasVencido(item)) return;
     const url = `${ARQUIVO_BASE_URL}?diretorioCompleto=${item.codigoPessoa}&nomeArquivo=${item.nomeArquivo}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   }

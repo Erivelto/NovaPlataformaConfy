@@ -70,13 +70,14 @@ interface ListaStatusAgendamento {
 
         <nz-table
           *ngIf="!loading"
+          #agendamentoTable
           [nzData]="listaFiltrada"
           nzBordered
           nzSize="middle"
-          [nzShowPagination]="true"
-          [nzPageSize]="10"
+          [nzShowPagination]="listaFiltrada.length > pageSize"
+          [nzPageSize]="pageSize"
           [nzFrontPagination]="true"
-          nzShowSizeChanger="false">
+          [(nzPageIndex)]="pageIndex">
           <thead>
             <tr>
               <th nzWidth="80px">Código</th>
@@ -90,7 +91,7 @@ interface ListaStatusAgendamento {
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of listaFiltrada; trackBy: trackByCodigo" [style.color]="corStatus(item.status)">
+            <tr *ngFor="let item of agendamentoTable.data; trackBy: trackByCodigo" [style.color]="corStatus(item.status)">
               <td>{{ item.codigo }}</td>
               <td>{{ item.codigoPessoa }}</td>
               <td>{{ item.documento }}</td>
@@ -131,6 +132,8 @@ export class AgendamentoNfeComponent implements OnInit {
   lista: ListaStatusAgendamento[] = [];
   listaFiltrada: ListaStatusAgendamento[] = [];
   busca = '';
+  pageIndex = 1;
+  readonly pageSize = 10;
 
   kpiStats: { label: string; value: number; icon: string; color: string }[] = [];
 
@@ -210,12 +213,13 @@ export class AgendamentoNfeComponent implements OnInit {
     const termo = this.busca.trim().toLowerCase();
     if (!termo) {
       this.listaFiltrada = [...this.lista];
-      return;
+    } else {
+      this.listaFiltrada = this.lista.filter(item =>
+        [item.codigo, item.codigoPessoa, item.documento, item.razao, item.dataPrimeiraEmissao, item.valor, item.status]
+          .some(v => String(v ?? '').toLowerCase().includes(termo))
+      );
     }
-    this.listaFiltrada = this.lista.filter(item =>
-      [item.codigo, item.codigoPessoa, item.documento, item.razao, item.dataPrimeiraEmissao, item.valor, item.status]
-        .some(v => String(v ?? '').toLowerCase().includes(termo))
-    );
+    this.pageIndex = 1;
   }
 
   corStatus(status: string): string {

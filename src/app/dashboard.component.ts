@@ -24,7 +24,9 @@ import { environment } from '../environments/environment';
 interface DasItem {
   nomeArquivo: string;
   periodo: string;
+  valorTributado?: string;
   valorTributo: string;
+  status?: string;
 }
 
 interface NotaFiscal {
@@ -281,12 +283,21 @@ export class DashboardComponent implements OnInit {
       { headers: this.headers }
     ).subscribe({
       next: (res) => {
-        const lista = Array.isArray(res) ? res : [res];
-        this.temDasPendente = lista.length > 0;
+        const lista = (Array.isArray(res) ? res : [res]).filter(Boolean) as DasItem[];
+        this.temDasPendente = lista.some(item => this.temDasPendenteParaAlerta(item));
         this.cdr.markForCheck();
       },
       error: () => {}
     });
+  }
+
+  private temDasPendenteParaAlerta(item: DasItem): boolean {
+    if (item.status === 'Pago') return false;
+    return !this.isSemTributoDas(item);
+  }
+
+  private isSemTributoDas(item: DasItem): boolean {
+    return this.parseBrl(item.valorTributado) === 0 || this.parseBrl(item.valorTributo) === 0;
   }
 
   irParaMensalidade(): void {
