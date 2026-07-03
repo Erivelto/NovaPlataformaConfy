@@ -1356,9 +1356,15 @@ export class ClienteEditarComponent implements OnInit {
         this.dadosDasList = Array.isArray(r) ? r as DadosDAS[] : [];
         // pré-preenche formulário inline com o primeiro registro existente
         if (this.dadosDasList.length > 0) {
-          const d = this.dadosDasList[0];
-          this.dasInline = { codigo: d.codigo, codigoPessoa: d.codigoPessoa, codigoContribuite: d.codigoContribuite, cpf: d.cpf, cnpj: d.cnpj };
-          this.carregarAnexo(d.codigo);
+          const d = this.dadosDasList[0] as any;
+          this.dasInline = {
+            codigo: d.codigo ?? d.Codigo,
+            codigoPessoa: d.codigoPessoa ?? d.CodigoPessoa,
+            codigoContribuite: d.codigoContribuite ?? d.CodigoContribuite ?? '',
+            cpf: d.cpf ?? d.CPF ?? '',
+            cnpj: d.cnpj ?? d.CNPJ ?? ''
+          };
+          this.carregarAnexo(this.dasInline.codigo!);
         } else {
           this.dasInline = { codigo: 0, codigoPessoa: this.codigoPessoa, codigoContribuite: '', cpf: '', cnpj: (this.pessoa.documento || '').replace(/\D/g, '') };
           this.anexoContribuinte = null;
@@ -1707,29 +1713,53 @@ export class ClienteEditarComponent implements OnInit {
     });
   }
 
+  private buildDadosDasPayload(base: Partial<DadosDAS>, incluirCodigo = false): Record<string, unknown> {
+    const agora = new Date();
+    const cnpj = (this.pessoa.documento || '').replace(/\D/g, '');
+    const payload: Record<string, unknown> = {
+      codigoPessoa: this.codigoPessoa,
+      cnpj,
+      cpf: (base.cpf || '').trim(),
+      codigoContribuite: (base.codigoContribuite || '').trim(),
+      mesApuracao: String(agora.getMonth() + 1),
+      anoApuracao: String(agora.getFullYear()),
+      valorTributado: base.valorTributado ?? '',
+      url: 'https://www8.receita.fazenda.gov.br/SimplesNacional/controleAcesso/Autentica.aspx?id=60',
+      codigoAntiCaptcha: '00104610857095f5ae8953b5ee208d11',
+      excluido: false
+    };
+    if (incluirCodigo && base.codigo && base.codigo > 0) payload['codigo'] = base.codigo;
+    return payload;
+  }
+
   abrirNovoDAS() { this.dasForm = { codigoPessoa: this.codigoPessoa, cnpj: (this.pessoa.documento || '').replace(/\D/g,''), codigoContribuite: '', cpf: '' }; this.dasVisible = true; this.cdr.markForCheck(); }
   salvarDAS() {
     this.salvandoDAS = true; this.cdr.markForCheck();
-    const agora = new Date();
-    const payload = { ...this.dasForm, codigoPessoa: this.codigoPessoa, cnpj: (this.pessoa.documento || '').replace(/\D/g,''), mesApuracao: agora.getMonth() + 1, anoApuracao: agora.getFullYear() };
+    const payload = this.buildDadosDasPayload(this.dasForm);
     this.http.post(`${this.api}/DadosDeDAS`, payload, { headers: this.h }).subscribe({
       next: () => { this.message.success('Dados DAS salvos!'); this.salvandoDAS = false; this.dasVisible = false; this.carregarDAS(); },
-      error: (e) => { this.message.error(`Erro (${e.status})`); this.salvandoDAS = false; this.cdr.markForCheck(); }
+      error: (e) => {
+        const msg = typeof e.error === 'string' ? e.error : 'Falha ao salvar Dados DAS.';
+        this.message.error(msg || `Erro (${e.status})`);
+        this.salvandoDAS = false; this.cdr.markForCheck();
+      }
     });
   }
 
   salvarDASInline() {
     this.salvandoDAS = true; this.cdr.markForCheck();
-    const agora = new Date();
-    const cnpj = (this.pessoa.documento || '').replace(/\D/g, '');
-    const payload = { ...this.dasInline, codigoPessoa: this.codigoPessoa, cnpj, mesApuracao: agora.getMonth() + 1, anoApuracao: agora.getFullYear() };
-    const isEdicao = this.dasInline.codigo && this.dasInline.codigo > 0;
+    const isEdicao = !!(this.dasInline.codigo && this.dasInline.codigo > 0);
+    const payload = this.buildDadosDasPayload(this.dasInline, isEdicao);
     const obs = isEdicao
       ? this.http.put(`${this.api}/DadosDeDAS`, payload, { headers: this.h })
       : this.http.post(`${this.api}/DadosDeDAS`, payload, { headers: this.h });
     obs.subscribe({
-      next: (res: any) => { this.message.success('Dados DAS salvos!'); this.salvandoDAS = false; this.editandoDAS = false; this.carregarDAS(); },
-      error: (e) => { this.message.error(`Erro (${e.status})`); this.salvandoDAS = false; this.cdr.markForCheck(); }
+      next: () => { this.message.success('Dados DAS salvos!'); this.salvandoDAS = false; this.editandoDAS = false; this.carregarDAS(); },
+      error: (e) => {
+        const msg = typeof e.error === 'string' ? e.error : 'Falha ao salvar Dados DAS.';
+        this.message.error(msg || `Erro (${e.status})`);
+        this.salvandoDAS = false; this.cdr.markForCheck();
+      }
     });
   }
 

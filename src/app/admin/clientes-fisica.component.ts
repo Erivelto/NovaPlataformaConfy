@@ -17,8 +17,10 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
+import { ClienteMensagemRef, MensagemClienteLoteComponent } from '../components/mensagem-cliente-lote.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtDate } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
@@ -29,13 +31,20 @@ interface Pessoa {
   prefeitura?: string; isNovo?: boolean; isTop5?: boolean;
 }
 
+interface DadosEmissaoNota {
+  codigoPessoa: number;
+  prefeitura?: string;
+  [key: string]: any;
+}
+
 @Component({
   selector: 'app-clientes-fisica',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule, NzModalModule,
-    NzMessageModule, NzFormModule, NzSelectModule, PageTitleComponent, ExportExcelButtonComponent],
+    NzMessageModule, NzFormModule, NzSelectModule, NzCheckboxModule, PageTitleComponent,
+    ExportExcelButtonComponent, MensagemClienteLoteComponent],
   template: `
     <div class="page">
       <app-page-title title="Clientes Física" subtitle="Clientes Pessoa Física na Plataforma">
@@ -69,6 +78,26 @@ interface Pessoa {
             <input nz-input placeholder="Buscar por CPF, nome ou código..." [(ngModel)]="filtro" (ngModelChange)="filtrar()" />
           </nz-input-group>
           <ng-template #pfx><i nz-icon nzType="search"></i></ng-template>
+          <nz-select
+            [(ngModel)]="filtroPrefeitura"
+            (ngModelChange)="filtrar()"
+            nzShowSearch
+            nzAllowClear
+            nzPlaceHolder="Filtrar por prefeitura"
+            style="min-width:220px">
+            <nz-option nzValue="" nzLabel="Todas as prefeituras"></nz-option>
+            <nz-option *ngFor="let p of prefeiturasOpcoes" [nzValue]="p" [nzLabel]="p"></nz-option>
+            <nz-option nzValue="__sem__" nzLabel="Sem Prefeitura"></nz-option>
+          </nz-select>
+          <button
+            nz-button
+            nzType="default"
+            [disabled]="selecionados.size === 0"
+            (click)="abrirMensagemLote()">
+            <i nz-icon nzType="message"></i>
+            Mensagem ao Cliente
+            <span *ngIf="selecionados.size > 0">({{ selecionados.size }})</span>
+          </button>
         </div>
         <ng-container *ngIf="loading"><nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{rows:8}"></nz-skeleton></ng-container>
         <nz-table
@@ -82,11 +111,27 @@ interface Pessoa {
           [nzFrontPagination]="true"
           [(nzPageIndex)]="pageIndex">
           <thead><tr>
+            <th nzWidth="48px" nzAlign="center">
+              <label
+                nz-checkbox
+                [ngModel]="todosSelecionados"
+                [nzIndeterminate]="selecaoParcial"
+                (ngModelChange)="toggleSelecionarTodos($event)"></label>
+            </th>
             <th nzWidth="80px">Código</th><th nzWidth="140px">CPF</th><th>Nome</th>
-            <th nzWidth="130px">Data Cadastro</th><th nzWidth="70px" nzAlign="center">Editar</th><th nzWidth="80px" nzAlign="center">Cancelar</th>
+            <th nzWidth="140px">Prefeitura</th>
+            <th nzWidth="130px">Data Cadastro</th>
+            <th nzWidth="70px" nzAlign="center">Mensagem</th>
+            <th nzWidth="70px" nzAlign="center">Editar</th><th nzWidth="80px" nzAlign="center">Cancelar</th>
           </tr></thead>
           <tbody>
             <tr *ngFor="let c of clientesTable.data">
+              <td nzAlign="center">
+                <label
+                  nz-checkbox
+                  [ngModel]="estaSelecionado(c.codigo)"
+                  (ngModelChange)="toggleSelecao(c.codigo, $event)"></label>
+              </td>
               <td>
                 <nz-tag *ngIf="c.isTop5" nzColor="green" style="font-size:10px;border-radius:8px">⭐ NOVO</nz-tag>
                 <nz-tag *ngIf="c.isNovo && !c.isTop5" nzColor="blue" style="font-size:10px">NOVO</nz-tag>
@@ -94,11 +139,20 @@ interface Pessoa {
               </td>
               <td>{{ c.documento || '—' }}</td>
               <td>{{ c.razao || c.nome || '—' }}</td>
+              <td>
+                <span *ngIf="c.prefeitura; else semPrefeitura">{{ c.prefeitura }}</span>
+                <ng-template #semPrefeitura><span class="sem-dado">Sem Prefeitura</span></ng-template>
+              </td>
               <td>{{ c.dataInclusao | date:'dd/MM/yyyy' }}</td>
+              <td nzAlign="center">
+                <button nz-button nzSize="small" nz-tooltip nzTooltipTitle="Mensagem ao Cliente" (click)="abrirMensagemIndividual(c)">
+                  <i nz-icon nzType="message"></i>
+                </button>
+              </td>
               <td nzAlign="center"><button nz-button nzType="primary" nzSize="small" (click)="editar(c)"><i nz-icon nzType="edit"></i></button></td>
               <td nzAlign="center"><button nz-button nzDanger nzSize="small" (click)="abrirCancelamento(c)"><i nz-icon nzType="close-circle"></i></button></td>
             </tr>
-            <tr *ngIf="clientesFiltrados.length===0"><td colspan="6" style="text-align:center;padding:32px;color:rgba(0,0,0,.45)">Nenhum cliente encontrado.</td></tr>
+            <tr *ngIf="clientesFiltrados.length===0"><td colspan="9" style="text-align:center;padding:32px;color:rgba(0,0,0,.45)">Nenhum cliente encontrado.</td></tr>
           </tbody>
         </nz-table>
       </nz-card>
@@ -134,13 +188,19 @@ interface Pessoa {
         <button nz-button nzType="primary" (click)="salvarNovo()" [nzLoading]="salvando">Salvar</button>
       </ng-template>
     </nz-modal>
+
+    <app-mensagem-cliente-lote
+      [(visible)]="mensagemVisible"
+      [clientes]="clientesMensagem"
+      (envioConcluido)="limparSelecao()" />
   `,
-  styles: [`.page{padding:8px 4px}.kpis{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}.kpi{flex:1;min-width:160px;text-align:center}.kpi-icon{font-size:24px;margin-bottom:6px}.kpi-label{color:rgba(0,0,0,.45);font-size:.88rem;margin-top:4px}.kpi-value{font-size:1.5rem;font-weight:800;margin:4px 0}.kpi-value.green{color:#52c41a}.kpi-value.primary{color:#1890ff}.kpi-value.purple{color:#722ed1}.kpi-action{cursor:pointer}`]
+  styles: [`.page{padding:8px 4px}.kpis{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}.kpi{flex:1;min-width:160px;text-align:center}.kpi-icon{font-size:24px;margin-bottom:6px}.kpi-label{color:rgba(0,0,0,.45);font-size:.88rem;margin-top:4px}.kpi-value{font-size:1.5rem;font-weight:800;margin:4px 0}.kpi-value.green{color:#52c41a}.kpi-value.primary{color:#1890ff}.kpi-value.purple{color:#722ed1}.kpi-action{cursor:pointer}.sem-dado{color:#ff4d4f;font-weight:500}`]
 })
 export class ClientesFisicaComponent implements OnInit {
   private readonly api = environment.apiUrl;
   loading = true; clientes: Pessoa[] = []; clientesFiltrados: Pessoa[] = [];
-  filtro = ''; pageIndex = 1; clientesNovos = 0; salvando = false;
+  filtro = ''; filtroPrefeitura = ''; prefeiturasOpcoes: string[] = [];
+  pageIndex = 1; clientesNovos = 0; salvando = false;
   cancelVisible = false; selecionado: Pessoa | null = null; cancelMotivo = '';
   readonly motivosCancelamento = [
     'Mudança de Contabilidade',
@@ -149,11 +209,15 @@ export class ClientesFisicaComponent implements OnInit {
     'Fechamento da Empresa'
   ];
   adicionarVisible = false; novo = { cnpj: '', celular: '', email: '', razao: '' };
+  selecionados = new Set<number>();
+  mensagemVisible = false;
+  clientesMensagem: ClienteMensagemRef[] = [];
 
   readonly exportColumns: ExcelExportColumn<Pessoa>[] = [
     { key: 'codigo', title: 'Código' },
     { key: 'documento', title: 'CPF' },
     { key: 'razao', title: 'Nome', format: (_v, row) => row.razao || row.nome || '' },
+    { key: 'prefeitura', title: 'Prefeitura', format: (_v, row) => row.prefeitura?.trim() || 'Sem Prefeitura' },
     { key: 'dataInclusao', title: 'Data Cadastro', format: fmtDate }
   ];
 
@@ -169,13 +233,22 @@ export class ClientesFisicaComponent implements OnInit {
     const safe = <T>(o: any) => o.pipe(timeout(8000), catchError(() => of([] as T[])));
     forkJoin({
       pessoas: safe<Pessoa>(this.http.get<Pessoa[]>(`${this.api}/Pessoa`, { headers: this.h })),
-      status:  safe<Pessoa>(this.http.get<Pessoa[]>(`${this.api}/Pessoa/Status`, { headers: this.h }))
-    }).subscribe({ next: ({ pessoas, status }) => {
+      status:  safe<Pessoa>(this.http.get<Pessoa[]>(`${this.api}/Pessoa/Status`, { headers: this.h })),
+      emissao: safe<DadosEmissaoNota>(this.http.get<DadosEmissaoNota[]>(`${this.api}/DadosEmissaoNota`, { headers: this.h }))
+    }).subscribe({ next: ({ pessoas, status, emissao }) => {
+      const emissaoMap = new Map<number, DadosEmissaoNota>();
+      (emissao as DadosEmissaoNota[]).forEach(e => emissaoMap.set(e.codigoPessoa, e));
       const sm = new Map<number, Pessoa>(); (status as Pessoa[]).filter(p => p.fisica).forEach(p => sm.set(p.codigo, p));
       const agora = new Date();
       this.clientes = (pessoas as Pessoa[]).filter(p => p.fisica).map(p => {
         const diff = (agora.getTime() - new Date(p.dataInclusao).getTime()) / 86400000;
-        return { ...(sm.get(p.codigo) ?? p), isNovo: diff < 30, isTop5: false };
+        const emissaoData = emissaoMap.get(p.codigo);
+        return {
+          ...(sm.get(p.codigo) ?? p),
+          prefeitura: emissaoData?.prefeitura ?? '',
+          isNovo: diff < 30,
+          isTop5: false
+        };
       });
       // Ordena: mais recentes primeiro
       this.clientes.sort((a, b) => new Date(b.dataInclusao).getTime() - new Date(a.dataInclusao).getTime());
@@ -185,19 +258,82 @@ export class ClientesFisicaComponent implements OnInit {
         p.isTop5 = diff <= 60;
       });
       this.clientesNovos = this.clientes.filter(c => (agora.getTime() - new Date(c.dataInclusao).getTime()) / 86400000 < 60).length;
-      this.clientesFiltrados = [...this.clientes]; this.pageIndex = 1; this.loading = false; this.cdr.markForCheck();
+      this.atualizarOpcoesPrefeitura();
+      this.filtrar();
+      this.loading = false; this.cdr.markForCheck();
     }, error: () => { this.loading = false; this.cdr.markForCheck(); }});
+  }
+  private atualizarOpcoesPrefeitura(): void {
+    const set = new Set<string>();
+    this.clientes.forEach(c => {
+      const p = c.prefeitura?.trim();
+      if (p) set.add(p);
+    });
+    this.prefeiturasOpcoes = [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+  private passaFiltroPrefeitura(c: Pessoa): boolean {
+    const filtro = this.filtroPrefeitura ?? '';
+    if (!filtro) return true;
+    if (filtro === '__sem__') return !c.prefeitura?.trim();
+    return (c.prefeitura || '').trim() === filtro;
   }
   filtrar() {
     const f = this.filtro.toLowerCase().trim();
-    const base = f
+    let base = f
       ? this.clientes.filter(c => (c.razao||c.nome||'').toLowerCase().includes(f) || (c.documento||'').includes(f) || String(c.codigo).includes(f))
       : [...this.clientes];
+    base = base.filter(c => this.passaFiltroPrefeitura(c));
     this.clientesFiltrados = base.sort((a, b) => new Date(b.dataInclusao).getTime() - new Date(a.dataInclusao).getTime());
     this.pageIndex = 1;
     this.cdr.markForCheck();
   }
   editar(c: Pessoa): void { this.router.navigate(['/administrativo/cliente', c.codigo, 'editar']); }
+
+  estaSelecionado(codigo: number): boolean {
+    return this.selecionados.has(codigo);
+  }
+
+  toggleSelecao(codigo: number, checked: boolean): void {
+    if (checked) this.selecionados.add(codigo);
+    else this.selecionados.delete(codigo);
+    this.cdr.markForCheck();
+  }
+
+  get todosSelecionados(): boolean {
+    return this.clientesFiltrados.length > 0
+      && this.clientesFiltrados.every(c => this.selecionados.has(c.codigo));
+  }
+
+  get selecaoParcial(): boolean {
+    const n = this.clientesFiltrados.filter(c => this.selecionados.has(c.codigo)).length;
+    return n > 0 && n < this.clientesFiltrados.length;
+  }
+
+  toggleSelecionarTodos(checked: boolean): void {
+    if (checked) this.clientesFiltrados.forEach(c => this.selecionados.add(c.codigo));
+    else this.clientesFiltrados.forEach(c => this.selecionados.delete(c.codigo));
+    this.cdr.markForCheck();
+  }
+
+  abrirMensagemLote(): void {
+    this.clientesMensagem = this.clientes
+      .filter(c => this.selecionados.has(c.codigo))
+      .map(c => ({ codigo: c.codigo, nome: c.razao || c.nome || String(c.codigo) }));
+    this.mensagemVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  abrirMensagemIndividual(c: Pessoa): void {
+    this.clientesMensagem = [{ codigo: c.codigo, nome: c.razao || c.nome || String(c.codigo) }];
+    this.mensagemVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  limparSelecao(): void {
+    this.selecionados.clear();
+    this.cdr.markForCheck();
+  }
+
   abrirCancelamento(c: Pessoa) { this.selecionado = c; this.cancelMotivo = ''; this.cancelVisible = true; this.cdr.markForCheck(); }
   salvarCancelamento() {
     if (!this.cancelMotivo.trim()) { this.message.warning('Selecione o motivo do cancelamento.'); return; }
