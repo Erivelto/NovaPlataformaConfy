@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, Pipe, Pi
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { of } from 'rxjs';
+import { of, forkJoin } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -31,14 +31,11 @@ class CnpjPipe implements PipeTransform {
   }
 }
 
-@Pipe({ name: 'brl', standalone: true, pure: true })
-class BrlPipe implements PipeTransform {
-  transform(v: string | number): string {
-    if (!v && v !== 0) return '—';
-    const n = typeof v === 'string'
-      ? parseFloat(v.replace(/\./g, '').replace(',', '.')) : v;
-    if (isNaN(n) || n === 0) return '—';
-    return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+@Pipe({ name: 'dasValor', standalone: true, pure: true })
+class DasValorPipe implements PipeTransform {
+  transform(v: string | number | null | undefined): string {
+    if (v === null || v === undefined || v === '') return '—';
+    return String(v);
   }
 }
 
@@ -65,7 +62,7 @@ interface Relatorio {
   imports: [
     CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzMessageModule, NzCollapseModule, NzBadgeModule,
-    NzToolTipModule, NzDividerModule, PageTitleComponent, CnpjPipe, BrlPipe, ExportExcelButtonComponent
+    NzToolTipModule, NzDividerModule, PageTitleComponent, CnpjPipe, DasValorPipe, ExportExcelButtonComponent
   ],
   template: `
     <div class="page">
@@ -127,7 +124,7 @@ interface Relatorio {
           <div class="tile-card gold">
             <div class="tile-icon"><i nz-icon nzType="file-text"></i></div>
             <div class="tile-body">
-              <div class="tile-count">{{ dados.totalSemFat }}</div>
+              <div class="tile-count">{{ dados.semValorFaturamento.length }}</div>
               <div class="tile-label">Sem faturamento</div>
             </div>
           </div>
@@ -205,21 +202,21 @@ interface Relatorio {
           <nz-collapse-panel [nzHeader]="hdr4" [nzActive]="false" [nzExtra]="cnt4">
             <ng-template #hdr4><span class="sec-hdr"><i nz-icon nzType="bug" style="color:#ff4d4f;margin-right:6px"></i>Geradas com erro</span></ng-template>
             <ng-template #cnt4><nz-badge [nzCount]="dados.totalComErro" [nzStyle]="badgeStyle(dados.totalComErro,'red')"></nz-badge></ng-template>
-            <ng-container [ngTemplateOutlet]="tabelaDAS" [ngTemplateOutletContext]="{rows: dados.comErro, fileName: 'historico-das-com-erro'}"></ng-container>
+            <ng-container [ngTemplateOutlet]="tabelaDAS" [ngTemplateOutletContext]="{rows: dados.comErro, fileName: 'historico-das-com-erro', erro: true}"></ng-container>
           </nz-collapse-panel>
 
-          <!-- 5: Sem Faturamento -->
+          <!-- 5: Sem Faturamento (sem robô) -->
           <nz-collapse-panel [nzHeader]="hdr5" [nzActive]="false" [nzExtra]="cnt5">
             <ng-template #hdr5><span class="sec-hdr"><i nz-icon nzType="robot" style="color:darkgoldenrod;margin-right:6px"></i>Sem Faturamento — sem consulta do Robô</span></ng-template>
             <ng-template #cnt5><nz-badge [nzCount]="dados.semFaturamento.length" [nzStyle]="badgeStyle(dados.semFaturamento.length,'gold')"></nz-badge></ng-template>
-            <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semFaturamento, fileName: 'historico-das-sem-faturamento'}"></ng-container>
+            <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semFaturamento, fileName: 'historico-das-sem-faturamento-robo', erro: false}"></ng-container>
           </nz-collapse-panel>
 
-          <!-- 6: Sem valor de Faturamento -->
+          <!-- 6: Sem valor de Faturamento (prefeituras com robô) -->
           <nz-collapse-panel [nzHeader]="hdr6" [nzActive]="false" [nzExtra]="cnt6">
             <ng-template #hdr6><span class="sec-hdr"><i nz-icon nzType="dollar" style="color:darkgoldenrod;margin-right:6px"></i>Sem valor de Faturamento</span></ng-template>
             <ng-template #cnt6><nz-badge [nzCount]="dados.semValorFaturamento.length" [nzStyle]="badgeStyle(dados.semValorFaturamento.length,'gold')"></nz-badge></ng-template>
-            <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semValorFaturamento, fileName: 'historico-das-sem-valor-faturamento'}"></ng-container>
+            <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semValorFaturamento, fileName: 'historico-das-sem-valor-faturamento', erro: false}"></ng-container>
           </nz-collapse-panel>
 
           <!-- 7: Aguardando -->
@@ -247,12 +244,12 @@ interface Relatorio {
       </ng-container>
 
       <!-- Template: tabela DAS simples (sem botão abrir) -->
-      <ng-template #tabelaDAS let-rows="rows" let-fileName="fileName">
+      <ng-template #tabelaDAS let-rows="rows" let-fileName="fileName" let-erro="erro">
         <div class="sec-export"><app-export-excel-button [data]="$any(rows)" [columns]="exportColumnsDas" [fileName]="fileName" /></div>
         <nz-table [nzData]="rows" nzSize="small" nzBordered [nzPageSize]="15"
           [nzShowPagination]="rows.length > 15" class="sec-table" nzTableLayout="fixed">
           <thead><tr>
-            <th nzWidth="70px">Cód.</th>
+            <th nzWidth="70px">Código</th>
             <th nzWidth="145px">CNPJ</th>
             <th>Razão Social</th>
             <th nzWidth="115px">Prefeitura</th>
@@ -263,16 +260,16 @@ interface Relatorio {
             <th nzWidth="115px" nzAlign="center">Status</th>
           </tr></thead>
           <tbody>
-            <tr *ngFor="let r of rows">
+            <tr *ngFor="let r of rows" [class.row-erro]="erro">
               <td class="mono">{{ r.codigoPessoa }}</td>
               <td class="mono">{{ r.documento | cnpj }}</td>
               <td class="razao-cell">{{ r.razao }}</td>
-              <td>{{ r.prefeitura }}</td>
-              <td class="mono">{{ r.periodo }}</td>
-              <td nzAlign="right" class="mono">{{ r.valorTributado | brl }}</td>
-              <td nzAlign="right" class="mono val-tributo">{{ r.valorTributo }}</td>
-              <td><span class="msg-cell" nz-tooltip [nzTooltipTitle]="r.mensagem">{{ r.mensagem }}</span></td>
-              <td nzAlign="center"><nz-tag [nzColor]="statusColor(r.status)">{{ r.status }}</nz-tag></td>
+              <td>{{ r.prefeitura || '—' }}</td>
+              <td class="mono">{{ r.periodo | dasValor }}</td>
+              <td nzAlign="right" class="mono">{{ r.valorTributado | dasValor }}</td>
+              <td nzAlign="right" class="mono val-tributo">{{ r.valorTributo | dasValor }}</td>
+              <td><span class="msg-cell" nz-tooltip [nzTooltipTitle]="r.mensagem">{{ r.mensagem || '—' }}</span></td>
+              <td nzAlign="center"><nz-tag [nzColor]="statusColor(r.status)">{{ r.status || '—' }}</nz-tag></td>
             </tr>
             <tr *ngIf="!rows.length"><td colspan="9" class="empty-row">Nenhum registro.</td></tr>
           </tbody>
@@ -280,12 +277,12 @@ interface Relatorio {
       </ng-template>
 
       <!-- Template: tabela DAS com botão Abrir -->
-      <ng-template #tabelaDASFat let-rows="rows" let-fileName="fileName">
+      <ng-template #tabelaDASFat let-rows="rows" let-fileName="fileName" let-erro="erro">
         <div class="sec-export"><app-export-excel-button [data]="$any(rows)" [columns]="exportColumnsDasFat" [fileName]="fileName" /></div>
         <nz-table [nzData]="rows" nzSize="small" nzBordered [nzPageSize]="15"
           [nzShowPagination]="rows.length > 15" class="sec-table" nzTableLayout="fixed">
           <thead><tr>
-            <th nzWidth="70px">Cód.</th>
+            <th nzWidth="70px">Código</th>
             <th nzWidth="145px">CNPJ</th>
             <th>Razão Social</th>
             <th nzWidth="115px">Prefeitura</th>
@@ -297,20 +294,20 @@ interface Relatorio {
             <th nzWidth="80px" nzAlign="center">DAS</th>
           </tr></thead>
           <tbody>
-            <tr *ngFor="let r of rows">
+            <tr *ngFor="let r of rows" [class.row-erro]="erro || r.status === 'Não concluido'">
               <td class="mono">{{ r.codigoPessoa }}</td>
               <td class="mono">{{ r.documento | cnpj }}</td>
               <td class="razao-cell">{{ r.razao }}</td>
-              <td>{{ r.prefeitura }}</td>
-              <td class="mono">{{ r.periodo }}</td>
-              <td nzAlign="right" class="mono">{{ r.valorTributado | brl }}</td>
-              <td nzAlign="right" class="mono val-tributo">{{ r.valorTributo }}</td>
-              <td><span class="msg-cell" nz-tooltip [nzTooltipTitle]="r.mensagem">{{ r.mensagem }}</span></td>
-              <td nzAlign="center"><nz-tag [nzColor]="statusColor(r.status)">{{ r.status }}</nz-tag></td>
+              <td>{{ r.prefeitura || '—' }}</td>
+              <td class="mono">{{ r.periodo | dasValor }}</td>
+              <td nzAlign="right" class="mono">{{ r.valorTributado | dasValor }}</td>
+              <td nzAlign="right" class="mono val-tributo">{{ r.valorTributo | dasValor }}</td>
+              <td><span class="msg-cell" nz-tooltip [nzTooltipTitle]="r.mensagem">{{ r.mensagem || '—' }}</span></td>
+              <td nzAlign="center"><nz-tag [nzColor]="statusColor(r.status)">{{ r.status || '—' }}</nz-tag></td>
               <td nzAlign="center">
                 <button *ngIf="r.nomeArquivo" nz-button nzType="link" nzSize="small"
                   nz-tooltip nzTooltipTitle="Abrir arquivo DAS" (click)="abrirArquivo(r)">
-                  <i nz-icon nzType="file-pdf" style="color:#ff4d4f;font-size:16px"></i>
+                  Abrir
                 </button>
                 <span *ngIf="!r.nomeArquivo" class="muted">—</span>
               </td>
@@ -399,6 +396,7 @@ interface Relatorio {
     .cod-link { color: #1890ff; }
 
     .empty-row { text-align: center; padding: 28px; color: rgba(0,0,0,.3); font-style: italic; }
+    .row-erro { color: #ff4d4f; }
   `]
 })
 export class HistoricoDasComponent implements OnInit {
@@ -449,19 +447,175 @@ export class HistoricoDasComponent implements OnInit {
   carregar() {
     this.loading = true;
     this.cdr.markForCheck();
-    this.http.get<Relatorio>(`${this.api}/DAS/RelatorioDashboard`, { headers: this.h })
-      .pipe(
-        timeout(30000),
-        catchError(err => {
-          this.message.error(`Erro ao carregar relatório (${err.status || 'timeout'})`);
-          return of(null);
-        })
-      )
-      .subscribe(data => {
-        this.dados = data;
+
+    const safe = <T>(obs: any) => obs.pipe(timeout(30000), catchError(() => of([] as T[])));
+    const agora = new Date();
+    const mes = agora.getMonth() + 1;
+    const ano = agora.getFullYear();
+
+    forkJoin({
+      das: safe<Record<string, unknown>>(this.http.get<Record<string, unknown>[]>(`${this.api}/DAS`, { headers: this.h })),
+      pessoas: safe<Record<string, unknown>>(this.http.get<Record<string, unknown>[]>(`${this.api}/Pessoa`, { headers: this.h })),
+      emissao: safe<Record<string, unknown>>(this.http.get<Record<string, unknown>[]>(`${this.api}/DadosEmissaoNota`, { headers: this.h }))
+    }).subscribe({
+      next: ({ das, pessoas, emissao }) => {
+        this.dados = this.montarRelatorio(
+          das as Record<string, unknown>[],
+          pessoas as Record<string, unknown>[],
+          emissao as Record<string, unknown>[],
+          mes,
+          ano
+        );
         this.loading = false;
         this.cdr.markForCheck();
-      });
+      },
+      error: () => {
+        this.message.error('Erro ao carregar relatório DAS.');
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private montarRelatorio(
+    dasRaw: Record<string, unknown>[],
+    pessoasRaw: Record<string, unknown>[],
+    emissaoRaw: Record<string, unknown>[],
+    mes: number,
+    ano: number
+  ): Relatorio {
+    const prefeiturasRobo = new Set([
+      'Guarulhos', 'Jundiai', 'Sao Jose do Rio preto', 'Itaquaquecetuba',
+      'Hortolandia', 'Sao Paulo', 'Cotia', 'Carapicuiba',
+      'Sao Jose dos Campos', 'São José dos Campos', 'Osasco', 'Atibaia'
+    ].map(p => p.toLowerCase()));
+
+    const emissaoMap = new Map<number, string>();
+    emissaoRaw.forEach(e => {
+      const cod = Number(e['codigoPessoa'] ?? e['CodigoPessoa'] ?? 0);
+      if (cod) emissaoMap.set(cod, String(e['prefeitura'] ?? e['Prefeitura'] ?? ''));
+    });
+
+    const pessoas = pessoasRaw
+      .filter(p => !(p['excluido'] ?? p['Excluido']) && !(p['fisica'] ?? p['Fisica']))
+      .map(p => ({
+        codigo: Number(p['codigo'] ?? p['Codigo'] ?? 0),
+        documento: String(p['documento'] ?? p['Documento'] ?? ''),
+        razao: String(p['razao'] ?? p['Razao'] ?? ''),
+        fantasia: String(p['nome'] ?? p['Nome'] ?? ''),
+        mei: !!(p['mei'] ?? p['MEI']),
+        fatAtivo: (p['fatAtivo'] ?? p['FatAtivo']) !== false
+      }));
+
+    const pessoaMap = new Map(pessoas.map(p => [p.codigo, p]));
+
+    const dasHistorico = dasRaw
+      .filter(d => !(d['excluido'] ?? d['Excluido']))
+      .map(d => this.mapDasItem(d, emissaoMap, pessoaMap));
+
+    const dasMes = dasRaw
+      .filter(d => {
+        if (d['excluido'] ?? d['Excluido']) return false;
+        const dataVal = d['data'] ?? d['Data'];
+        if (!dataVal) return false;
+        const dt = new Date(String(dataVal));
+        return !isNaN(dt.getTime()) && dt.getMonth() + 1 === mes && dt.getFullYear() === ano;
+      })
+      .map(d => this.mapDasItem(d, emissaoMap, pessoaMap));
+
+    const dasCodigoPessoa = new Set(dasHistorico.map(d => d.codigoPessoa));
+    const pessoaFatAtivo = new Set(pessoas.filter(p => p.fatAtivo).map(p => p.codigo));
+    const pessoaFatInativo = new Set(pessoas.filter(p => !p.fatAtivo).map(p => p.codigo));
+
+    const semCadastro: PessoaItem[] = [];
+    const clientesMEI: PessoaItem[] = [];
+    for (const p of pessoas) {
+      const item = { codigo: p.codigo, documento: p.documento, razao: p.razao, fantasia: p.fantasia };
+      if (p.mei) clientesMEI.push(item);
+      else if (!dasCodigoPessoa.has(p.codigo)) semCadastro.push(item);
+    }
+
+    const foraDoSimples: DasItem[] = [];
+    const comErro: DasItem[] = [];
+    const semFaturamento: DasItem[] = [];
+    const semValorFaturamento: DasItem[] = [];
+    const aguardando: DasItem[] = [];
+    const enviados: DasItem[] = [];
+    const fatDesativado: DasItem[] = [];
+
+    for (const d of dasMes) {
+      const tributo = (d.valorTributo || '').trim();
+      const tributoZero = !tributo || tributo === '0' || tributo === '0,00' || tributo === '0.00';
+      const tributoComValor = !tributoZero;
+      const status = d.status || '';
+      const mensagem = d.mensagem || '';
+
+      if (status === 'Não concluido') {
+        if (mensagem.toLowerCase().includes('simples nacional'))
+          foraDoSimples.push(d);
+        else
+          comErro.push(d);
+        continue;
+      }
+
+      if (pessoaFatInativo.has(d.codigoPessoa))
+        fatDesativado.push(d);
+
+      if (status === 'Concluido' && tributoComValor)
+        aguardando.push(d);
+      else if (status === 'Enviado' && tributoComValor)
+        enviados.push(d);
+
+      if (tributoZero && pessoaFatAtivo.has(d.codigoPessoa)) {
+        const pref = (d.prefeitura || '').toLowerCase();
+        if (prefeiturasRobo.has(pref))
+          semValorFaturamento.push(d);
+        else
+          semFaturamento.push(d);
+      }
+    }
+
+    return {
+      totalSemCadastro: semCadastro.length,
+      totalMEI: clientesMEI.length,
+      totalComErro: comErro.length,
+      totalAguardando: aguardando.length,
+      totalEnviado: enviados.length,
+      totalSemFat: semFaturamento.length + semValorFaturamento.length,
+      totalFatDesativado: fatDesativado.length,
+      totalForaDoSimples: foraDoSimples.length,
+      semCadastro,
+      clientesMEI,
+      foraDoSimples,
+      comErro,
+      semFaturamento,
+      semValorFaturamento,
+      aguardando,
+      enviados,
+      fatDesativado
+    };
+  }
+
+  private mapDasItem(
+    raw: Record<string, unknown>,
+    emissaoMap: Map<number, string>,
+    pessoaMap: Map<number, { documento: string; razao: string }>
+  ): DasItem {
+    const codigoPessoa = Number(raw['codigoPessoa'] ?? raw['CodigoPessoa'] ?? 0);
+    const pessoa = pessoaMap.get(codigoPessoa);
+    return {
+      codigo: Number(raw['codigo'] ?? raw['Codigo'] ?? 0),
+      codigoPessoa,
+      documento: String(raw['documento'] ?? raw['Documento'] ?? pessoa?.documento ?? ''),
+      razao: String(raw['razao'] ?? raw['Razao'] ?? pessoa?.razao ?? ''),
+      prefeitura: emissaoMap.get(codigoPessoa) || String(raw['prefeitura'] ?? raw['Prefeitura'] ?? ''),
+      periodo: String(raw['periodo'] ?? raw['Periodo'] ?? ''),
+      valorTributado: String(raw['valorTributado'] ?? raw['ValorTributado'] ?? ''),
+      valorTributo: String(raw['valorTributo'] ?? raw['ValorTributo'] ?? ''),
+      mensagem: String(raw['mensagem'] ?? raw['Mensagem'] ?? ''),
+      status: String(raw['status'] ?? raw['Status'] ?? ''),
+      nomeArquivo: String(raw['nomeArquivo'] ?? raw['NomeArquivo'] ?? '')
+    };
   }
 
   abrirArquivo(d: DasItem) {
@@ -476,9 +630,11 @@ export class HistoricoDasComponent implements OnInit {
   statusColor(status: string): string {
     switch ((status || '').toLowerCase()) {
       case 'enviado':       return 'green';
-      case 'concluido':     return 'blue';
-      case 'aguardando':    return 'cyan';
-      case 'não concluido': return 'orange';
+      case 'concluido':     return 'cyan';
+      case 'concluído':     return 'cyan';
+      case 'aguardando':    return 'blue';
+      case 'não concluido': return 'red';
+      case 'nao concluido': return 'red';
       case 'e':             return 'red';
       default:              return 'default';
     }
