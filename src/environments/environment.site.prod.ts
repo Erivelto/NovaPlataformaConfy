@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
-  deployTarget: 'app' as const,
+  deployTarget: 'site' as const,
   siteUrl: 'https://contfy.com.br',
   appUrl: 'https://contabilcontfy.com.br',
-  apiUrl: 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api'
+  apiUrl: 'https://contfyapinovo-dnhygmhpg2gjerh4.canadacentral-01.azurewebsites.net/api',
 };

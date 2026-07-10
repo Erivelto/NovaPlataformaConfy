@@ -8,7 +8,7 @@ export const adminGuard: CanActivateFn = () => {
 
   if (!loginService.estaAutenticado()) {
     loginService.logout();
-    router.navigate(['/login']);
+    router.navigate(['/entrar']);
     return false;
   }
 

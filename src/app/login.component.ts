@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -10,13 +10,14 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { LoginService } from './services/login.service';
+import { siteHomeUrl } from './public/external-links';
 
 const REMEMBER_KEY = 'contfy_remembered_user';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, NzFormModule, NzInputModule, NzButtonModule, NzAlertModule, NzSpinModule, NzIconModule, NzCheckboxModule],
+  imports: [CommonModule, FormsModule, RouterModule, NzFormModule, NzInputModule, NzButtonModule, NzAlertModule, NzSpinModule, NzIconModule, NzCheckboxModule],
   template: `
     <div class="login-wrap">
       <div class="login-box">
@@ -25,6 +26,7 @@ const REMEMBER_KEY = 'contfy_remembered_user';
         </div>
         <h2 class="login-title">Seja bem-vindo à Contfy!</h2>
         <p class="login-sub">Acesse sua conta para continuar</p>
+        <p class="login-back"><a [href]="siteHomeUrl">← Voltar ao site institucional</a></p>
 
         <nz-alert
           *ngIf="errorMessage"
@@ -98,7 +100,7 @@ const REMEMBER_KEY = 'contfy_remembered_user';
       align-items: center;
       justify-content: center;
       padding: 24px;
-      background: linear-gradient(135deg, #0a66c2 0%, #5fb1ff 100%);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
     }`,
     `.login-box {
       width: 100%;
@@ -125,17 +127,20 @@ const REMEMBER_KEY = 'contfy_remembered_user';
     }`,
     `.login-title {
       margin: 0;
-      color: #0a66c2;
+      color: var(--primary-color);
       font-size: 1.5rem;
       font-weight: 700;
       text-align: center;
     }`,
     `.login-sub {
-      margin: 6px 0 22px;
+      margin: 6px 0 8px;
       color: rgba(0,0,0,0.5);
       font-size: 0.9rem;
       text-align: center;
     }`,
+    `.login-back { margin: 0 0 18px; text-align: center; font-size: .85rem; }
+    .login-back a { color: var(--primary-color); text-decoration: none; }
+    .login-back a:hover { text-decoration: underline; }`,
     `.alert-margin { margin-bottom: 16px; }`,
     `.actions {
       display: flex;
@@ -145,7 +150,7 @@ const REMEMBER_KEY = 'contfy_remembered_user';
     }`,
     `.primary-btn {
       flex: 1;
-      background: linear-gradient(90deg, #0a66c2, #5fb1ff);
+      background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
       border: none;
       color: #fff;
       font-weight: 600;
@@ -158,7 +163,7 @@ const REMEMBER_KEY = 'contfy_remembered_user';
       margin-bottom: 14px;
       font-size: 13px;
     }
-    .remember-row a { color: #0a66c2; cursor: pointer; }
+    .remember-row a { color: var(--primary-color); cursor: pointer; }
     .remember-row a:hover { text-decoration: underline; }`,
     `@media (max-width: 480px) {
       .login-box { padding: 24px 18px; border-radius: 12px; }
@@ -173,6 +178,7 @@ export class LoginComponent implements OnInit {
   errorMessage = '';
   showPassword = false;
   rememberMe = false;
+  readonly siteHomeUrl = siteHomeUrl;
 
   constructor(private router: Router, private loginService: LoginService) {}
 

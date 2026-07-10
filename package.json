@@ -3,8 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --port 4200",
-    "build": "ng build",
+    "start": "ng serve --configuration site-development --port 4200",
+    "start:site": "ng serve --configuration site-development --port 4200",
+    "start:app": "ng serve --configuration development --port 4201",
+    "build": "ng build --configuration production",
+    "build:app": "ng build --configuration production",
+    "build:site": "ng build --configuration site",
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"

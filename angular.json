@@ -15,7 +15,7 @@
           "options": {
             "outputPath": "dist/novoangularbackv2",
             "index": "src/index.html",
-            "browser": "src/main.ts",
+            "browser": "src/main.app.ts",
             "polyfills": [
               "zone.js"
             ],
@@ -53,10 +53,48 @@
               ],
               "outputHashing": "all"
             },
+            "site": {
+              "outputPath": "dist/contfy-site",
+              "index": "src/index.site.html",
+              "browser": "src/main.site.ts",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.site.prod.ts"
+                }
+              ],
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1.5MB",
+                  "maximumError": "3MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "32kB",
+                  "maximumError": "64kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "site-development": {
+              "outputPath": "dist/contfy-site",
+              "index": "src/index.site.html",
+              "browser": "src/main.site.ts",
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.site.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -69,10 +107,17 @@
             },
             "development": {
               "buildTarget": "novoangularbackv2:build:development",
+              "port": 4201
+            },
+            "site": {
+              "buildTarget": "novoangularbackv2:build:site"
+            },
+            "site-development": {
+              "buildTarget": "novoangularbackv2:build:site-development",
               "port": 4200
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "site-development"
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n"

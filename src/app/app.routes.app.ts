@@ -2,15 +2,17 @@ import { Routes } from '@angular/router';
 import { authGuard } from './services/auth.guard';
 import { adminGuard } from './services/admin.guard';
 
-export const routes: Routes = [
-	{ path: 'login', loadComponent: () => import('./login.component').then(m => m.LoginComponent) },
+/** Rotas da plataforma autenticada (deploy: contabilcontfy.com.br) */
+export const appRoutes: Routes = [
+	{ path: '', redirectTo: 'entrar', pathMatch: 'full' },
+	{ path: 'entrar', loadComponent: () => import('./login.component').then(m => m.LoginComponent) },
+	{ path: 'login', redirectTo: 'entrar', pathMatch: 'full' },
 	{ path: 'alterar-senha', loadComponent: () => import('./alterar-senha.component').then(m => m.AlterarSenhaComponent) },
 	{
 		path: '',
 		loadComponent: () => import('./layout.component').then(m => m.LayoutComponent),
 		canActivate: [authGuard],
 		children: [
-			{ path: '', redirectTo: 'dashboard', pathMatch: 'full' },
 			{ path: 'dashboard', loadComponent: () => import('./dashboard.component').then(m => m.DashboardComponent) },
 			{ path: 'form', loadComponent: () => import('./sample-form.component').then(m => m.SampleFormComponent) },
 			{ path: 'users', loadComponent: () => import('./users-table.component').then(m => m.UsersTableComponent) },
@@ -32,8 +34,6 @@ export const routes: Routes = [
 		children: [
 			{ path: '', redirectTo: 'dashboard', pathMatch: 'full' },
 			{ path: 'dashboard', loadComponent: () => import('./admin-dashboard.component').then(m => m.DashboardAdminComponent) },
-
-			// Gestão > Clientes
 			{ path: 'clientes', loadComponent: () => import('./admin/clientes-online.component').then(m => m.ClientesOnlineComponent) },
 			{ path: 'clientes-fisica', loadComponent: () => import('./admin/clientes-fisica.component').then(m => m.ClientesFisicaComponent) },
 			{ path: 'clientes-excluidos', loadComponent: () => import('./admin/clientes-excluidos.component').then(m => m.ClientesExcluidosComponent) },
@@ -41,30 +41,22 @@ export const routes: Routes = [
 			{ path: 'cliente/:id/editar', loadComponent: () => import('./admin/cliente-editar.component').then(m => m.ClienteEditarComponent) },
 			{ path: 'cliente/:id/editar-debitos', loadComponent: () => import('./admin/editar-debitos.component').then(m => m.EditarDebitosComponent) },
 			{ path: 'receita-anual/:pessoaCodigo', loadComponent: () => import('./admin/dashboard-fiscal-admin.component').then(m => m.DashboardFiscalAdminComponent) },
-
-			// Gestão > Cobrança
 			{ path: 'devedores', loadComponent: () => import('./admin/devedores.component').then(m => m.DevedoresComponent) },
 			{ path: 'devedores-anterior', loadComponent: () => import('./admin/devedores-anterior.component').then(m => m.DevedoresAnteriorComponent) },
-
-			// Gestão > DAS
 			{ path: 'historico-das', loadComponent: () => import('./admin/historico-das.component').then(m => m.HistoricoDasComponent) },
 			{ path: 'validacao-das', loadComponent: () => import('./admin/validacao-das.component').then(m => m.ValidacaoDasComponent) },
 			{ path: 'pendencias-das', loadComponent: () => import('./admin/pendencias-das.component').then(m => m.PendenciasDasComponent) },
-
-			// Gestão > Pessoal / Blog / Solicitações / NFE
 			{ path: 'gestao-pessoal', loadComponent: () => import('./admin/gestao-pessoal.component').then(m => m.GestaoPessoalComponent) },
 			{ path: 'blog', loadComponent: () => import('./admin/blog.component').then(m => m.BlogComponent) },
 			{ path: 'solicitacoes', loadComponent: () => import('./admin/solicitacoes.component').then(m => m.SolicitacoesComponent) },
 			{ path: 'solicitacoes-dashboard', loadComponent: () => import('./admin/solicitacoes-dashboard.component').then(m => m.SolicitacoesDashboardComponent) },
 			{ path: 'agendamento-nfe/detalhe/:codigo', loadComponent: () => import('./admin/agendamento-nfe-detalhe.component').then(m => m.AgendamentoNfeDetalheComponent) },
 			{ path: 'agendamento-nfe', loadComponent: () => import('./admin/agendamento-nfe.component').then(m => m.AgendamentoNfeComponent) },
-
-			// Rotas legadas mantidas
 			{ path: 'usuarios', loadComponent: () => import('./users-table.component').then(m => m.UsersTableComponent) },
 			{ path: 'mensalidades', loadComponent: () => import('./mensalidade/mensalidade.component').then(m => m.MensalidadeComponent) },
 			{ path: 'notas-fiscais', loadComponent: () => import('./notas-fiscais/notas-fiscais.component').then(m => m.NotasFiscaisComponent) },
 			{ path: 'impostos', loadComponent: () => import('./receita-imposto/receita-imposto.component').then(m => m.ReceitaImpostoComponent) }
 		]
 	},
-	{ path: '**', redirectTo: '' }
+	{ path: '**', redirectTo: 'entrar' }
 ];

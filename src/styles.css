@@ -11,7 +11,8 @@
 	 /* NG-ZORRO primary token fallback */
 	 --ant-primary-color: #0b3d91;
 	/* button radius */
-	--btn-radius: 8px;
+	 --btn-radius: 8px;
+	 --pub-bg: #f4f8fc;
  }
 
 /* Toolbar title color */
