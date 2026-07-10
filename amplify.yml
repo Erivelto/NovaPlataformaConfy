@@ -6,9 +6,22 @@ frontend:
         - npm ci --legacy-peer-deps
     build:
       commands:
-        - npx ng build --configuration production
+        - |
+          if [ "$DEPLOY_TARGET" = "site" ]; then
+            echo "Build: site (contfy.com.br)"
+            npx ng build --configuration site
+            rm -rf dist/deploy
+            mkdir -p dist/deploy
+            cp -r dist/contfy-site/browser/. dist/deploy/
+          else
+            echo "Build: app (contabilcontfy.com.br)"
+            npx ng build --configuration production
+            rm -rf dist/deploy
+            mkdir -p dist/deploy
+            cp -r dist/novoangularbackv2/browser/. dist/deploy/
+          fi
   artifacts:
-    baseDirectory: dist/novoangularbackv2/browser
+    baseDirectory: dist/deploy
     files:
       - '**/*'
   cache:
