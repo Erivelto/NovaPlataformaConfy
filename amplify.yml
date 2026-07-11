@@ -7,8 +7,9 @@ frontend:
     build:
       commands:
         - |
-          if [ "$DEPLOY_TARGET" = "site" ]; then
-            echo "Build: site (contfy.com.br)"
+          # SiteContfy (Amplify) usa AWS_APP_ID=d64oxvnbymsbo — sem variável manual no console
+          if [ "$DEPLOY_TARGET" = "site" ] || [ "$AWS_APP_ID" = "d64oxvnbymsbo" ]; then
+            echo "Build: site (SiteContfy / contfy.com.br)"
             npx ng build --configuration site
             rm -rf dist/deploy
             mkdir -p dist/deploy
