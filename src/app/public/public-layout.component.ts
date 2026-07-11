@@ -1,10 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterModule, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { MEDIA, SITE } from './site.constants';
 import { appLoginUrl } from './external-links';
+import { SeoService } from './seo.service';
 
 @Component({
   selector: 'app-public-layout',
@@ -106,9 +108,19 @@ import { appLoginUrl } from './external-links';
     }
   `]
 })
-export class PublicLayoutComponent {
+export class PublicLayoutComponent implements OnInit {
+  private readonly router = inject(Router);
+  private readonly seo = inject(SeoService);
+
   readonly site = SITE;
   readonly media = MEDIA;
   readonly whatsappUrl = `https://wa.me/${SITE.whatsapp}`;
   readonly appLoginUrl = appLoginUrl;
+
+  ngOnInit(): void {
+    this.seo.updateForPath(this.router.url);
+    this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe((event) => this.seo.updateForPath((event as NavigationEnd).urlAfterRedirects));
+  }
 }
