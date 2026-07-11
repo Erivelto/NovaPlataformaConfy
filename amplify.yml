@@ -6,8 +6,7 @@ frontend:
         - npm ci --legacy-peer-deps
     build:
       commands:
-        - chmod +x scripts/amplify-build.sh
-        - bash scripts/amplify-build.sh
+        - node scripts/amplify-build.cjs
   artifacts:
     baseDirectory: dist/deploy
     files:
