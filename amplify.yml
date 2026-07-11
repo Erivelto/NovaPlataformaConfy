@@ -6,21 +6,8 @@ frontend:
         - npm ci --legacy-peer-deps
     build:
       commands:
-        - |
-          # SiteContfy (Amplify) usa AWS_APP_ID=d64oxvnbymsbo — sem variável manual no console
-          if [ "$DEPLOY_TARGET" = "site" ] || [ "$AWS_APP_ID" = "d64oxvnbymsbo" ]; then
-            echo "Build: site (SiteContfy / contfy.com.br)"
-            npx ng build --configuration site
-            rm -rf dist/deploy
-            mkdir -p dist/deploy
-            cp -r dist/contfy-site/browser/. dist/deploy/
-          else
-            echo "Build: app (contabilcontfy.com.br)"
-            npx ng build --configuration production
-            rm -rf dist/deploy
-            mkdir -p dist/deploy
-            cp -r dist/novoangularbackv2/browser/. dist/deploy/
-          fi
+        - chmod +x scripts/amplify-build.sh
+        - bash scripts/amplify-build.sh
   artifacts:
     baseDirectory: dist/deploy
     files:
