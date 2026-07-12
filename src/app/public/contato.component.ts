@@ -5,7 +5,6 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { SITE } from './site.constants';
-import { appLoginUrl } from './external-links';
 
 @Component({
   selector: 'app-contato',
@@ -33,8 +32,8 @@ import { appLoginUrl } from './external-links';
         </nz-card>
         <nz-card>
           <h3><i nz-icon nzType="user"></i> Plataforma</h3>
-          <p>Já é cliente? Acesse sua conta na plataforma digital.</p>
-          <a nz-button nzType="primary" [href]="appLoginUrl">Entrar na plataforma</a>
+          <p>Já é cliente? Acesse com o botão <strong>Já sou cliente</strong> no topo do site.</p>
+          <a nz-button nzType="primary" routerLink="/plataforma">Conhecer a plataforma</a>
         </nz-card>
       </div>
     </section>
@@ -51,5 +50,4 @@ import { appLoginUrl } from './external-links';
 export class ContatoComponent {
   readonly site = SITE;
   readonly whatsappUrl = `https://wa.me/${SITE.whatsapp}`;
-  readonly appLoginUrl = appLoginUrl;
 }

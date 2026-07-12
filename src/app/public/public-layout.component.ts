@@ -15,18 +15,24 @@ import { SeoService } from './seo.service';
   template: `
     <div class="pub-shell">
       <header class="pub-header">
-        <a routerLink="/" class="pub-brand">
-          <img [src]="media.logo" alt="Contfy" class="pub-brand-logo" />
+        <a routerLink="/" class="pub-brand" aria-label="Contfy Contábil — início">
+          <span class="pub-brand-lockup">
+            <img [src]="media.logoMark" alt="" class="pub-brand-mark" />
+            <span class="pub-brand-text">
+              <span class="pub-brand-name">{{ site.brandName }}</span>
+              <span class="pub-brand-tag">CONTÁBIL</span>
+            </span>
+          </span>
         </a>
         <nav class="pub-nav">
           <a routerLink="/planos" routerLinkActive="active">Planos</a>
-          <a routerLink="/" fragment="como-funciona">Como funciona</a>
-          <a routerLink="/" fragment="plataforma">Plataforma</a>
+          <a routerLink="/como-funciona" routerLinkActive="active">Como funciona</a>
+          <a routerLink="/plataforma" routerLinkActive="active">Plataforma</a>
           <a routerLink="/contato">Contato</a>
         </nav>
         <div class="pub-header-actions">
           <a nz-button nzType="default" class="pub-btn-ghost pub-link-btn" [href]="appLoginUrl">Já sou cliente</a>
-          <a nz-button nzType="primary" class="pub-link-btn" [href]="appLoginUrl">Entrar na plataforma</a>
+          <a nz-button nzType="primary" class="pub-link-btn" routerLink="/plataforma">Conhecer plataforma</a>
         </div>
       </header>
 
@@ -53,7 +59,8 @@ import { SeoService } from './seo.service';
           </div>
           <div>
             <strong>Plataforma</strong>
-            <a [href]="appLoginUrl">Entrar</a>
+            <a routerLink="/plataforma">Conhecer</a>
+            <a [href]="appLoginUrl">Já sou cliente</a>
             <span>© {{ site.copyrightYear }} Contfy</span>
           </div>
         </div>
@@ -72,8 +79,39 @@ import { SeoService } from './seo.service';
       padding: 12px 24px; background: #fff;
       border-bottom: 1px solid rgba(11, 61, 145, 0.08);
     }
-    .pub-brand { display: flex; align-items: center; text-decoration: none; color: inherit; }
-    .pub-brand-logo { height: 52px; width: 52px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(11,61,145,.15); }
+    .pub-brand { display: flex; align-items: center; text-decoration: none; color: inherit; flex-shrink: 0; }
+    .pub-brand-lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 52px;
+      padding: 6px 14px 6px 8px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f7fbff 0%, #ffffff 100%);
+      border: 1px solid rgba(11, 61, 145, 0.12);
+      box-shadow: 0 4px 14px rgba(11, 61, 145, 0.06);
+    }
+    .pub-brand-mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .pub-brand-text { display: flex; flex-direction: column; line-height: 1.05; }
+    .pub-brand-name {
+      font-size: 1.28rem;
+      font-weight: 800;
+      color: var(--primary-color);
+      letter-spacing: -0.02em;
+    }
+    .pub-brand-tag {
+      margin-top: 2px;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .16em;
+      color: #2eb8e8;
+    }
     .pub-nav { display: flex; gap: 18px; margin-left: auto; }
     .pub-nav a { color: rgba(26,26,46,.75); text-decoration: none; font-size: .92rem; }
     .pub-nav a.active, .pub-nav a:hover { color: var(--primary-color); }
@@ -104,6 +142,10 @@ import { SeoService } from './seo.service';
     }
     @media (max-width: 560px) {
       .pub-header-actions .pub-btn-ghost { display: none; }
+      .pub-brand-lockup { padding: 5px 10px 5px 6px; min-height: 46px; }
+      .pub-brand-mark { width: 36px; height: 36px; }
+      .pub-brand-name { font-size: 1.05rem; }
+      .pub-brand-tag { font-size: .58rem; }
       .pub-footer-grid { grid-template-columns: 1fr; }
     }
   `]

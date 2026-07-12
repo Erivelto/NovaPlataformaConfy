@@ -63,6 +63,19 @@ export function getSeoForPath(path: string, baseUrl: string): PageSeo {
         'Conheça os planos Contfy: abertura de empresa, mudança de contador e plano básico a partir de R$ 199,90/mês para Simples Nacional.',
       path: '/planos',
     },
+    '/como-funciona': {
+      title: 'Como funciona — abertura de empresa e mudança de contador',
+      description:
+        'Veja o passo a passo da abertura de empresa e da mudança de contador com a Contfy, do planejamento à regularização fiscal.',
+      path: '/como-funciona',
+    },
+    '/plataforma': {
+      title: 'Demonstração da plataforma Contfy',
+      description:
+        'Assista à demonstração da plataforma Contfy e entenda como funciona o acesso digital à contabilidade da sua empresa.',
+      path: '/plataforma',
+      image: '/assets/site/startup.jpg',
+    },
     '/abrir-empresa': {
       title: 'Abrir minha empresa',
       description:

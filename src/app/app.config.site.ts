@@ -10,6 +10,8 @@ import { NZ_ICONS } from 'ng-zorro-antd/icon';
 import { authInterceptor } from './services/auth.interceptor';
 import {
   CheckOutline,
+  CheckCircleFill,
+  PlayCircleFill,
   DesktopOutline,
   FileOutline,
   PieChartOutline,
@@ -36,6 +38,8 @@ export const siteAppConfig: ApplicationConfig = {
       provide: NZ_ICONS,
       useValue: [
         CheckOutline,
+        CheckCircleFill,
+        PlayCircleFill,
         DesktopOutline,
         FileOutline,
         PieChartOutline,

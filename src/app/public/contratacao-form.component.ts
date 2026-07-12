@@ -17,7 +17,7 @@ import { ContratacaoService } from './contratacao.service';
     <nz-alert *ngIf="erro" nzType="error" [nzMessage]="erro" nzShowIcon style="margin-bottom:16px"></nz-alert>
 
     <form nz-form nzLayout="vertical" (ngSubmit)="enviar()">
-      <nz-form-item>
+      <nz-form-item *ngIf="showCnpj">
         <nz-form-label>CNPJ</nz-form-label>
         <nz-form-control>
           <input nz-input name="cnpj" [(ngModel)]="cnpj" placeholder="00.000.000/0000-00" [disabled]="enviando" required />
@@ -51,6 +51,7 @@ import { ContratacaoService } from './contratacao.service';
 export class ContratacaoFormComponent {
   @Input() titulo = '';
   @Input() plano = '1';
+  @Input() showCnpj = true;
   @Input() nomeLabel = 'Razão social';
   @Input() nomePlaceholder = 'Nome da empresa';
   @Input() submitLabel = 'Enviar solicitação';
@@ -66,14 +67,15 @@ export class ContratacaoFormComponent {
 
   enviar(): void {
     this.erro = '';
-    if (!this.cnpj.trim() || !this.nome.trim() || !this.email.trim() || !this.celular.trim()) {
+    const cnpjOk = !this.showCnpj || this.cnpj.trim();
+    if (!cnpjOk || !this.nome.trim() || !this.email.trim() || !this.celular.trim()) {
       this.erro = 'Preencha todos os campos.';
       return;
     }
 
     this.enviando = true;
     this.contratacao.cadastrar({
-      cnpj: this.cnpj.trim(),
+      cnpj: this.showCnpj ? this.cnpj.trim() : '',
       nome: this.nome.trim(),
       email: this.email.trim(),
       celular: this.celular.trim(),

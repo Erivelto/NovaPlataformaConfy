@@ -13,7 +13,6 @@ import {
   SITE,
   TRUST_ITEMS,
 } from './site.constants';
-import { appLoginUrl } from './external-links';
 
 @Component({
   selector: 'app-home',
@@ -68,12 +67,17 @@ import { appLoginUrl } from './external-links';
     <section id="como-funciona" class="pub-section">
       <div class="pub-container">
         <h2>Como funciona</h2>
-        <div class="pub-steps">
+        <p class="pub-section-lead">Escolha abrir empresa ou mudar de contador e veja o passo a passo completo de cada processo.</p>
+        <div class="pub-steps pub-steps-compact">
           <div *ngFor="let step of funnelSteps; let i = index" class="pub-step">
             <div class="pub-step-num">{{ i + 1 }}</div>
             <strong>{{ step.title }}</strong>
             <p>{{ step.desc }}</p>
           </div>
+        </div>
+        <div class="pub-hero-actions" style="margin-top:20px">
+          <button nz-button nzType="primary" routerLink="/como-funciona" [queryParams]="{ tipo: 'abertura' }">Fluxo de abertura</button>
+          <button nz-button routerLink="/como-funciona" [queryParams]="{ tipo: 'mudanca' }">Fluxo de mudança de contador</button>
         </div>
       </div>
     </section>
@@ -86,7 +90,7 @@ import { appLoginUrl } from './external-links';
               <h2>Sua contabilidade na palma da mão</h2>
               <p>Tudo que você precisa, sem sair da plataforma Contfy.</p>
             </div>
-            <a nz-button nzType="primary" class="pub-link-btn" [href]="appLoginUrl">Conhecer a plataforma</a>
+            <a nz-button nzType="primary" class="pub-link-btn" routerLink="/plataforma">Conhecer a plataforma</a>
           </div>
           <div class="pub-features">
             <div *ngFor="let f of features" class="pub-feature-card">
@@ -218,6 +222,7 @@ import { appLoginUrl } from './external-links';
     .pub-section { padding: 48px 0; }
     .pub-section-alt { background: #fff; }
     .pub-section h2 { color: var(--primary-color); margin-bottom: 24px; }
+    .pub-section-lead { margin: -12px 0 20px; color: rgba(26,26,46,.68); max-width: 640px; line-height: 1.5; }
     .pub-section-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
     .pub-link-btn { text-decoration: none; display: inline-flex; align-items: center; }
     .pub-platform-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, 480px); gap: 40px; align-items: center; }
@@ -271,5 +276,4 @@ export class HomeComponent {
   readonly features = PLATFORM_FEATURES;
   readonly faq = FAQ_ITEMS;
   readonly whatsappUrl = `https://wa.me/${SITE.whatsapp}`;
-  readonly appLoginUrl = appLoginUrl;
 }

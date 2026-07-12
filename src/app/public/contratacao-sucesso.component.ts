@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { appLoginUrl, siteHomeUrl } from './external-links';
+import { siteHomeUrl } from './external-links';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzResultModule } from 'ng-zorro-antd/result';
 
@@ -14,7 +14,7 @@ import { NzResultModule } from 'ng-zorro-antd/result';
       <div class="pub-container pub-success">
         <nz-result nzStatus="success" nzTitle="Solicitação enviada com sucesso!" [nzSubTitle]="subtitulo">
           <div nz-result-extra>
-            <a nz-button nzType="primary" [href]="appLoginUrl">Ir para o login</a>
+            <a nz-button nzType="primary" routerLink="/plataforma">Conhecer a plataforma</a>
             <a nz-button [href]="siteHomeUrl">Voltar ao site</a>
           </div>
         </nz-result>
@@ -28,8 +28,7 @@ import { NzResultModule } from 'ng-zorro-antd/result';
   `]
 })
 export class ContratacaoSucessoComponent implements OnInit {
-  subtitulo = 'Nossa equipe analisará seus dados e entrará em contato. Quando seu acesso estiver liberado, use a plataforma Contfy para entrar.';
-  readonly appLoginUrl = appLoginUrl;
+  subtitulo = 'Nossa equipe analisará seus dados e entrará em contato. O acesso à plataforma é liberado após essa análise.';
   readonly siteHomeUrl = siteHomeUrl;
 
   constructor(private route: ActivatedRoute) {}
@@ -37,7 +36,7 @@ export class ContratacaoSucessoComponent implements OnInit {
   ngOnInit(): void {
     const email = this.route.snapshot.queryParamMap.get('email');
     if (email) {
-      this.subtitulo = `Recebemos sua solicitação para ${email}. Quando seu acesso estiver liberado, entre em contfy.com.br/entrar.`;
+      this.subtitulo = `Recebemos sua solicitação para ${email}. Quando seu acesso estiver liberado, use o botão Já sou cliente em contabilcontfy.com.br.`;
     }
   }
 }

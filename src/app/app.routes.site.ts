@@ -8,6 +8,8 @@ export const siteRoutes: Routes = [
 		children: [
 			{ path: '', loadComponent: () => import('./public/home.component').then(m => m.HomeComponent) },
 			{ path: 'planos', loadComponent: () => import('./public/planos.component').then(m => m.PlanosComponent) },
+			{ path: 'como-funciona', loadComponent: () => import('./public/como-funciona.component').then(m => m.ComoFuncionaComponent) },
+			{ path: 'plataforma', loadComponent: () => import('./public/plataforma-demo.component').then(m => m.PlataformaDemoComponent) },
 			{ path: 'abrir-empresa', loadComponent: () => import('./public/abrir-empresa.component').then(m => m.AbrirEmpresaComponent) },
 			{ path: 'mudar-contador', loadComponent: () => import('./public/abrir-empresa.component').then(m => m.MudarContadorComponent) },
 			{ path: 'contato', loadComponent: () => import('./public/contato.component').then(m => m.ContatoComponent) },
