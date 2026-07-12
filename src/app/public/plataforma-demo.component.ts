@@ -158,6 +158,12 @@ import { appLoginUrl } from './external-links';
     @media (max-width: 900px) {
       .pub-demo-grid, .pub-features { grid-template-columns: 1fr; }
     }
+    @media (max-width: 768px) {
+      .pub-container { padding: 0 16px; }
+      .pub-demo-actions { flex-direction: column; align-items: stretch; }
+      .pub-demo-actions .ant-btn,
+      .pub-demo-actions .pub-link-btn { width: 100%; justify-content: center; min-height: 44px; }
+    }
   `]
 })
 export class PlataformaDemoComponent implements OnInit {

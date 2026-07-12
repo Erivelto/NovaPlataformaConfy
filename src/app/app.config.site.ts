@@ -23,6 +23,8 @@ import {
   AimOutline,
   InstagramOutline,
   WhatsAppOutline,
+  MenuOutline,
+  CloseOutline,
 } from '@ant-design/icons-angular/icons';
 
 registerLocaleData(en);
@@ -51,6 +53,8 @@ export const siteAppConfig: ApplicationConfig = {
         AimOutline,
         InstagramOutline,
         WhatsAppOutline,
+        MenuOutline,
+        CloseOutline,
       ],
     },
   ],

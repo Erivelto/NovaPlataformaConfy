@@ -260,11 +260,20 @@ import {
     .pub-faq { max-width: 760px; }
     @media (max-width: 900px) {
       .pub-hero { min-height: auto; padding: 32px 0 24px; }
-      .pub-hero-grid, .pub-steps, .pub-features, .pub-plans, .pub-trust-grid, .pub-platform-grid { grid-template-columns: 1fr; }
+      .pub-hero-grid, .pub-features, .pub-plans, .pub-platform-grid { grid-template-columns: 1fr; }
       .pub-hero-visual { justify-content: center; }
       .pub-hero-frame { max-width: 420px; max-height: 360px; margin: 0 auto; }
       .pub-platform-visual { order: -1; }
       .pub-platform-frame { max-width: 100%; aspect-ratio: 16 / 11; }
+    }
+    @media (max-width: 768px) {
+      .pub-container { padding: 0 16px; }
+      .pub-steps-compact { grid-template-columns: repeat(2, 1fr); }
+      .pub-trust-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .pub-steps-compact, .pub-trust-grid { grid-template-columns: 1fr; }
+      .pub-hero-frame { max-width: 100%; max-height: 300px; }
     }
   `]
 })

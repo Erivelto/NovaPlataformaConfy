@@ -13,9 +13,9 @@ import { SeoService } from './seo.service';
   standalone: true,
   imports: [CommonModule, RouterModule, RouterOutlet, NzButtonModule, NzIconModule],
   template: `
-    <div class="pub-shell">
+    <div class="pub-shell" [class.pub-menu-open]="menuOpen">
       <header class="pub-header">
-        <a routerLink="/" class="pub-brand" aria-label="Contfy Contábil — início">
+        <a routerLink="/" class="pub-brand" aria-label="Contfy Contábil — início" (click)="closeMenu()">
           <span class="pub-brand-lockup">
             <img [src]="media.logoMark" alt="" class="pub-brand-mark" />
             <span class="pub-brand-text">
@@ -24,16 +24,35 @@ import { SeoService } from './seo.service';
             </span>
           </span>
         </a>
-        <nav class="pub-nav">
-          <a routerLink="/planos" routerLinkActive="active">Planos</a>
-          <a routerLink="/como-funciona" routerLinkActive="active">Como funciona</a>
-          <a routerLink="/plataforma" routerLinkActive="active">Plataforma</a>
-          <a routerLink="/contato">Contato</a>
-        </nav>
-        <div class="pub-header-actions">
-          <a nz-button nzType="default" class="pub-btn-ghost pub-link-btn" [href]="appLoginUrl">Já sou cliente</a>
-          <a nz-button nzType="primary" class="pub-link-btn" routerLink="/plataforma">Conhecer plataforma</a>
+
+        <div class="pub-header-tools">
+          <div class="pub-header-actions pub-header-actions--desktop">
+            <a nz-button nzType="default" class="pub-btn-ghost pub-link-btn" [href]="appLoginUrl">Já sou cliente</a>
+            <a nz-button nzType="primary" class="pub-link-btn" routerLink="/plataforma">Conhecer plataforma</a>
+          </div>
+          <button
+            type="button"
+            class="pub-menu-btn"
+            (click)="toggleMenu()"
+            [attr.aria-expanded]="menuOpen"
+            aria-controls="pub-nav"
+            [attr.aria-label]="menuOpen ? 'Fechar menu' : 'Abrir menu'"
+          >
+            <i nz-icon [nzType]="menuOpen ? 'close' : 'menu'" nzTheme="outline"></i>
+          </button>
         </div>
+
+        <div class="pub-nav-backdrop" *ngIf="menuOpen" (click)="closeMenu()" aria-hidden="true"></div>
+        <nav id="pub-nav" class="pub-nav" [class.pub-nav-open]="menuOpen">
+          <a routerLink="/planos" routerLinkActive="active" (click)="closeMenu()">Planos</a>
+          <a routerLink="/como-funciona" routerLinkActive="active" (click)="closeMenu()">Como funciona</a>
+          <a routerLink="/plataforma" routerLinkActive="active" (click)="closeMenu()">Plataforma</a>
+          <a routerLink="/contato" (click)="closeMenu()">Contato</a>
+          <div class="pub-nav-actions">
+            <a nz-button nzType="default" class="pub-btn-ghost pub-link-btn" [href]="appLoginUrl" (click)="closeMenu()">Já sou cliente</a>
+            <a nz-button nzType="primary" class="pub-link-btn" routerLink="/plataforma" (click)="closeMenu()">Conhecer plataforma</a>
+          </div>
+        </nav>
       </header>
 
       <main class="pub-main">
@@ -72,14 +91,32 @@ import { SeoService } from './seo.service';
     </div>
   `,
   styles: [`
-    .pub-shell { min-height: 100vh; background: var(--pub-bg, #f4f8fc); color: #1a1a2e; }
+    .pub-shell {
+      min-height: 100vh;
+      background: var(--pub-bg, #f4f8fc);
+      color: #1a1a2e;
+      overflow-x: clip;
+    }
+    .pub-shell.pub-menu-open { overflow: hidden; }
     .pub-header {
-      position: sticky; top: 0; z-index: 100;
-      display: flex; align-items: center; gap: 20px;
-      padding: 12px 24px; background: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 24px;
+      background: #fff;
       border-bottom: 1px solid rgba(11, 61, 145, 0.08);
     }
-    .pub-brand { display: flex; align-items: center; text-decoration: none; color: inherit; flex-shrink: 0; }
+    .pub-brand {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      color: inherit;
+      flex-shrink: 0;
+      z-index: 102;
+    }
     .pub-brand-lockup {
       display: inline-flex;
       align-items: center;
@@ -112,41 +149,150 @@ import { SeoService } from './seo.service';
       letter-spacing: .16em;
       color: #2eb8e8;
     }
-    .pub-nav { display: flex; gap: 18px; margin-left: auto; }
-    .pub-nav a { color: rgba(26,26,46,.75); text-decoration: none; font-size: .92rem; }
-    .pub-nav a.active, .pub-nav a:hover { color: var(--primary-color); }
-    .pub-header-actions { display: flex; gap: 8px; }
+    .pub-header-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      z-index: 102;
+    }
+    .pub-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pub-menu-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 1px solid rgba(11, 61, 145, 0.15);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--primary-color);
+      cursor: pointer;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .pub-menu-btn:hover { background: #f4f8fc; }
+    .pub-nav-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 31, 63, 0.35);
+      z-index: 100;
+    }
+    .pub-nav {
+      display: flex;
+      gap: 18px;
+      margin-left: auto;
+      align-items: center;
+    }
+    .pub-nav a {
+      color: rgba(26, 26, 46, .75);
+      text-decoration: none;
+      font-size: .92rem;
+      padding: 4px 0;
+    }
+    .pub-nav a.active,
+    .pub-nav a:hover { color: var(--primary-color); }
+    .pub-nav-actions { display: none; }
     .pub-btn-ghost { border-color: var(--primary-color) !important; color: var(--primary-color) !important; }
     .pub-link-btn { text-decoration: none; display: inline-flex; align-items: center; }
     .pub-main { min-height: calc(100vh - 160px); }
-    .pub-footer { background: #fff; border-top: 1px solid rgba(11,61,145,.08); padding: 32px 24px; }
+    .pub-footer {
+      background: #fff;
+      border-top: 1px solid rgba(11, 61, 145, .08);
+      padding: 32px 24px;
+    }
     .pub-footer-grid {
-      max-width: 1100px; margin: 0 auto;
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
     }
     .pub-footer-grid div { display: flex; flex-direction: column; gap: 6px; }
-    .pub-footer-logo { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(11,61,145,.12); margin-bottom: 4px; }
-    .pub-footer-grid a { color: rgba(26,26,46,.7); text-decoration: none; font-size: .9rem; }
+    .pub-footer-logo {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(11, 61, 145, .12);
+      margin-bottom: 4px;
+    }
+    .pub-footer-grid a {
+      color: rgba(26, 26, 46, .7);
+      text-decoration: none;
+      font-size: .9rem;
+    }
     .pub-footer-grid a:hover { color: var(--primary-color); }
     .pub-whatsapp {
-      position: fixed; right: 20px; bottom: 20px; z-index: 120;
-      width: 52px; height: 52px; border-radius: 50%;
-      background: var(--primary-color); color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px; text-decoration: none;
+      position: fixed;
+      right: max(16px, env(safe-area-inset-right));
+      bottom: max(16px, env(safe-area-inset-bottom));
+      z-index: 90;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      text-decoration: none;
+      box-shadow: 0 6px 20px rgba(11, 61, 145, .25);
     }
-    @media (max-width: 900px) {
-      .pub-header { flex-wrap: wrap; }
-      .pub-nav { order: 3; width: 100%; flex-wrap: wrap; margin-left: 0; }
-      .pub-footer-grid { grid-template-columns: 1fr 1fr; }
+
+    @media (max-width: 960px) {
+      .pub-header { flex-wrap: wrap; padding: 10px 16px; }
+      .pub-header-actions--desktop { display: none; }
+      .pub-menu-btn { display: inline-flex; }
+      .pub-nav-backdrop { display: block; }
+      .pub-nav {
+        display: none;
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(320px, 88vw);
+        margin: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: 88px 20px 24px;
+        background: #fff;
+        box-shadow: -8px 0 32px rgba(11, 61, 145, .12);
+        z-index: 101;
+        overflow-y: auto;
+      }
+      .pub-nav.pub-nav-open { display: flex; }
+      .pub-nav a {
+        padding: 14px 0;
+        font-size: 1rem;
+        border-bottom: 1px solid rgba(11, 61, 145, .08);
+      }
+      .pub-nav-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .pub-nav-actions .pub-link-btn {
+        width: 100%;
+        justify-content: center;
+        min-height: 44px;
+      }
+      .pub-footer-grid { grid-template-columns: 1fr 1fr; gap: 20px; }
     }
+
     @media (max-width: 560px) {
-      .pub-header-actions .pub-btn-ghost { display: none; }
       .pub-brand-lockup { padding: 5px 10px 5px 6px; min-height: 46px; }
       .pub-brand-mark { width: 36px; height: 36px; }
       .pub-brand-name { font-size: 1.05rem; }
       .pub-brand-tag { font-size: .58rem; }
+      .pub-footer { padding: 28px 16px; }
       .pub-footer-grid { grid-template-columns: 1fr; }
+      .pub-whatsapp { width: 48px; height: 48px; font-size: 20px; }
     }
   `]
 })
@@ -159,10 +305,23 @@ export class PublicLayoutComponent implements OnInit {
   readonly whatsappUrl = `https://wa.me/${SITE.whatsapp}`;
   readonly appLoginUrl = appLoginUrl;
 
+  menuOpen = false;
+
   ngOnInit(): void {
     this.seo.updateForPath(this.router.url);
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
-      .subscribe((event) => this.seo.updateForPath((event as NavigationEnd).urlAfterRedirects));
+      .subscribe((event) => {
+        this.seo.updateForPath((event as NavigationEnd).urlAfterRedirects);
+        this.closeMenu();
+      });
+  }
+
+  toggleMenu(): void {
+    this.menuOpen = !this.menuOpen;
+  }
+
+  closeMenu(): void {
+    this.menuOpen = false;
   }
 }

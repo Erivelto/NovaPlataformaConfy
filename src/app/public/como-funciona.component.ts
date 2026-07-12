@@ -146,7 +146,9 @@ type FluxoTipo = 'abertura' | 'mudanca';
     .pub-fluxo-cta p { margin: 0 0 14px; color: rgba(26,26,46,.72); line-height: 1.5; }
     .pub-fluxo-cta-actions { display: flex; flex-wrap: wrap; gap: 8px; }
     @media (max-width: 700px) {
+      .pub-container { padding: 0 16px; }
       .pub-fluxo-picker { grid-template-columns: 1fr; }
+      .pub-fluxo-option { padding: 16px; }
     }
   `]
 })

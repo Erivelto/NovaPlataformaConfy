@@ -180,3 +180,151 @@
 	min-width: 62px;
 	text-align: center;
 }
+
+/* ── Site público: layout responsivo (mobile / tablet) ── */
+.pub-container {
+	box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+	.pub-container {
+		padding-left: 16px !important;
+		padding-right: 16px !important;
+	}
+
+	.pub-page-hero {
+		padding-top: 28px !important;
+		padding-bottom: 16px !important;
+	}
+
+	.pub-page-hero h1 {
+		font-size: clamp(1.45rem, 6vw, 1.85rem) !important;
+		line-height: 1.2;
+	}
+
+	.pub-page-hero p {
+		font-size: .95rem;
+	}
+
+	.pub-section {
+		padding-top: 28px !important;
+		padding-bottom: 36px !important;
+	}
+
+	.pub-section h2 {
+		font-size: 1.35rem;
+		margin-bottom: 18px !important;
+	}
+
+	.pub-hero {
+		padding-top: 24px !important;
+		padding-bottom: 20px !important;
+	}
+
+	.pub-hero-actions {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 10px !important;
+	}
+
+	.pub-hero-actions .ant-btn,
+	.pub-hero-actions a.ant-btn,
+	.pub-fluxo-cta-actions .ant-btn,
+	.pub-demo-actions .ant-btn,
+	.pub-demo-actions a.ant-btn,
+	.pub-nav-actions .ant-btn {
+		width: 100%;
+		justify-content: center;
+		min-height: 44px;
+	}
+
+	.pub-trust-grid {
+		grid-template-columns: repeat(2, 1fr) !important;
+		gap: 10px !important;
+	}
+
+	.pub-trust-item {
+		font-size: .8rem !important;
+		padding: 10px 8px !important;
+	}
+
+	.pub-steps,
+	.pub-steps-compact {
+		grid-template-columns: repeat(2, 1fr) !important;
+	}
+
+	.pub-features {
+		grid-template-columns: 1fr !important;
+	}
+
+	.pub-plans,
+	.pub-plans-page,
+	.pub-contact-grid,
+	.pub-abrir-grid,
+	.pub-demo-grid,
+	.pub-platform-grid {
+		grid-template-columns: 1fr !important;
+	}
+
+	.pub-fluxo-step {
+		grid-template-columns: 32px 1fr !important;
+		gap: 12px !important;
+		padding: 14px 16px !important;
+	}
+
+	.pub-fluxo-cta-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.pub-cta-band {
+		padding: 36px 0 !important;
+	}
+
+	.pub-cta-inner h2 {
+		font-size: 1.35rem;
+	}
+
+	/* Evita zoom automático em inputs no iOS */
+	.pub-shell input.ant-input,
+	.pub-shell textarea.ant-input {
+		font-size: 16px !important;
+	}
+
+	.ant-collapse > .ant-collapse-item > .ant-collapse-header {
+		padding: 12px 12px !important;
+		font-size: .95rem;
+		line-height: 1.35;
+	}
+}
+
+@media (max-width: 480px) {
+	.pub-trust-grid,
+	.pub-steps,
+	.pub-steps-compact {
+		grid-template-columns: 1fr !important;
+	}
+
+	.pub-hero-tags {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 6px !important;
+	}
+
+	.pub-section-head {
+		flex-direction: column;
+		align-items: flex-start !important;
+	}
+
+	.pub-section-head .pub-link-btn,
+	.pub-section-head .ant-btn {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.pub-plan-card .ant-btn,
+	.pub-plans-page .ant-btn,
+	.pub-contact-grid .ant-btn {
+		width: 100%;
+	}
+}
