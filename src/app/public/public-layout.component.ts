@@ -25,7 +25,18 @@ import { SeoService } from './seo.service';
           </span>
         </a>
 
-        <div class="pub-header-tools">
+        <div class="pub-header-end">
+          <div class="pub-nav-backdrop" *ngIf="menuOpen" (click)="closeMenu()" aria-hidden="true"></div>
+          <nav id="pub-nav" class="pub-nav" [class.pub-nav-open]="menuOpen">
+            <a routerLink="/planos" routerLinkActive="active" (click)="closeMenu()">Planos</a>
+            <a routerLink="/como-funciona" routerLinkActive="active" (click)="closeMenu()">Como funciona</a>
+            <a routerLink="/plataforma" routerLinkActive="active" (click)="closeMenu()">Plataforma</a>
+            <a routerLink="/contato" (click)="closeMenu()">Contato</a>
+            <div class="pub-nav-actions">
+              <a nz-button nzType="default" class="pub-btn-ghost pub-link-btn" [href]="appLoginUrl" (click)="closeMenu()">Já sou cliente</a>
+              <a nz-button nzType="primary" class="pub-link-btn" routerLink="/plataforma" (click)="closeMenu()">Conhecer plataforma</a>
+            </div>
+          </nav>
           <div class="pub-header-actions pub-header-actions--desktop">
             <a nz-button nzType="default" class="pub-btn-ghost pub-link-btn" [href]="appLoginUrl">Já sou cliente</a>
             <a nz-button nzType="primary" class="pub-link-btn" routerLink="/plataforma">Conhecer plataforma</a>
@@ -41,18 +52,6 @@ import { SeoService } from './seo.service';
             <i nz-icon [nzType]="menuOpen ? 'close' : 'menu'" nzTheme="outline"></i>
           </button>
         </div>
-
-        <div class="pub-nav-backdrop" *ngIf="menuOpen" (click)="closeMenu()" aria-hidden="true"></div>
-        <nav id="pub-nav" class="pub-nav" [class.pub-nav-open]="menuOpen">
-          <a routerLink="/planos" routerLinkActive="active" (click)="closeMenu()">Planos</a>
-          <a routerLink="/como-funciona" routerLinkActive="active" (click)="closeMenu()">Como funciona</a>
-          <a routerLink="/plataforma" routerLinkActive="active" (click)="closeMenu()">Plataforma</a>
-          <a routerLink="/contato" (click)="closeMenu()">Contato</a>
-          <div class="pub-nav-actions">
-            <a nz-button nzType="default" class="pub-btn-ghost pub-link-btn" [href]="appLoginUrl" (click)="closeMenu()">Já sou cliente</a>
-            <a nz-button nzType="primary" class="pub-link-btn" routerLink="/plataforma" (click)="closeMenu()">Conhecer plataforma</a>
-          </div>
-        </nav>
       </header>
 
       <main class="pub-main">
@@ -149,14 +148,15 @@ import { SeoService } from './seo.service';
       letter-spacing: .16em;
       color: #2eb8e8;
     }
-    .pub-header-tools {
+    .pub-header-end {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 20px;
       margin-left: auto;
+      flex-shrink: 0;
       z-index: 102;
     }
-    .pub-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pub-header-actions { display: flex; gap: 8px; flex-wrap: nowrap; }
     .pub-menu-btn {
       display: none;
       align-items: center;
@@ -183,7 +183,6 @@ import { SeoService } from './seo.service';
     .pub-nav {
       display: flex;
       gap: 18px;
-      margin-left: auto;
       align-items: center;
     }
     .pub-nav a {
@@ -244,10 +243,15 @@ import { SeoService } from './seo.service';
     }
 
     @media (max-width: 960px) {
-      .pub-header { flex-wrap: wrap; padding: 10px 16px; }
+      .pub-header { padding: 10px 16px; }
+      .pub-header-end { gap: 8px; }
       .pub-header-actions--desktop { display: none; }
       .pub-menu-btn { display: inline-flex; }
-      .pub-nav-backdrop { display: block; }
+      .pub-nav-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+      }
       .pub-nav {
         display: none;
         position: fixed;
