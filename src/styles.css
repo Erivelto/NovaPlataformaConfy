@@ -13,6 +13,8 @@
 	/* button radius */
 	 --btn-radius: 8px;
 	 --pub-bg: #f4f8fc;
+	 --pub-section-py: 52px;
+	 --pub-section-py-compact: 24px;
  }
 
 /* Toolbar title color */
@@ -186,6 +188,37 @@
 	box-sizing: border-box;
 }
 
+.pub-reveal {
+	animation: pubFadeUp 0.55s ease both;
+}
+
+@keyframes pubFadeUp {
+	from {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.pub-section {
+	padding-top: var(--pub-section-py) !important;
+	padding-bottom: var(--pub-section-py) !important;
+}
+
+.pub-section-compact {
+	padding-top: var(--pub-section-py-compact) !important;
+	padding-bottom: var(--pub-section-py-compact) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pub-reveal {
+		animation: none;
+	}
+}
+
 @media (max-width: 768px) {
 	.pub-container {
 		padding-left: 16px !important;
@@ -262,7 +295,8 @@
 	.pub-contact-grid,
 	.pub-abrir-grid,
 	.pub-demo-grid,
-	.pub-platform-grid {
+	.pub-platform-grid,
+	.pub-why-grid {
 		grid-template-columns: 1fr !important;
 	}
 
@@ -320,6 +354,10 @@
 	.pub-section-head .ant-btn {
 		width: 100%;
 		justify-content: center;
+	}
+
+	.pub-why-grid {
+		grid-template-columns: 1fr !important;
 	}
 
 	.pub-plan-card .ant-btn,

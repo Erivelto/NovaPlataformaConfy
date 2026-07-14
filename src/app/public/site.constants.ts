@@ -5,10 +5,19 @@ export const SITE = {
   whatsappDisplay: '(11) 91047-3458',
   email: 'contato@contfy.com.br',
   emailSuporte: 'suporte@contfy.com.br',
+  atendimentoHorario: 'Segunda a sexta, em horário comercial',
   planoBasicoValor: 'R$ 199,90',
   copyrightYear: 2026,
   /** URL de embed (YouTube/Vimeo). Vazio exibe poster até o vídeo ser publicado. */
   platformDemoVideoEmbedUrl: 'https://www.youtube.com/embed/L3MGj3J8c88',
+} as const;
+
+export const HERO_COPY = {
+  headline: 'Simplifique a contabilidade da sua empresa',
+  lead:
+    'Abra sua empresa, troque de contador e gerencie NF-e, impostos e documentos em uma plataforma digital — com acompanhamento de especialistas em Simples Nacional.',
+  support:
+    'Você solicita o serviço online, nossa equipe analisa seu perfil e, com o acesso liberado, passa a usar a plataforma Contfy com suporte por WhatsApp, telefone e e-mail.',
 } as const;
 
 export const MEDIA = {
@@ -29,19 +38,135 @@ export const TRUST_ITEMS = [
 ] as const;
 
 export const FUNNEL_STEPS = [
-  { title: 'Escolha o serviço', desc: 'Abrir empresa ou mudar de contador' },
-  { title: 'Cadastro rápido', desc: 'Formulário simples em contfy.com.br' },
-  { title: 'Ativação', desc: 'Nossa equipe valida e cria seu acesso' },
-  { title: 'Use a plataforma', desc: 'Acesso liberado após análise — login em contabilcontfy.com.br' },
+  {
+    title: 'Escolha o serviço',
+    desc: 'Defina se deseja abrir empresa ou mudar de contador. Cada fluxo tem etapas e documentos específicos.',
+  },
+  {
+    title: 'Cadastro rápido',
+    desc: 'Preencha o formulário em poucos minutos. Nossa equipe recebe sua solicitação e entra em contato para orientar os próximos passos.',
+  },
+  {
+    title: 'Análise e ativação',
+    desc: 'Validamos se o serviço se encaixa no perfil da sua empresa e conduzimos abertura ou transição com acompanhamento próximo.',
+  },
+  {
+    title: 'Use a plataforma',
+    desc: 'Com acesso liberado, você gerencia solicitações, documentos e rotinas contábeis em contabilcontfy.com.br.',
+  },
+] as const;
+
+export const WHY_CONTFY = [
+  {
+    icon: 'desktop',
+    title: 'Contabilidade digital de verdade',
+    desc: 'NF-e, impostos, documentos e solicitações em um só lugar — disponível online, quando você precisar.',
+  },
+  {
+    icon: 'customer-service',
+    title: 'Suporte humano no processo',
+    desc: 'Não é só software: você fala com a equipe Contfy por WhatsApp, telefone e e-mail em cada fase do atendimento.',
+  },
+  {
+    icon: 'file',
+    title: 'Processo transparente',
+    desc: 'Fluxos claros de abertura e mudança de contador, com orientação documental e acompanhamento das etapas legais e fiscais.',
+  },
+  {
+    icon: 'pie-chart',
+    title: 'Foco em Simples Nacional',
+    desc: 'Especialistas em empresas de serviços no Simples, com rotina pensada para quem quer menos burocracia e mais clareza.',
+  },
 ] as const;
 
 export const PLATFORM_FEATURES = [
-  { title: 'Emissão de NF-e', desc: 'Solicite e acompanhe a emissão das notas fiscais' },
-  { title: 'Impostos e Guias', desc: 'Guias e histórico fiscal, administração de dívidas e parcelamento' },
-  { title: 'Documentos', desc: 'Na plataforma são armazenados arquivos da sua empresa para seu acesso!' },
-  { title: 'Solicitações', desc: 'Direto na plataforma ou Canal direto com a equipe' },
-  { title: 'Mensalidade', desc: 'Será via Boletos ou link de pagamentos online' },
-  { title: 'Dashboard', desc: 'Visão clara geral de como sua empresa está!' },
+  {
+    title: 'Emissão de NF-e',
+    desc: 'Solicite e acompanhe a emissão das notas fiscais sem depender de múltiplos canais de comunicação.',
+  },
+  {
+    title: 'Impostos e Guias',
+    desc: 'Consulte guias, histórico fiscal e acompanhe dívidas e parcelamentos com mais organização.',
+  },
+  {
+    title: 'Documentos',
+    desc: 'Arquivos da sua empresa centralizados na plataforma para consulta e envio quando precisar.',
+  },
+  {
+    title: 'Solicitações',
+    desc: 'Abra demandas direto na plataforma ou fale com a equipe pelos canais de atendimento.',
+  },
+  {
+    title: 'Mensalidade',
+    desc: 'Pagamento via boleto ou link online, com rotina financeira integrada ao seu dia a dia.',
+  },
+  {
+    title: 'Dashboard',
+    desc: 'Visão geral da situação da empresa para acompanhar pendências e rotinas com mais clareza.',
+  },
+] as const;
+
+export interface PlanCard {
+  id: string;
+  title: string;
+  badge?: string;
+  featured?: boolean;
+  price?: string;
+  priceSuffix?: string;
+  description: string;
+  benefits: readonly string[];
+  ctaLabel: string;
+  ctaLink: string;
+  ctaType: 'primary' | 'default';
+}
+
+export const PLAN_CARDS: readonly PlanCard[] = [
+  {
+    id: 'abertura',
+    title: 'Abertura de empresa',
+    description: 'Constituição com suporte completo, do planejamento inicial ao credenciamento para emitir notas.',
+    benefits: [
+      'Orientação sobre CNAE, porte e regime tributário',
+      'Acompanhamento na viabilidade e registro',
+      'Suporte nas inscrições municipal e estadual',
+      'Orientação sobre certificado digital',
+    ],
+    ctaLabel: 'Solicitar abertura',
+    ctaLink: '/abrir-empresa',
+    ctaType: 'default',
+  },
+  {
+    id: 'basico',
+    title: 'Plano Básico',
+    badge: 'Mais popular',
+    featured: true,
+    price: 'R$ 199,90',
+    priceSuffix: '/mês',
+    description: 'Contabilidade digital para empresa de serviços no Simples Nacional.',
+    benefits: [
+      'Até 2 sócios, sem funcionário',
+      'Plataforma online 24h',
+      'Emissão de NF-e e gestão de impostos',
+      'Suporte por WhatsApp, telefone e e-mail',
+    ],
+    ctaLabel: 'Contratar agora',
+    ctaLink: '/mudar-contador',
+    ctaType: 'primary',
+  },
+  {
+    id: 'mudanca',
+    title: 'Mudança de contador',
+    description: 'Transição segura para a Contfy, com condução da rescisão, transferência e regularização fiscal.',
+    benefits: [
+      'Comunicação e distrato com contador anterior',
+      'Transferência de responsabilidade técnica',
+      'Check-up fiscal de entrada',
+      'Onboarding na plataforma digital',
+    ],
+    ctaLabel: 'Mudar de contador',
+    ctaLink: '/mudar-contador',
+    ctaType: 'default',
+  },
 ] as const;
 
 export interface ProcessoFluxoStep {
@@ -138,10 +263,46 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'Quanto tempo leva a abertura de empresa?',
-    a: 'O prazo varia conforme a prefeitura e documentação. Nossa equipe acompanha cada etapa e mantém você informado pela plataforma e WhatsApp.',
+    a: 'O prazo varia conforme a prefeitura, a Junta Comercial e a documentação enviada. Nossa equipe acompanha cada etapa e mantém você informado pela plataforma e WhatsApp.',
   },
   {
     q: 'Posso trocar de contador estando no Simples Nacional?',
-    a: 'Sim. A Contfy cuida da transição com segurança, incluindo a comunicação com o contador anterior quando necessário.',
+    a: 'Sim. A Contfy cuida da transição com segurança, incluindo a comunicação com o contador anterior e a transferência da responsabilidade técnica quando necessário.',
+  },
+  {
+    q: 'Preciso ter CNPJ para solicitar abertura de empresa?',
+    a: 'Não. No fluxo de abertura você informa seus dados de contato e nossa equipe orienta cada fase até a emissão do CNPJ.',
+  },
+  {
+    q: 'Quais documentos são solicitados na abertura?',
+    a: 'Durante o processo podem ser necessários IPTU do endereço, CNH ou RG, certificado digital, razão social, descrição das atividades e dados de contato. A equipe solicita cada item na hora certa.',
+  },
+  {
+    q: 'O que preciso para mudar de contador?',
+    a: 'Em geral: CNH ou RG, certificado digital e senhas de acesso aos portais estadual e municipal. A Contfy conduz a rescisão, a transferência e o check-up fiscal de entrada.',
+  },
+  {
+    q: 'Como funciona o suporte da Contfy?',
+    a: 'Você pode abrir solicitações na plataforma ou falar com a equipe por WhatsApp, telefone e e-mail, de segunda a sexta em horário comercial.',
+  },
+  {
+    q: 'A plataforma funciona no celular?',
+    a: 'Sim. O site institucional e a plataforma foram pensados para uso em desktop e dispositivos móveis.',
+  },
+  {
+    q: 'Como é feito o pagamento da mensalidade?',
+    a: 'A mensalidade pode ser paga via boleto ou link de pagamento online, conforme orientação da equipe Contfy.',
+  },
+  {
+    q: 'O que acontece depois que envio o formulário?',
+    a: 'Recebemos sua solicitação, analisamos se o serviço é adequado ao perfil da empresa e entramos em contato para dar sequência ao processo de abertura ou mudança de contador.',
+  },
+  {
+    q: 'Preciso assistir à demonstração antes de contratar?',
+    a: 'Recomendamos conhecer a plataforma em /plataforma para entender os recursos. O cadastro na plataforma é liberado pela equipe após análise do seu caso.',
+  },
+  {
+    q: 'O Plano Básico atende empresas com funcionário?',
+    a: 'O Plano Básico é indicado para empresa de serviços no Simples Nacional, com até 2 sócios e sem funcionário. Para outros perfis, fale com a equipe para avaliarmos a melhor opção.',
   },
 ] as const;

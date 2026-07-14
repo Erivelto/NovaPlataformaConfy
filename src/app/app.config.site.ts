@@ -1,5 +1,5 @@
 import { ApplicationConfig, provideZoneChangeDetection, importProvidersFrom } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { siteRoutes } from './app.routes.site';
@@ -32,7 +32,10 @@ registerLocaleData(en);
 export const siteAppConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(siteRoutes),
+    provideRouter(
+      siteRoutes,
+      withInMemoryScrolling({ anchorScrolling: 'enabled', scrollPositionRestoration: 'enabled' }),
+    ),
     provideHttpClient(withInterceptors([authInterceptor])),
     importProvidersFrom(BrowserAnimationsModule),
     { provide: NZ_I18N, useValue: en_US },

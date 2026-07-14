@@ -28,9 +28,9 @@ import { SeoService } from './seo.service';
         <div class="pub-header-end">
           <div class="pub-nav-backdrop" *ngIf="menuOpen" (click)="closeMenu()" aria-hidden="true"></div>
           <nav id="pub-nav" class="pub-nav" [class.pub-nav-open]="menuOpen">
-            <a routerLink="/planos" routerLinkActive="active" (click)="closeMenu()">Planos</a>
             <a routerLink="/como-funciona" routerLinkActive="active" (click)="closeMenu()">Como funciona</a>
             <a routerLink="/plataforma" routerLinkActive="active" (click)="closeMenu()">Plataforma</a>
+            <a routerLink="/planos" routerLinkActive="active" (click)="closeMenu()">Serviços</a>
             <a routerLink="/contato" (click)="closeMenu()">Contato</a>
             <div class="pub-nav-actions">
               <a nz-button nzType="default" class="pub-btn-ghost pub-link-btn" [href]="appLoginUrl" (click)="closeMenu()">Já sou cliente</a>
@@ -60,26 +60,35 @@ import { SeoService } from './seo.service';
 
       <footer class="pub-footer">
         <div class="pub-footer-grid">
-          <div>
+          <div class="pub-footer-brand">
             <img [src]="media.logoFooter" alt="Contfy" class="pub-footer-logo" />
-            <p>{{ site.tagline }}</p>
+            <p class="pub-footer-tagline">{{ site.tagline }}</p>
+            <p class="pub-footer-desc">
+              Contabilidade digital com plataforma online e suporte humano para abertura de empresa e mudança de contador.
+            </p>
           </div>
           <div>
             <strong>Serviços</strong>
             <a routerLink="/abrir-empresa">Abrir empresa</a>
-            <a routerLink="/mudar-contador">Mudar contador</a>
-            <a routerLink="/planos">Planos</a>
+            <a routerLink="/mudar-contador">Mudar de contador</a>
+            <a routerLink="/planos">Planos e serviços</a>
+            <a routerLink="/plataforma">Demonstração</a>
+          </div>
+          <div>
+            <strong>Ajuda</strong>
+            <a routerLink="/como-funciona">Como funciona</a>
+            <a routerLink="/" fragment="faq">Perguntas frequentes</a>
+            <a routerLink="/contato">Fale conosco</a>
+            <a [href]="whatsappUrl" target="_blank" rel="noopener">WhatsApp</a>
           </div>
           <div>
             <strong>Contato</strong>
             <a [href]="'tel:' + site.whatsapp">{{ site.whatsappDisplay }}</a>
             <a [href]="'mailto:' + site.email">{{ site.email }}</a>
-          </div>
-          <div>
-            <strong>Plataforma</strong>
-            <a routerLink="/plataforma">Conhecer</a>
+            <a [href]="'mailto:' + site.emailSuporte">{{ site.emailSuporte }}</a>
+            <span class="pub-footer-meta">{{ site.atendimentoHorario }}</span>
             <a [href]="appLoginUrl">Já sou cliente</a>
-            <span>© {{ site.copyrightYear }} Contfy</span>
+            <span class="pub-footer-copy">© {{ site.copyrightYear }} Contfy</span>
           </div>
         </div>
       </footer>
@@ -210,6 +219,23 @@ import { SeoService } from './seo.service';
       gap: 24px;
     }
     .pub-footer-grid div { display: flex; flex-direction: column; gap: 6px; }
+    .pub-footer-brand .pub-footer-tagline {
+      font-weight: 700;
+      color: var(--primary-color);
+      margin: 0;
+    }
+    .pub-footer-desc {
+      margin: 0;
+      color: rgba(26, 26, 46, .62);
+      font-size: .86rem;
+      line-height: 1.45;
+      max-width: 260px;
+    }
+    .pub-footer-meta,
+    .pub-footer-copy {
+      color: rgba(26, 26, 46, .55);
+      font-size: .84rem;
+    }
     .pub-footer-logo {
       width: 72px;
       height: 72px;
