@@ -27,7 +27,6 @@ import { SITE } from './site.constants';
         <nz-card>
           <h3><i nz-icon nzType="mail"></i> E-mail</h3>
           <p>{{ site.email }}</p>
-          <p>{{ site.emailSuporte }}</p>
           <a nz-button [href]="'mailto:' + site.email">Enviar e-mail</a>
         </nz-card>
         <nz-card>

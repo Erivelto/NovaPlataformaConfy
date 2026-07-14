@@ -4,7 +4,6 @@ export const SITE = {
   whatsapp: '5511910473458',
   whatsappDisplay: '(11) 91047-3458',
   email: 'contato@contfy.com.br',
-  emailSuporte: 'suporte@contfy.com.br',
   atendimentoHorario: 'Segunda a sexta, em horário comercial',
   planoBasicoValor: 'R$ 199,90',
   copyrightYear: 2026,

@@ -85,7 +85,6 @@ import { SeoService } from './seo.service';
             <strong>Contato</strong>
             <a [href]="'tel:' + site.whatsapp">{{ site.whatsappDisplay }}</a>
             <a [href]="'mailto:' + site.email">{{ site.email }}</a>
-            <a [href]="'mailto:' + site.emailSuporte">{{ site.emailSuporte }}</a>
             <span class="pub-footer-meta">{{ site.atendimentoHorario }}</span>
             <a [href]="appLoginUrl">Já sou cliente</a>
             <span class="pub-footer-copy">© {{ site.copyrightYear }} Contfy</span>
