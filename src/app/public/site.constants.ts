@@ -8,7 +8,7 @@ export const SITE = {
   planoBasicoValor: 'R$ 199,90',
   copyrightYear: 2026,
   /** URL de embed (YouTube/Vimeo). Vazio exibe poster até o vídeo ser publicado. */
-  platformDemoVideoEmbedUrl: 'https://www.youtube.com/embed/_ikACNWyU94',
+  platformDemoVideoEmbedUrl: 'https://www.youtube.com/embed/L3MGj3J8c88',
 } as const;
 
 export const MEDIA = {
