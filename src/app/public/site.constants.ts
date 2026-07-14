@@ -11,6 +11,14 @@ export const SITE = {
   platformDemoVideoEmbedUrl: 'https://www.youtube.com/embed/L3MGj3J8c88',
 } as const;
 
+/** Configuração do envio de WhatsApp para leads do site (api/PessoaAplicativo). */
+export const LEAD_WHATSAPP = {
+  codigoPessoa: 138,
+  nomeDestinatario: 'Contfy',
+  numeroDestinatario: '5511962626537',
+  numeroRemetente: '5511996100268',
+} as const;
+
 export const HERO_COPY = {
   headline: 'Simplifique a contabilidade da sua empresa',
   lead:

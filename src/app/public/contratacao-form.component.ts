@@ -7,7 +7,10 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { catchError, switchMap } from 'rxjs/operators';
+import { of } from 'rxjs';
 import { ContratacaoService } from './contratacao.service';
+import { PessoaAplicativoService, TipoSolicitacaoLead } from './pessoa-aplicativo.service';
 
 @Component({
   selector: 'app-contratacao-form',
@@ -55,6 +58,7 @@ export class ContratacaoFormComponent {
   @Input() nomeLabel = 'Razão social';
   @Input() nomePlaceholder = 'Nome da empresa';
   @Input() submitLabel = 'Enviar solicitação';
+  @Input() tipoSolicitacao: TipoSolicitacaoLead = 'mudanca';
 
   cnpj = '';
   nome = '';
@@ -63,7 +67,11 @@ export class ContratacaoFormComponent {
   enviando = false;
   erro = '';
 
-  constructor(private contratacao: ContratacaoService, private router: Router) {}
+  constructor(
+    private contratacao: ContratacaoService,
+    private pessoaAplicativo: PessoaAplicativoService,
+    private router: Router,
+  ) {}
 
   enviar(): void {
     this.erro = '';
@@ -73,22 +81,34 @@ export class ContratacaoFormComponent {
       return;
     }
 
-    this.enviando = true;
-    this.contratacao.cadastrar({
+    const payload = {
       cnpj: this.showCnpj ? this.cnpj.trim() : '',
       nome: this.nome.trim(),
       email: this.email.trim(),
       celular: this.celular.trim(),
       plano: this.plano,
-    }).subscribe({
-      next: () => {
-        this.enviando = false;
-        this.router.navigate(['/contratar/sucesso'], { queryParams: { email: this.email.trim() } });
-      },
-      error: (err) => {
-        this.enviando = false;
-        this.erro = err?.error?.message || err?.error || 'Não foi possível enviar. Tente novamente ou fale conosco pelo WhatsApp.';
-      },
-    });
+    };
+
+    this.enviando = true;
+    this.contratacao
+      .cadastrar(payload)
+      .pipe(
+        switchMap(() =>
+          this.pessoaAplicativo.enviarMensagemLead(this.tipoSolicitacao, payload, this.nomeLabel).pipe(
+            catchError(() => of(null)),
+          ),
+        ),
+      )
+      .subscribe({
+        next: () => {
+          this.enviando = false;
+          this.router.navigate(['/contratar/sucesso'], { queryParams: { email: payload.email } });
+        },
+        error: (err) => {
+          this.enviando = false;
+          this.erro =
+            err?.error?.message || err?.error || 'Não foi possível enviar. Tente novamente ou fale conosco pelo WhatsApp.';
+        },
+      });
   }
 }

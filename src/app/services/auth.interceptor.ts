@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 import { LoginService } from './login.service';
 
-const PUBLIC_API_FRAGMENTS = ['/Autenticacao/', '/Contratacao/CadastroInicial'];
+const PUBLIC_API_FRAGMENTS = ['/Autenticacao/', '/Contratacao/CadastroInicial', '/PessoaAplicativo'];
 
 function isPublicApi(url: string): boolean {
   return PUBLIC_API_FRAGMENTS.some((fragment) => url.includes(fragment));

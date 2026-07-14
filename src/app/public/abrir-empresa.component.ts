@@ -39,6 +39,7 @@ const ABERTURA_DOCUMENTOS = [
         <nz-card>
           <app-contratacao-form
             plano="2"
+            tipoSolicitacao="abertura"
             [showCnpj]="false"
             nomeLabel="Nome / Contato"
             nomePlaceholder="Seu nome para contato"
@@ -123,7 +124,11 @@ export class AbrirEmpresaComponent {
           </ul>
         </nz-card>
         <nz-card>
-          <app-contratacao-form plano="1" submitLabel="Solicitar mudança de contador" />
+          <app-contratacao-form
+            plano="1"
+            tipoSolicitacao="mudanca"
+            submitLabel="Solicitar mudança de contador"
+          />
         </nz-card>
       </div>
     </section>
