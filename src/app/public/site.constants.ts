@@ -15,7 +15,7 @@ export const SITE = {
 export const LEAD_WHATSAPP = {
   codigoPessoa: 138,
   nomeDestinatario: 'Contfy',
-  numeroDestinatario: '5511962626537',
+  numeroDestinatario: '5511996100268',
   numeroRemetente: '5511996100268',
 } as const;
 
