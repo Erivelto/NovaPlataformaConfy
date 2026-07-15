@@ -223,7 +223,7 @@ interface ChamadoUpload {
           <div *ngFor="let a of anexos" class="anexo-item">
             <span>{{ a.tipo }} — {{ a.dataCriacao | date:'dd/MM/yyyy HH:mm' }}</span>
             <button nz-button nzType="link" nzSize="small" (click)="abrirAnexo(a)">
-              <span nz-icon nzType="paper-clip"></span> Abrir
+              <span nz-icon nzType="download"></span> Baixar
             </button>
           </div>
           <nz-divider nzText="Histórico" nzOrientation="left"></nz-divider>

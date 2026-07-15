@@ -15,10 +15,12 @@ import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { ArquivoService } from '../services/arquivo.service';
+import { EnvioArquivoClienteComponent, ArquivoEnvioRef } from '../components/envio-arquivo-cliente.component';
 import { environment } from '../../environments/environment';
 
 @Pipe({ name: 'cnpj', standalone: true, pure: true })
@@ -63,7 +65,8 @@ interface Relatorio {
   imports: [
     CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzMessageModule, NzCollapseModule, NzBadgeModule,
-    NzToolTipModule, NzDividerModule, PageTitleComponent, CnpjPipe, DasValorPipe, ExportExcelButtonComponent
+    NzToolTipModule, NzDividerModule, NzCheckboxModule, PageTitleComponent, CnpjPipe, DasValorPipe,
+    ExportExcelButtonComponent, EnvioArquivoClienteComponent
   ],
   template: `
     <div class="page">
@@ -224,7 +227,7 @@ interface Relatorio {
           <nz-collapse-panel [nzHeader]="hdr7" [nzActive]="false" [nzExtra]="cnt7">
             <ng-template #hdr7><span class="sec-hdr"><i nz-icon nzType="clock-circle" style="color:#13c2c2;margin-right:6px"></i>DAS Aguardando Envio</span></ng-template>
             <ng-template #cnt7><nz-badge [nzCount]="dados.totalAguardando" [nzStyle]="badgeStyle(dados.totalAguardando,'cyan')"></nz-badge></ng-template>
-            <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.aguardando, fileName: 'historico-das-aguardando'}"></ng-container>
+            <ng-container [ngTemplateOutlet]="tabelaDASAguardando" [ngTemplateOutletContext]="{rows: dados.aguardando}"></ng-container>
           </nz-collapse-panel>
 
           <!-- 8: Enviados -->
@@ -277,7 +280,7 @@ interface Relatorio {
         </nz-table>
       </ng-template>
 
-      <!-- Template: tabela DAS com botão Abrir -->
+      <!-- Template: tabela DAS com botão Baixar -->
       <ng-template #tabelaDASFat let-rows="rows" let-fileName="fileName" let-erro="erro">
         <div class="sec-export"><app-export-excel-button [data]="$any(rows)" [columns]="exportColumnsDasFat" [fileName]="fileName" /></div>
         <nz-table [nzData]="rows" nzSize="small" nzBordered [nzPageSize]="15"
@@ -307,8 +310,8 @@ interface Relatorio {
               <td nzAlign="center"><nz-tag [nzColor]="statusColor(r.status)">{{ r.status || '—' }}</nz-tag></td>
               <td nzAlign="center">
                 <button *ngIf="r.nomeArquivo" nz-button nzType="link" nzSize="small"
-                  nz-tooltip nzTooltipTitle="Abrir arquivo DAS" (click)="abrirArquivo(r)">
-                  Abrir
+                  nz-tooltip nzTooltipTitle="Baixar arquivo DAS" (click)="abrirArquivo(r)">
+                  Baixar
                 </button>
                 <span *ngIf="!r.nomeArquivo" class="muted">—</span>
               </td>
@@ -317,6 +320,71 @@ interface Relatorio {
           </tbody>
         </nz-table>
       </ng-template>
+
+      <!-- Template: DAS aguardando envio (seleção + envio) -->
+      <ng-template #tabelaDASAguardando let-rows="rows">
+        <div class="sec-toolbar">
+          <button nz-button nzType="primary" nzSize="small"
+            [disabled]="!selecionadosAguardando.size"
+            (click)="abrirEnvioLoteAguardando()">
+            <i nz-icon nzType="send"></i> Enviar selecionados ({{ selecionadosAguardando.size }})
+          </button>
+          <app-export-excel-button [data]="$any(rows)" [columns]="exportColumnsDasFat" fileName="historico-das-aguardando" />
+        </div>
+        <nz-table [nzData]="rows" nzSize="small" nzBordered [nzPageSize]="15"
+          [nzShowPagination]="rows.length > 15" class="sec-table" nzTableLayout="fixed">
+          <thead><tr>
+            <th nzWidth="42px" nzAlign="center">
+              <label nz-checkbox
+                [nzChecked]="todosAguardandoSelecionados(rows)"
+                [nzIndeterminate]="algunsAguardandoSelecionados(rows)"
+                (nzCheckedChange)="alternarTodosAguardando(rows, $event)"></label>
+            </th>
+            <th nzWidth="70px">Código</th>
+            <th nzWidth="145px">CNPJ</th>
+            <th>Razão Social</th>
+            <th nzWidth="115px">Prefeitura</th>
+            <th nzWidth="100px">Período</th>
+            <th nzWidth="105px" nzAlign="right">Val. Tributado</th>
+            <th nzWidth="95px" nzAlign="right">Val. Tributo</th>
+            <th nzWidth="160px">Mensagem</th>
+            <th nzWidth="105px" nzAlign="center">Status</th>
+            <th nzWidth="150px" nzAlign="center">Ação</th>
+          </tr></thead>
+          <tbody>
+            <tr *ngFor="let r of rows">
+              <td nzAlign="center">
+                <label nz-checkbox
+                  [nzDisabled]="!r.nomeArquivo"
+                  [nzChecked]="selecionadosAguardando.has(r.codigo)"
+                  (nzCheckedChange)="alternarSelecaoAguardando(r.codigo, $event)"></label>
+              </td>
+              <td class="mono">{{ r.codigoPessoa }}</td>
+              <td class="mono">{{ r.documento | cnpj }}</td>
+              <td class="razao-cell">{{ r.razao }}</td>
+              <td>{{ r.prefeitura || '—' }}</td>
+              <td class="mono">{{ r.periodo | dasValor }}</td>
+              <td nzAlign="right" class="mono">{{ r.valorTributado | dasValor }}</td>
+              <td nzAlign="right" class="mono val-tributo">{{ r.valorTributo | dasValor }}</td>
+              <td><span class="msg-cell" nz-tooltip [nzTooltipTitle]="r.mensagem">{{ r.mensagem || '—' }}</span></td>
+              <td nzAlign="center"><nz-tag [nzColor]="statusColor(r.status)">{{ r.status || '—' }}</nz-tag></td>
+              <td nzAlign="center" class="acoes-cell">
+                <button *ngIf="r.nomeArquivo" nz-button nzType="link" nzSize="small" (click)="abrirArquivo(r)">Baixar</button>
+                <button *ngIf="r.nomeArquivo" nz-button nzType="link" nzSize="small" (click)="abrirEnvioDas(r)">
+                  <i nz-icon nzType="send"></i> Enviar
+                </button>
+                <span *ngIf="!r.nomeArquivo" class="muted">—</span>
+              </td>
+            </tr>
+            <tr *ngIf="!rows.length"><td colspan="11" class="empty-row">Nenhum registro.</td></tr>
+          </tbody>
+        </nz-table>
+      </ng-template>
+
+      <app-envio-arquivo-cliente
+        [(visible)]="envioVisible"
+        [itens]="envioItens"
+        (envioConcluido)="onEnvioConcluido()" />
     </div>
   `,
   styles: [`
@@ -383,6 +451,8 @@ interface Relatorio {
 
     .sec-hdr { font-weight: 600; font-size: .93rem; }
     .sec-export { display: flex; justify-content: flex-end; padding: 8px 12px 0; }
+    .sec-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px 0; flex-wrap: wrap; }
+    .acoes-cell { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
 
     /* ---- Tables ---- */
     .sec-table { margin: 0; }
@@ -404,6 +474,9 @@ export class HistoricoDasComponent implements OnInit {
   private readonly api = environment.apiUrl;
   loading = true;
   dados: Relatorio | null = null;
+  envioVisible = false;
+  envioItens: ArquivoEnvioRef[] = [];
+  selecionadosAguardando = new Set<number>();
 
   readonly exportColumnsPessoa: ExcelExportColumn<PessoaItem>[] = [
     { key: 'codigo', title: 'Código' },
@@ -621,8 +694,73 @@ export class HistoricoDasComponent implements OnInit {
 
   abrirArquivo(d: DasItem) {
     if (d.nomeArquivo) {
-      this.arquivoService.abrir(d.codigoPessoa, d.nomeArquivo);
+      const tipo = d.periodo?.trim() ? `DAS ${d.periodo.trim()}` : 'DAS';
+      this.arquivoService.abrir(d.codigoPessoa, d.nomeArquivo, tipo);
     }
+  }
+
+  alternarSelecaoAguardando(codigo: number, checked: boolean): void {
+    if (checked) this.selecionadosAguardando.add(codigo);
+    else this.selecionadosAguardando.delete(codigo);
+    this.cdr.markForCheck();
+  }
+
+  todosAguardandoSelecionados(rows: DasItem[]): boolean {
+    const elegiveis = rows.filter(r => r.nomeArquivo);
+    return elegiveis.length > 0 && elegiveis.every(r => this.selecionadosAguardando.has(r.codigo));
+  }
+
+  algunsAguardandoSelecionados(rows: DasItem[]): boolean {
+    const elegiveis = rows.filter(r => r.nomeArquivo);
+    const qtd = elegiveis.filter(r => this.selecionadosAguardando.has(r.codigo)).length;
+    return qtd > 0 && qtd < elegiveis.length;
+  }
+
+  alternarTodosAguardando(rows: DasItem[], checked: boolean): void {
+    rows.filter(r => r.nomeArquivo).forEach(r => {
+      if (checked) this.selecionadosAguardando.add(r.codigo);
+      else this.selecionadosAguardando.delete(r.codigo);
+    });
+    this.cdr.markForCheck();
+  }
+
+  abrirEnvioDas(item: DasItem): void {
+    this.envioItens = [this.mapDasParaEnvio(item)];
+    this.envioVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  abrirEnvioLoteAguardando(): void {
+    if (!this.dados?.aguardando.length || !this.selecionadosAguardando.size) return;
+    this.envioItens = this.dados.aguardando
+      .filter(r => this.selecionadosAguardando.has(r.codigo) && r.nomeArquivo)
+      .map(r => this.mapDasParaEnvio(r));
+    if (!this.envioItens.length) {
+      this.message.warning('Selecione DAS com arquivo disponível.');
+      return;
+    }
+    this.envioVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  onEnvioConcluido(): void {
+    this.selecionadosAguardando.clear();
+    this.carregar();
+  }
+
+  private mapDasParaEnvio(item: DasItem): ArquivoEnvioRef {
+    const periodo = item.periodo?.trim() || '';
+    return {
+      codigoPessoa: item.codigoPessoa,
+      nome: item.razao || String(item.codigoPessoa),
+      nomeArquivo: item.nomeArquivo,
+      tipoArquivo: periodo ? `DAS ${periodo}` : 'DAS',
+      categoria: 'Das',
+      codigoDas: item.codigo,
+      periodo,
+      valorTributo: item.valorTributo,
+      marcarDasEnviado: true
+    };
   }
 
   statusColor(status: string): string {

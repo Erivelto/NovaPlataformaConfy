@@ -36,6 +36,7 @@ import { ExportExcelButtonComponent } from '../components/export-excel-button.co
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { ArquivoService } from '../services/arquivo.service';
+import { EnvioArquivoClienteComponent, ArquivoEnvioRef } from '../components/envio-arquivo-cliente.component';
 import { environment } from '../../environments/environment';
 
 
@@ -83,7 +84,8 @@ interface CobrancaAdicionalForm {
     NzSelectModule, NzCheckboxModule, NzSwitchModule, NzIconModule, NzAlertModule,
     NzTableModule, NzTagModule, NzModalModule, NzSkeletonModule, NzMessageModule,
     NzDividerModule, NzToolTipModule, NzUploadModule, NzCollapseModule, NzBadgeModule,
-    NzSpinModule, NzTreeModule, NzPopconfirmModule, NzDatePickerModule, PageTitleComponent, ExportExcelButtonComponent
+    NzSpinModule, NzTreeModule, NzPopconfirmModule, NzDatePickerModule, PageTitleComponent, ExportExcelButtonComponent,
+    EnvioArquivoClienteComponent
   ],
   template: `
 <div class="page">
@@ -733,13 +735,14 @@ interface CobrancaAdicionalForm {
             <button nz-button nzType="primary" (click)="abrirUpload()"><i nz-icon nzType="upload"></i> Novo Documento</button>
           </div>
           <nz-table [nzData]="documentos" nzBordered nzSize="middle" [nzShowPagination]="false">
-            <thead><tr><th nzWidth="80px">Código</th><th>Tipo</th><th nzWidth="160px" nzAlign="center">Ação</th></tr></thead>
+            <thead><tr>                <th nzWidth="80px">Código</th><th>Tipo</th><th nzWidth="220px" nzAlign="center">Ação</th></tr></thead>
             <tbody>
               <tr *ngFor="let d of documentos">
                 <td>{{ d.codigo }}</td>
                 <td><nz-tag>{{ d.tipo }}</nz-tag></td>
                 <td nzAlign="center">
-                  <button nz-button nzType="link" nzSize="small" (click)="abrirDocumento(d)"><i nz-icon nzType="eye"></i> Abrir</button>
+                  <button nz-button nzType="link" nzSize="small" (click)="abrirDocumento(d)"><i nz-icon nzType="download"></i> Baixar</button>
+                  <button nz-button nzType="link" nzSize="small" (click)="enviarDocumento(d)"><i nz-icon nzType="send"></i> Enviar</button>
                   <button nz-button nzDanger nzSize="small" [nzLoading]="excluindoDoc.has(d.codigo)" (click)="excluirDoc(d)"><i nz-icon nzType="delete"></i></button>
                 </td>
               </tr>
@@ -758,6 +761,10 @@ interface CobrancaAdicionalForm {
     </button>
   </div>
 </div>
+
+<app-envio-arquivo-cliente
+  [(visible)]="envioDocVisible"
+  [itens]="envioDocItens" />
 
 <!-- MODAL: Cadastro de Anexo (Treeview) -->
 <nz-modal
@@ -1066,6 +1073,8 @@ export class ClienteEditarComponent implements OnInit {
   dadosDasList: DadosDAS[] = [];
   prefeituras: Prefeitura[] = [];
   documentos: PessoaUpload[] = [];
+  envioDocVisible = false;
+  envioDocItens: ArquivoEnvioRef[] = [];
   cobranca: DadosCobranca = { codigo: 0, codigoPessoa: 0, tipo: 'Boleto', diaCobranca: 5, mensalidade: 79.90, cpf: '', email: '' };
   ultimasFaturas: PessoaCobranca[] = [];
   cobrancasAdicionais: PessoaCobrancaAdicional[] = [];
@@ -1840,6 +1849,19 @@ export class ClienteEditarComponent implements OnInit {
   abrirDocumento(d: PessoaUpload): void {
     if (!d.arquivo) { this.message.warning('Arquivo não encontrado.'); return; }
     this.arquivoService.abrir(d.codigoPessoa, d.arquivo, d.tipo);
+  }
+
+  enviarDocumento(d: PessoaUpload): void {
+    if (!d.arquivo) { this.message.warning('Arquivo não encontrado.'); return; }
+    this.envioDocItens = [{
+      codigoPessoa: d.codigoPessoa,
+      nome: this.pessoa.razao || this.pessoa.nome || String(d.codigoPessoa),
+      nomeArquivo: d.arquivo,
+      tipoArquivo: d.tipo || 'Documento',
+      categoria: 'Documento'
+    }];
+    this.envioDocVisible = true;
+    this.cdr.markForCheck();
   }
 
   beforeUpload = (file: NzUploadFile): boolean => {

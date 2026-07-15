@@ -144,7 +144,7 @@ interface AbaConfig {
                       <td nzAlign="center" class="acoes-arquivo">
                         <ng-container *ngIf="item.status !== 'Pago' && isValorZero(item)">
                           <button nz-button nzType="default" nzSize="small" (click)="gerarBoletoDas(item)">
-                            <i nz-icon nzType="eye"></i> Visualizar
+                            <i nz-icon nzType="download"></i> Baixar
                           </button>
                         </ng-container>
                         <ng-container *ngIf="item.status !== 'Pago' && temTributoDas(item)">
@@ -224,7 +224,7 @@ interface AbaConfig {
                           nzSize="small"
                           [disabled]="estaVencida(item)"
                           (click)="abrirArquivo(item, aba)">
-                          <i nz-icon nzType="eye"></i> Visualizar
+                          <i nz-icon nzType="download"></i> Baixar
                         </button>
                         <button
                           *ngIf="estaVencida(item)"

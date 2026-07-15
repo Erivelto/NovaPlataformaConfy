@@ -81,7 +81,7 @@ interface PessoaUpload {
               <td><nz-tag>{{ d.tipo }}</nz-tag></td>
               <td nzAlign="center">
                 <button nz-button nzType="link" nzSize="small" (click)="abrirDocumento(d)">
-                  <i nz-icon nzType="eye"></i> Abrir
+                  <i nz-icon nzType="download"></i> Baixar
                 </button>
               </td>
             </tr>

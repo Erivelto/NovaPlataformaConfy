@@ -1,6 +1,9 @@
 ﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { forkJoin, of } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -11,14 +14,26 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { NzFormModule } from 'ng-zorro-antd/form';
+import { NzGridModule } from 'ng-zorro-antd/grid';
+import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
+import { NzMessageModule, NzMessageService } from 'ng-zorro-antd/message';
 import { Router } from '@angular/router';
 import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { PessoaService } from '../services/pessoa.service';
 import { LoginService } from '../services/login.service';
+import { environment } from '../../environments/environment';
+
+const AREA_FIXA = 'Contabilidade';
+const ATENDENTE_FIXO = 'Analista Contabil';
+const PRIORIDADE_PADRAO = 2;
+const TIPO_SOLICITACAO = 'Outros';
+
+interface Chamado {
+  id: number;
+}
 
 @Component({
   selector: 'app-meus-dados',
@@ -27,6 +42,7 @@ import { LoginService } from '../services/login.service';
     CommonModule, FormsModule,
     NzCardModule, NzDescriptionsModule, NzTableModule, NzButtonModule,
     NzModalModule, NzInputModule, NzSpinModule, NzAlertModule, NzIconModule, NzTagModule,
+    NzFormModule, NzGridModule, NzUploadModule, NzMessageModule,
     PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
@@ -55,7 +71,7 @@ import { LoginService } from '../services/login.service';
             <nz-descriptions-item nzTitle="CEP">{{ pessoa?.endereco?.cep || '-' }}</nz-descriptions-item>
           </nz-descriptions>
           <div class="card-foot">
-            <button nz-button nzType="primary" (click)="openModal('Dados Empresarial')">
+            <button nz-button nzType="primary" (click)="abrirSolicitacao('Dados Empresarial')">
               <i nz-icon nzType="edit"></i> Solicitar Alteracao
             </button>
           </div>
@@ -76,7 +92,7 @@ import { LoginService } from '../services/login.service';
             </ng-container>
           </nz-descriptions>
           <div class="card-foot">
-            <button nz-button nzType="primary" (click)="openModal('Representante Legal')">
+            <button nz-button nzType="primary" (click)="abrirSolicitacao('Representante Legal')">
               <i nz-icon nzType="edit"></i> Solicitar Alteracao
             </button>
           </div>
@@ -108,7 +124,7 @@ import { LoginService } from '../services/login.service';
             </tbody>
           </nz-table>
           <div class="card-foot">
-            <button nz-button nzType="primary" (click)="openModal('Contatos')">
+            <button nz-button nzType="primary" (click)="abrirSolicitacao('Contatos')">
               <i nz-icon nzType="edit"></i> Solicitar Alteracao
             </button>
           </div>
@@ -119,17 +135,72 @@ import { LoginService } from '../services/login.service';
 
     <nz-modal
       [(nzVisible)]="modalVisible"
-      [nzTitle]="'Solicitar alteracao - ' + modalSecao"
-      nzOkText="Enviar"
-      nzCancelText="Cancelar"
-      (nzOnCancel)="closeModal()"
-      (nzOnOk)="enviar()"
-      [nzOkDisabled]="!mensagem.trim()"
+      [nzTitle]="'Nova Solicitação — ' + modalSecao"
+      [nzWidth]="720"
+      [nzFooter]="ftSolicitacao"
+      (nzOnCancel)="fecharModal()"
     >
       <ng-container *nzModalContent>
-        <p class="modal-hint">Descreva as alteracoes para <strong>{{ modalSecao }}</strong>:</p>
-        <textarea nz-input rows="7" [(ngModel)]="mensagem" placeholder="Digite sua mensagem..." style="width:100%;resize:vertical"></textarea>
+        <div class="modal-form">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="24">Tipo de Solicitação</nz-form-label>
+            <nz-form-control [nzSpan]="24">
+              <input nz-input [value]="tipoSolicitacao" disabled />
+            </nz-form-control>
+          </nz-form-item>
+
+          <div nz-row [nzGutter]="16" class="campos-fixos">
+            <div nz-col [nzSpan]="12" [nzXs]="24" [nzSm]="12">
+              <div class="campo-readonly">
+                <label>Área</label>
+                <input nz-input [value]="areaFixa" disabled />
+              </div>
+            </div>
+            <div nz-col [nzSpan]="12" [nzXs]="24" [nzSm]="12">
+              <div class="campo-readonly">
+                <label>Atendente</label>
+                <input nz-input [value]="atendenteFixo" disabled />
+              </div>
+            </div>
+          </div>
+
+          <nz-form-item>
+            <nz-form-label [nzSpan]="24">Anexo de Arquivo</nz-form-label>
+            <nz-form-control [nzSpan]="24">
+              <nz-upload
+                nzAction=""
+                [nzBeforeUpload]="beforeUpload"
+                [nzFileList]="fileList"
+                nzAccept=".pdf"
+                [nzMultiple]="true"
+                [nzRemove]="onRemoveArquivo">
+                <button nz-button type="button">
+                  <span nz-icon nzType="upload"></span> Selecionar arquivo(s) (.pdf)
+                </button>
+              </nz-upload>
+              <div *ngIf="fileList.length > 0" class="upload-hint">
+                {{ fileList.length }} arquivo(s) selecionado(s)
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSpan]="24" nzRequired>Descrição</nz-form-label>
+            <nz-form-control [nzSpan]="24">
+              <textarea
+                nz-input
+                [(ngModel)]="mensagem"
+                [nzAutosize]="{minRows:5,maxRows:10}"
+                [placeholder]="descricaoPlaceholder">
+              </textarea>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
       </ng-container>
+      <ng-template #ftSolicitacao>
+        <button nz-button (click)="fecharModal()" [disabled]="salvando">Cancelar</button>
+        <button nz-button nzType="primary" (click)="enviarSolicitacao()" [nzLoading]="salvando">Cadastrar</button>
+      </ng-template>
     </nz-modal>
   `,
   styles: [
@@ -137,16 +208,38 @@ import { LoginService } from '../services/login.service';
     `.sc { margin-bottom: 16px; }`,
     `.alert-top { margin-bottom: 16px; }`,
     `.card-foot { margin-top: 16px; display: flex; justify-content: flex-end; }`,
-    `.modal-hint { margin-bottom: 12px; color: rgba(0,0,0,0.65); }`
+    `.modal-form { padding: 4px 0; }`,
+    `.modal-form nz-form-item { margin-bottom: 16px; }`,
+    `.modal-form ::ng-deep .ant-form-item { flex-direction: column; align-items: stretch; }`,
+    `.modal-form ::ng-deep .ant-form-item-label { text-align: left; width: 100%; padding: 0 0 6px; }`,
+    `.modal-form ::ng-deep .ant-form-item-label > label { height: auto; font-weight: 600; }`,
+    `.modal-form ::ng-deep .ant-form-item-control { width: 100%; max-width: 100%; }`,
+    `.campos-fixos { margin-bottom: 8px; }`,
+    `.campo-readonly label {
+      display: block;
+      font-weight: 600;
+      color: rgba(0,0,0,.65);
+      font-size: .82rem;
+      margin-bottom: 6px;
+    }`,
+    `.campo-readonly input { width: 100%; }`,
+    `.upload-hint { margin-top: 6px; font-size: .82rem; color: rgba(0,0,0,.45); }`
   ]
 })
 export class MeusDadosComponent implements OnInit {
+  private readonly api = environment.apiUrl;
+  readonly tipoSolicitacao = TIPO_SOLICITACAO;
+  readonly areaFixa = AREA_FIXA;
+  readonly atendenteFixo = ATENDENTE_FIXO;
+
   loading = true;
   erro = '';
   pessoa: any = null;
   rep: any = null;
   enderecoRep: any = null;
   contatos: any[] = [];
+  codigoPessoa = 0;
+  solicitante = '';
 
   readonly exportColumnsContatos: ExcelExportColumn[] = [
     { key: 'codigo', title: 'Codigo' },
@@ -164,10 +257,20 @@ export class MeusDadosComponent implements OnInit {
   modalVisible = false;
   modalSecao = '';
   mensagem = '';
+  salvando = false;
+  fileList: NzUploadFile[] = [];
+  private arquivosPendentes: File[] = [];
 
-  constructor(private pessoaService: PessoaService, private loginService: LoginService, private router: Router) {}
+  constructor(
+    private pessoaService: PessoaService,
+    private loginService: LoginService,
+    private router: Router,
+    private http: HttpClient,
+    private message: NzMessageService
+  ) {}
 
   ngOnInit(): void {
+    const usuario = this.loginService.obterUsuario();
     const pessoaSession = this.loginService.obterPessoa();
     if (!pessoaSession?.codigo) {
       this.loginService.logout();
@@ -175,6 +278,8 @@ export class MeusDadosComponent implements OnInit {
       return;
     }
     this.pessoa = pessoaSession;
+    this.codigoPessoa = usuario?.codigoPessoa ?? pessoaSession.codigo;
+    this.solicitante = usuario?.email || usuario?.nome || '';
     this.rep = pessoaSession.listaRepresentante?.[0] || null;
     const codigoRep = this.rep?.codigo;
     if (codigoRep) {
@@ -192,6 +297,15 @@ export class MeusDadosComponent implements OnInit {
     } else {
       this.loading = false;
     }
+  }
+
+  get descricaoPlaceholder(): string {
+    return `Descreva as alterações desejadas em ${this.modalSecao}...`;
+  }
+
+  private get h(): HttpHeaders {
+    const t = localStorage.getItem('auth_token');
+    return t ? new HttpHeaders({ Authorization: `Bearer ${t}` }) : new HttpHeaders();
   }
 
   get cnpjMasked(): string {
@@ -223,18 +337,177 @@ export class MeusDadosComponent implements OnInit {
     return e.uf ? e.cidade + ' / ' + e.uf : e.cidade;
   }
 
-  openModal(secao: string): void {
+  abrirSolicitacao(secao: string): void {
     this.modalSecao = secao;
     this.mensagem = '';
+    this.fileList = [];
+    this.arquivosPendentes = [];
     this.modalVisible = true;
   }
 
-  closeModal(): void {
+  fecharModal(): void {
+    if (this.salvando) return;
     this.modalVisible = false;
     this.mensagem = '';
+    this.fileList = [];
+    this.arquivosPendentes = [];
   }
 
-  enviar(): void {
-    this.closeModal();
+  beforeUpload = (file: NzUploadFile): boolean => {
+    const ext = (file.name || '').split('.').pop()?.toLowerCase();
+    if (ext !== 'pdf') {
+      this.message.error('Apenas arquivos PDF são aceitos.');
+      return false;
+    }
+    const rawFile = this.resolverArquivo(file);
+    if (!rawFile) {
+      this.message.error('Não foi possível ler o arquivo selecionado.');
+      return false;
+    }
+    this.arquivosPendentes = [...this.arquivosPendentes, rawFile];
+    this.fileList = [...this.fileList, file];
+    return false;
+  };
+
+  onRemoveArquivo = (file: NzUploadFile): boolean => {
+    const idx = this.fileList.findIndex(f => f.uid === file.uid);
+    this.fileList = this.fileList.filter(f => f.uid !== file.uid);
+    if (idx >= 0) {
+      this.arquivosPendentes = this.arquivosPendentes.filter((_, i) => i !== idx);
+    }
+    return true;
+  };
+
+  enviarSolicitacao(): void {
+    if (!this.mensagem?.trim()) {
+      this.message.warning('Informe a descrição da alteração.');
+      return;
+    }
+
+    const arquivos = [...this.arquivosPendentes];
+    if (this.fileList.length > 0 && arquivos.length === 0) {
+      this.message.error('Não foi possível ler os arquivos selecionados. Selecione novamente.');
+      return;
+    }
+
+    this.salvando = true;
+    const agora = new Date().toISOString();
+    const mensagemFinal = `Alteração solicitada — ${this.modalSecao}:\n${this.mensagem.trim()}`;
+    const payload = {
+      codigoPessoa: this.codigoPessoa,
+      atendente: ATENDENTE_FIXO,
+      solicitante: this.solicitante,
+      titulo: TIPO_SOLICITACAO,
+      mensagem: mensagemFinal,
+      status: 'N',
+      prioridade: PRIORIDADE_PADRAO,
+      tipo: AREA_FIXA,
+      slaTempo: this.slaPorPrioridade(PRIORIDADE_PADRAO),
+      dataCriacao: agora,
+      chamadoHistoricos: [{
+        dataHistorico: agora,
+        descricao: 'Criação de solicitação',
+        usuario: this.solicitante
+      }]
+    };
+
+    this.http.post<Chamado>(`${this.api}/Chamado`, payload, { headers: this.h }).subscribe({
+      next: (chamado) => {
+        const chamadoId = this.extrairChamadoId(chamado);
+        if (!chamadoId) {
+          this.message.warning('Solicitação criada, mas não foi possível identificar o código para anexar arquivos.');
+          this.finalizarCadastro();
+          return;
+        }
+        if (arquivos.length === 0) {
+          this.finalizarCadastro();
+          return;
+        }
+        this.uploadAnexos(chamadoId, arquivos)
+          .then(() => this.finalizarCadastro())
+          .catch((err) => {
+            const detalhe = err?.status ? ` (${err.status})` : '';
+            this.message.warning(`Solicitação criada, mas houve erro ao enviar um ou mais anexos${detalhe}.`);
+            this.finalizarCadastro();
+          });
+      },
+      error: (e) => {
+        this.message.error(e?.error?.message || e?.error || `Erro ao cadastrar (${e.status})`);
+        this.salvando = false;
+      }
+    });
+  }
+
+  private finalizarCadastro(): void {
+    this.message.success('Solicitação cadastrada com sucesso!');
+    this.salvando = false;
+    this.modalVisible = false;
+    this.mensagem = '';
+    this.fileList = [];
+    this.arquivosPendentes = [];
+  }
+
+  private uploadAnexos(chamadoId: number, arquivos: File[]): Promise<void> {
+    return Promise.all(arquivos.map(arquivo => this.uploadUmAnexo(chamadoId, arquivo))).then(() => undefined);
+  }
+
+  private uploadUmAnexo(chamadoId: number, arquivo: File): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const ext = (arquivo.name || '').split('.').pop()?.toLowerCase();
+      if (ext !== 'pdf') {
+        reject(new Error('Apenas arquivos PDF são aceitos.'));
+        return;
+      }
+
+      const arquivoGuid = crypto.randomUUID();
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        this.http.post(`${this.api}/ArmazenamentoDeObjeto`, {
+          codigo: arquivoGuid,
+          image: base64,
+          pasta: String(this.codigoPessoa)
+        }, { headers: this.h }).pipe(timeout(60000), catchError(() => of(null))).subscribe({
+          next: (res) => {
+            if (res === null) {
+              reject(new Error('Erro ao enviar arquivo para o armazenamento.'));
+              return;
+            }
+
+            this.http.post(`${this.api}/Chamado/ChamadoUpload`, {
+              ChamadoId: chamadoId,
+              DataCriacao: new Date().toISOString(),
+              Arquivo: arquivoGuid,
+              Tipo: TIPO_SOLICITACAO,
+              Excluido: false
+            }, { headers: this.h }).pipe(timeout(15000)).subscribe({
+              next: () => resolve(),
+              error: (e) => reject(e)
+            });
+          },
+          error: (e) => reject(e)
+        });
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Erro ao ler o arquivo selecionado.'));
+      reader.readAsDataURL(arquivo);
+    });
+  }
+
+  private resolverArquivo(file: NzUploadFile): File | null {
+    if (file.originFileObj instanceof File) return file.originFileObj;
+    if (file instanceof File) return file;
+    const candidate = file as unknown as File;
+    return candidate?.name && candidate?.size != null ? candidate : null;
+  }
+
+  private extrairChamadoId(chamado: unknown): number {
+    const c = chamado as Record<string, unknown>;
+    const id = c?.['id'] ?? c?.['ID'] ?? c?.['Id'];
+    const n = Number(id);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
+  private slaPorPrioridade(p: number): number {
+    return ({ 1: 2, 2: 8, 3: 120 } as Record<number, number>)[p] ?? 8;
   }
 }

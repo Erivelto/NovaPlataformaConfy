@@ -26,6 +26,7 @@ import { ExportExcelButtonComponent } from '../components/export-excel-button.co
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtDate } from '../utils/excel-export.helpers';
 import { ArquivoService } from '../services/arquivo.service';
+import { EnvioArquivoClienteComponent, ArquivoEnvioRef } from '../components/envio-arquivo-cliente.component';
 import { environment } from '../../environments/environment';
 
 
@@ -75,7 +76,8 @@ interface AbaConfig {
     NzCardModule, NzTabsModule, NzFormModule, NzInputModule, NzButtonModule,
     NzIconModule, NzTableModule, NzTagModule, NzModalModule, NzSkeletonModule,
     NzMessageModule, NzUploadModule, NzDatePickerModule, NzInputNumberModule,
-    NzPopconfirmModule, NzSelectModule, PageTitleComponent, ExportExcelButtonComponent
+    NzPopconfirmModule, NzSelectModule, PageTitleComponent, ExportExcelButtonComponent,
+    EnvioArquivoClienteComponent
   ],
   template: `
     <div class="page">
@@ -137,7 +139,7 @@ interface AbaConfig {
                     <th *ngIf="!aba.modoDas">Tipo</th>
                     <th *ngIf="!aba.modoDas" nzWidth="120px">Vencimento</th>
                     <th nzWidth="120px">{{ aba.modoDas ? 'Data' : 'Cadastro' }}</th>
-                    <th nzWidth="140px" nzAlign="center">Ação</th>
+                    <th nzWidth="200px" nzAlign="center">Ação</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -151,9 +153,12 @@ interface AbaConfig {
                     <td *ngIf="!aba.modoDas"><nz-tag>{{ item.tipo || '—' }}</nz-tag></td>
                     <td *ngIf="!aba.modoDas">{{ formatarData(item.dataVencimento) }}</td>
                     <td>{{ formatarData(aba.modoDas ? item.data : item.dataCriacao) }}</td>
-                    <td nzAlign="center">
+                    <td nzAlign="center" class="acoes-cell">
                       <button nz-button nzType="link" nzSize="small" (click)="abrirArquivo(item, aba.id)">
-                        <i nz-icon nzType="eye"></i> Abrir
+                        <i nz-icon nzType="download"></i> Baixar
+                      </button>
+                      <button *ngIf="item.arquivo" nz-button nzType="link" nzSize="small" (click)="enviarArquivo(item, aba)">
+                        <i nz-icon nzType="send"></i> Enviar
                       </button>
                       <button
                         nz-button
@@ -252,6 +257,11 @@ interface AbaConfig {
         <button nz-button nzType="primary" [nzLoading]="fazendoUpload" (click)="fazerUpload()">Enviar</button>
       </ng-template>
     </nz-modal>
+
+    <app-envio-arquivo-cliente
+      [(visible)]="envioVisible"
+      [itens]="envioItens"
+      (envioConcluido)="onEnvioConcluido()" />
   `,
   styles: [`
     .page { padding: 8px 4px; }
@@ -260,6 +270,7 @@ interface AbaConfig {
     .form-section { padding: 8px 4px; }
     .toolbar { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
     .empty { text-align: center; padding: 24px; color: rgba(0,0,0,.45); }
+    .acoes-cell { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
   `]
 })
 export class EditarDebitosComponent implements OnInit {
@@ -326,6 +337,8 @@ export class EditarDebitosComponent implements OnInit {
   fileList: NzUploadFile[] = [];
   selectedFile: File | null = null;
   fazendoUpload = false;
+  envioVisible = false;
+  envioItens: ArquivoEnvioRef[] = [];
 
   get uploadAbaConfig(): AbaConfig | undefined {
     return this.abas.find(a => a.id === this.uploadAba);
@@ -539,6 +552,47 @@ export class EditarDebitosComponent implements OnInit {
       return;
     }
     this.arquivoService.abrir(item.codigoPessoa, item.arquivo, item.tipo || 'pdf');
+  }
+
+  enviarArquivo(item: DebitoArquivo, aba: AbaConfig): void {
+    if (!item.arquivo) {
+      this.message.warning('Arquivo não encontrado.');
+      return;
+    }
+
+    const nome = this.pessoa.razao || this.pessoa.nome || String(this.codigoPessoa);
+    if (aba.modoDas) {
+      const periodo = item.periodo?.trim() || '';
+      this.envioItens = [{
+        codigoPessoa: item.codigoPessoa,
+        nome,
+        nomeArquivo: item.arquivo,
+        tipoArquivo: periodo ? `DAS ${periodo}` : 'DAS',
+        categoria: 'Das',
+        codigoDas: item.codigo,
+        periodo,
+        valorTributo: item.valorTributo,
+        marcarDasEnviado: true
+      }];
+    } else {
+      const tipo = item.tipo?.trim() || aba.titulo;
+      const tipoArquivo = item.parcela != null ? `${tipo} - Parcela ${item.parcela}` : tipo;
+      this.envioItens = [{
+        codigoPessoa: item.codigoPessoa,
+        nome,
+        nomeArquivo: item.arquivo,
+        tipoArquivo,
+        categoria: 'Debito'
+      }];
+    }
+
+    this.envioVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  onEnvioConcluido(): void {
+    const aba = this.abas[this.abaIndex];
+    if (aba) this.carregarLista(aba.id);
   }
 
   excluir(item: DebitoArquivo, abaId: AbaDebito): void {

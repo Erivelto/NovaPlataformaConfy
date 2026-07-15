@@ -297,7 +297,7 @@ interface FormAtendimento {
           <div *ngFor="let a of anexos" class="anexo-item">
             <span>{{ a.tipo }} — {{ a.dataCriacao | date:'dd/MM/yyyy HH:mm' }}</span>
             <button nz-button nzType="link" nzSize="small" (click)="abrirAnexo(a)">
-              <i nz-icon nzType="paper-clip"></i> Abrir
+              <i nz-icon nzType="download"></i> Baixar
             </button>
           </div>
 
