@@ -22,6 +22,7 @@ import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtDate } from '../utils/excel-export.helpers';
+import { ArquivoService } from '../services/arquivo.service';
 import { environment } from '../../environments/environment';
 
 interface Prolabore { codigo: number; codigoPessoa: number; tipo: string; status: string; nomeArquivo?: string; dateVencimento?: string; mes?: number; ano?: number; razao?: string; }
@@ -95,7 +96,7 @@ export class GestaoPessoalComponent implements OnInit {
   ];
 
   private get h(): HttpHeaders { const t = localStorage.getItem('auth_token'); return t ? new HttpHeaders({ Authorization: `Bearer ${t}` }) : new HttpHeaders(); }
-  constructor(private http: HttpClient, private message: NzMessageService, private cdr: ChangeDetectorRef) {}
+  constructor(private http: HttpClient, private message: NzMessageService, private arquivoService: ArquivoService, private cdr: ChangeDetectorRef) {}
   ngOnInit() { this.carregar(); }
   carregar() {
     this.loading = true;
@@ -113,7 +114,7 @@ export class GestaoPessoalComponent implements OnInit {
     }, error: () => { this.loading = false; this.cdr.markForCheck(); }});
   }
   filtrar() { const f = this.filtro.toLowerCase().trim(); this.listaFiltrada = f ? this.lista.filter(p => (p.razao||'').toLowerCase().includes(f)||(p.tipo||'').toLowerCase().includes(f)) : [...this.lista]; }
-  baixar(p: Prolabore) { if (p.nomeArquivo) window.open(`https://armazenamento.contfy.com.br/Arquivos/Resultado?diretorioCompleto=${p.codigoPessoa}&nomeArquivo=${p.nomeArquivo}`, '_blank'); }
+  baixar(p: Prolabore) { if (p.nomeArquivo) this.arquivoService.abrir(p.codigoPessoa, p.nomeArquivo); }
   enviarGuia(p: Prolabore) {
     this.enviando.add(p.codigo); this.cdr.markForCheck();
     this.http.get(`${this.api}/PessoaProlabore/${p.codigo}`, { headers: this.h }).subscribe({

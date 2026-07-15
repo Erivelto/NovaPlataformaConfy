@@ -17,10 +17,10 @@ import { ExportExcelButtonComponent } from '../components/export-excel-button.co
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { LoginService } from '../services/login.service';
+import { ArquivoService } from '../services/arquivo.service';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 
-const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
 const AREA_FIXA = 'Contabilidade';
 const ATENDENTE_FIXO = 'Analista Contabil';
 const PRIORIDADE_PADRAO = 2;
@@ -223,7 +223,7 @@ interface AbaConfig {
                           nzType="primary"
                           nzSize="small"
                           [disabled]="estaVencida(item)"
-                          (click)="abrirArquivo(item)">
+                          (click)="abrirArquivo(item, aba)">
                           <i nz-icon nzType="eye"></i> Visualizar
                         </button>
                         <button
@@ -328,6 +328,7 @@ export class ReceitaImpostoComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private loginService: LoginService,
+    private arquivoService: ArquivoService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private message: NzMessageService
@@ -429,18 +430,13 @@ export class ReceitaImpostoComponent implements OnInit {
     });
   }
 
-  abrirArquivo(item: ArquivoDebito): void {
+  abrirArquivo(item: ArquivoDebito, aba?: AbaConfig): void {
     if (this.estaVencida(item)) return;
     if (!item.arquivo) {
       this.message.warning('Arquivo não encontrado.');
       return;
     }
-    const params = new URLSearchParams({
-      diretorioCompleto: String(item.codigoPessoa),
-      nomeArquivo: item.arquivo,
-      tipo: item.tipo || 'pdf'
-    });
-    window.open(`${ARQUIVO_BASE_URL}?${params.toString()}`, '_blank', 'noopener,noreferrer');
+    this.arquivoService.abrir(item.codigoPessoa, item.arquivo, this.nomeArquivoDebito(item, aba));
   }
 
   statusDasItem(item: DasItem): string {
@@ -559,8 +555,23 @@ export class ReceitaImpostoComponent implements OnInit {
 
   gerarBoletoDas(item: DasItem): void {
     if (this.dasVencido(item)) return;
-    const url = `${ARQUIVO_BASE_URL}?diretorioCompleto=${item.codigoPessoa}&nomeArquivo=${item.nomeArquivo}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+    this.arquivoService.abrir(item.codigoPessoa, item.nomeArquivo, this.nomeArquivoDas(item));
+  }
+
+  private nomeArquivoDas(item: DasItem): string {
+    const periodo = item.periodo?.trim();
+    return periodo ? `DAS ${periodo}` : 'DAS';
+  }
+
+  private nomeArquivoDebito(item: ArquivoDebito, aba?: AbaConfig): string {
+    const tipo = item.tipo?.trim();
+    if (tipo) {
+      return item.parcela != null ? `${tipo} - Parcela ${item.parcela}` : tipo;
+    }
+    if (aba) {
+      return item.parcela != null ? `${aba.titulo} - Parcela ${item.parcela}` : aba.titulo;
+    }
+    return 'Documento';
   }
 
   marcarComoPaga(item: DasItem): void {

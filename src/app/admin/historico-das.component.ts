@@ -18,6 +18,7 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
+import { ArquivoService } from '../services/arquivo.service';
 import { environment } from '../../environments/environment';
 
 @Pipe({ name: 'cnpj', standalone: true, pure: true })
@@ -440,7 +441,7 @@ export class HistoricoDasComponent implements OnInit {
     return t ? new HttpHeaders({ Authorization: `Bearer ${t}` }) : new HttpHeaders();
   }
 
-  constructor(private http: HttpClient, private message: NzMessageService, private cdr: ChangeDetectorRef) {}
+  constructor(private http: HttpClient, private message: NzMessageService, private arquivoService: ArquivoService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() { this.carregar(); }
 
@@ -620,10 +621,7 @@ export class HistoricoDasComponent implements OnInit {
 
   abrirArquivo(d: DasItem) {
     if (d.nomeArquivo) {
-      window.open(
-        `https://armazenamento.contfy.com.br/Arquivos/Resultado?diretorioCompleto=${d.codigoPessoa}&nomeArquivo=${d.nomeArquivo}`,
-        '_blank'
-      );
+      this.arquivoService.abrir(d.codigoPessoa, d.nomeArquivo);
     }
   }
 

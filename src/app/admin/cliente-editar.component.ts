@@ -35,9 +35,9 @@ import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
+import { ArquivoService } from '../services/arquivo.service';
 import { environment } from '../../environments/environment';
 
-const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
 
 interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; ccm?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; status?: string; dataInclusao?: string; dataAtulizacao?: string; contabilidade?: number; excluido?: boolean; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
 interface PessoaCertificadoData { codigo: number; codigoPessoa: number; validade: string; diretorio: string; codigoAcesso: string; }
@@ -1210,7 +1210,7 @@ export class ClienteEditarComponent implements OnInit {
   private get h(): HttpHeaders {
     const t = localStorage.getItem('auth_token'); return t ? new HttpHeaders({ Authorization: `Bearer ${t}` }) : new HttpHeaders();
   }
-  constructor(private http: HttpClient, private route: ActivatedRoute, private router: Router, private message: NzMessageService, private cdr: ChangeDetectorRef) {}
+  constructor(private http: HttpClient, private route: ActivatedRoute, private router: Router, private message: NzMessageService, private arquivoService: ArquivoService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.codigoPessoa = +this.route.snapshot.paramMap.get('id')!;
@@ -1839,12 +1839,7 @@ export class ClienteEditarComponent implements OnInit {
 
   abrirDocumento(d: PessoaUpload): void {
     if (!d.arquivo) { this.message.warning('Arquivo não encontrado.'); return; }
-    const params = new URLSearchParams({
-      diretorioCompleto: String(d.codigoPessoa),
-      nomeArquivo: d.arquivo,
-      tipo: d.tipo
-    });
-    window.open(`${ARQUIVO_BASE_URL}?${params.toString()}`, '_blank', 'noopener,noreferrer');
+    this.arquivoService.abrir(d.codigoPessoa, d.arquivo, d.tipo);
   }
 
   beforeUpload = (file: NzUploadFile): boolean => {

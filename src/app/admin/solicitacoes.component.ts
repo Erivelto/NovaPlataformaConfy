@@ -24,9 +24,9 @@ import { ExportExcelButtonComponent } from '../components/export-excel-button.co
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtDateTime } from '../utils/excel-export.helpers';
 import { LoginService } from '../services/login.service';
+import { ArquivoService } from '../services/arquivo.service';
 import { environment } from '../../environments/environment';
 
-const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
 
 const TIPOS_SOLICITACAO = [
   'Erro na Plataforma',
@@ -482,6 +482,7 @@ export class SolicitacoesComponent implements OnInit {
     private http: HttpClient,
     private message: NzMessageService,
     private login: LoginService,
+    private arquivoService: ArquivoService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -808,8 +809,7 @@ export class SolicitacoesComponent implements OnInit {
 
   abrirAnexo(anexo: ChamadoUpload): void {
     if (!this.selecionado) return;
-    const url = `${ARQUIVO_BASE_URL}?diretorioCompleto=${this.selecionado.codigoPessoa}&nomeArquivo=${anexo.arquivo}`;
-    window.open(url, '_blank');
+    this.arquivoService.abrir(this.selecionado.codigoPessoa, anexo.arquivo);
   }
 
   abrirNovo(): void {

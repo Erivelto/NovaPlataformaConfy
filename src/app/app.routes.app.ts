@@ -7,6 +7,10 @@ export const appRoutes: Routes = [
 	{ path: '', redirectTo: 'entrar', pathMatch: 'full' },
 	{ path: 'entrar', loadComponent: () => import('./login.component').then(m => m.LoginComponent) },
 	{ path: 'login', redirectTo: 'entrar', pathMatch: 'full' },
+	{
+		path: 'arquivo',
+		loadComponent: () => import('./arquivo-download.component').then(m => m.ArquivoDownloadComponent)
+	},
 	{ path: 'alterar-senha', loadComponent: () => import('./alterar-senha.component').then(m => m.AlterarSenhaComponent) },
 	{
 		path: '',

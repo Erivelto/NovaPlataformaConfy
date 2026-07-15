@@ -24,12 +24,12 @@ import { ExportExcelButtonComponent } from '../components/export-excel-button.co
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtDateTime } from '../utils/excel-export.helpers';
 import { LoginService } from '../services/login.service';
+import { ArquivoService } from '../services/arquivo.service';
 import { environment } from '../../environments/environment';
 
 const AREA_FIXA = 'Contabilidade';
 const ATENDENTE_FIXO = 'Analista Contabil';
 const PRIORIDADE_PADRAO = 2; // Média
-const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
 
 const TIPOS_SOLICITACAO = [
   'Emissão de Nota',
@@ -326,6 +326,7 @@ export class SolicitacoesClienteComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private login: LoginService,
+    private arquivoService: ArquivoService,
     private message: NzMessageService,
     private cdr: ChangeDetectorRef
   ) {}
@@ -581,12 +582,7 @@ export class SolicitacoesClienteComponent implements OnInit {
       this.message.warning('Arquivo não encontrado.');
       return;
     }
-    const params = new URLSearchParams({
-      diretorioCompleto: String(this.codigoPessoa),
-      nomeArquivo: anexo.arquivo,
-      tipo: anexo.tipo
-    });
-    window.open(`${ARQUIVO_BASE_URL}?${params.toString()}`, '_blank', 'noopener,noreferrer');
+    this.arquivoService.abrir(this.codigoPessoa, anexo.arquivo, anexo.tipo);
   }
 
   private mapAnexo(raw: any): ChamadoUpload {

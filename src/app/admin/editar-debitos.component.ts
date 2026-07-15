@@ -25,9 +25,9 @@ import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtDate } from '../utils/excel-export.helpers';
+import { ArquivoService } from '../services/arquivo.service';
 import { environment } from '../../environments/environment';
 
-const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
 
 type AbaDebito = 'parcelamento' | 'das' | 'tfe' | 'inss';
 
@@ -341,6 +341,7 @@ export class EditarDebitosComponent implements OnInit {
     private router: Router,
     private http: HttpClient,
     private message: NzMessageService,
+    private arquivoService: ArquivoService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -534,19 +535,10 @@ export class EditarDebitosComponent implements OnInit {
     }
     const aba = this.abas.find(a => a.id === abaId);
     if (aba?.modoDas) {
-      window.open(
-        `${ARQUIVO_BASE_URL}?diretorioCompleto=${item.codigoPessoa}&nomeArquivo=${item.arquivo}`,
-        '_blank',
-        'noopener,noreferrer'
-      );
+      this.arquivoService.abrir(item.codigoPessoa, item.arquivo);
       return;
     }
-    const params = new URLSearchParams({
-      diretorioCompleto: String(item.codigoPessoa),
-      nomeArquivo: item.arquivo,
-      tipo: item.tipo || 'pdf'
-    });
-    window.open(`${ARQUIVO_BASE_URL}?${params.toString()}`, '_blank', 'noopener,noreferrer');
+    this.arquivoService.abrir(item.codigoPessoa, item.arquivo, item.tipo || 'pdf');
   }
 
   excluir(item: DebitoArquivo, abaId: AbaDebito): void {

@@ -14,10 +14,9 @@ import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { LoginService } from '../services/login.service';
+import { ArquivoService } from '../services/arquivo.service';
 import { environment } from '../../environments/environment';
 import { catchError, of, timeout } from 'rxjs';
-
-const ARQUIVO_BASE_URL = 'https://armazenamento.contfy.com.br/Arquivos/Resultado';
 
 interface PessoaUpload {
   codigo: number;
@@ -117,6 +116,7 @@ export class DocumentosComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private loginService: LoginService,
+    private arquivoService: ArquivoService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private message: NzMessageService
@@ -163,12 +163,7 @@ export class DocumentosComponent implements OnInit {
       this.message.warning('Arquivo não encontrado.');
       return;
     }
-    const params = new URLSearchParams({
-      diretorioCompleto: String(d.codigoPessoa),
-      nomeArquivo: d.arquivo,
-      tipo: d.tipo
-    });
-    window.open(`${ARQUIVO_BASE_URL}?${params.toString()}`, '_blank', 'noopener,noreferrer');
+    this.arquivoService.abrir(d.codigoPessoa, d.arquivo, d.tipo);
   }
 
   private mapDocumento(raw: any): PessoaUpload {
