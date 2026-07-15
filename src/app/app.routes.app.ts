@@ -43,6 +43,7 @@ export const appRoutes: Routes = [
 			{ path: 'clientes-excluidos', loadComponent: () => import('./admin/clientes-excluidos.component').then(m => m.ClientesExcluidosComponent) },
 			{ path: 'gestao-debitos', loadComponent: () => import('./admin/gestao-debitos.component').then(m => m.GestaoDebitosComponent) },
 			{ path: 'cliente/:id/editar', loadComponent: () => import('./admin/cliente-editar.component').then(m => m.ClienteEditarComponent) },
+			{ path: 'cliente/:id/faturamento', loadComponent: () => import('./admin/cliente-faturamento.component').then(m => m.ClienteFaturamentoComponent) },
 			{ path: 'cliente/:id/editar-debitos', loadComponent: () => import('./admin/editar-debitos.component').then(m => m.EditarDebitosComponent) },
 			{ path: 'receita-anual/:pessoaCodigo', loadComponent: () => import('./admin/dashboard-fiscal-admin.component').then(m => m.DashboardFiscalAdminComponent) },
 			{ path: 'devedores', loadComponent: () => import('./admin/devedores.component').then(m => m.DevedoresComponent) },

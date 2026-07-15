@@ -118,11 +118,11 @@ interface DadosEmissaoNota {
                 [nzIndeterminate]="selecaoParcial"
                 (ngModelChange)="toggleSelecionarTodos($event)"></label>
             </th>
-            <th nzWidth="80px">Código</th><th nzWidth="140px">CPF</th><th>Nome</th>
+            <th nzWidth="80px">Código</th>
+            <th nzWidth="140px">CPF</th>
+            <th>Nome</th>
             <th nzWidth="140px">Prefeitura</th>
-            <th nzWidth="130px">Data Cadastro</th>
-            <th nzWidth="70px" nzAlign="center">Mensagem</th>
-            <th nzWidth="70px" nzAlign="center">Editar</th><th nzWidth="80px" nzAlign="center">Cancelar</th>
+            <th nzWidth="132px" nzAlign="center">Ações</th>
           </tr></thead>
           <tbody>
             <tr *ngFor="let c of clientesTable.data">
@@ -143,16 +143,19 @@ interface DadosEmissaoNota {
                 <span *ngIf="c.prefeitura; else semPrefeitura">{{ c.prefeitura }}</span>
                 <ng-template #semPrefeitura><span class="sem-dado">Sem Prefeitura</span></ng-template>
               </td>
-              <td>{{ c.dataInclusao | date:'dd/MM/yyyy' }}</td>
-              <td nzAlign="center">
-                <button nz-button nzSize="small" nz-tooltip nzTooltipTitle="Mensagem ao Cliente" (click)="abrirMensagemIndividual(c)">
-                  <i nz-icon nzType="message"></i>
+              <td nzAlign="center" class="acoes-cell">
+                <button nz-button nzType="default" nzSize="small" nz-tooltip nzTooltipTitle="Faturamento" (click)="faturamento(c)">
+                  <i nz-icon nzType="bar-chart"></i>
+                </button>
+                <button nz-button nzType="primary" nzSize="small" nz-tooltip nzTooltipTitle="Editar" (click)="editar(c)">
+                  <i nz-icon nzType="edit"></i>
+                </button>
+                <button nz-button nzDanger nzSize="small" nz-tooltip nzTooltipTitle="Cancelar cliente" (click)="abrirCancelamento(c)">
+                  <i nz-icon nzType="close-circle"></i>
                 </button>
               </td>
-              <td nzAlign="center"><button nz-button nzType="primary" nzSize="small" (click)="editar(c)"><i nz-icon nzType="edit"></i></button></td>
-              <td nzAlign="center"><button nz-button nzDanger nzSize="small" (click)="abrirCancelamento(c)"><i nz-icon nzType="close-circle"></i></button></td>
             </tr>
-            <tr *ngIf="clientesFiltrados.length===0"><td colspan="9" style="text-align:center;padding:32px;color:rgba(0,0,0,.45)">Nenhum cliente encontrado.</td></tr>
+            <tr *ngIf="clientesFiltrados.length===0"><td colspan="6" style="text-align:center;padding:32px;color:rgba(0,0,0,.45)">Nenhum cliente encontrado.</td></tr>
           </tbody>
         </nz-table>
       </nz-card>
@@ -194,7 +197,7 @@ interface DadosEmissaoNota {
       [clientes]="clientesMensagem"
       (envioConcluido)="limparSelecao()" />
   `,
-  styles: [`.page{padding:8px 4px}.kpis{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}.kpi{flex:1;min-width:160px;text-align:center}.kpi-icon{font-size:24px;margin-bottom:6px}.kpi-label{color:rgba(0,0,0,.45);font-size:.88rem;margin-top:4px}.kpi-value{font-size:1.5rem;font-weight:800;margin:4px 0}.kpi-value.green{color:#52c41a}.kpi-value.primary{color:#1890ff}.kpi-value.purple{color:#722ed1}.kpi-action{cursor:pointer}.sem-dado{color:#ff4d4f;font-weight:500}`]
+  styles: [`.page{padding:8px 4px}.kpis{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}.kpi{flex:1;min-width:160px;text-align:center}.kpi-icon{font-size:24px;margin-bottom:6px}.kpi-label{color:rgba(0,0,0,.45);font-size:.88rem;margin-top:4px}.kpi-value{font-size:1.5rem;font-weight:800;margin:4px 0}.kpi-value.green{color:#52c41a}.kpi-value.primary{color:#1890ff}.kpi-value.purple{color:#722ed1}.kpi-action{cursor:pointer}.sem-dado{color:#ff4d4f;font-weight:500}.acoes-cell{white-space:nowrap}.acoes-cell .ant-btn{margin:0 2px}`]
 })
 export class ClientesFisicaComponent implements OnInit {
   private readonly api = environment.apiUrl;
@@ -288,6 +291,11 @@ export class ClientesFisicaComponent implements OnInit {
     this.cdr.markForCheck();
   }
   editar(c: Pessoa): void { this.router.navigate(['/administrativo/cliente', c.codigo, 'editar']); }
+  faturamento(c: Pessoa): void {
+    this.router.navigate(['/administrativo/cliente', c.codigo, 'faturamento'], {
+      queryParams: { origem: 'clientes-fisica' }
+    });
+  }
 
   estaSelecionado(codigo: number): boolean {
     return this.selecionados.has(codigo);
@@ -319,12 +327,6 @@ export class ClientesFisicaComponent implements OnInit {
     this.clientesMensagem = this.clientes
       .filter(c => this.selecionados.has(c.codigo))
       .map(c => ({ codigo: c.codigo, nome: c.razao || c.nome || String(c.codigo) }));
-    this.mensagemVisible = true;
-    this.cdr.markForCheck();
-  }
-
-  abrirMensagemIndividual(c: Pessoa): void {
-    this.clientesMensagem = [{ codigo: c.codigo, nome: c.razao || c.nome || String(c.codigo) }];
     this.mensagemVisible = true;
     this.cdr.markForCheck();
   }

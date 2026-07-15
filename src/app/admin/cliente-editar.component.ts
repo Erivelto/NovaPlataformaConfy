@@ -197,6 +197,8 @@ interface CobrancaAdicionalForm {
               <nz-form-control><input nz-input [(ngModel)]="pessoa.descricaoAtividade" /></nz-form-control></nz-form-item>
             <nz-form-item class="flex1"><nz-form-label>WhatsApp / Telegram</nz-form-label>
               <nz-form-control><input nz-input [(ngModel)]="pessoa.numeroWhats" placeholder="5511900000000" /></nz-form-control></nz-form-item>
+            <nz-form-item class="flex1"><nz-form-label>Data Cadastro</nz-form-label>
+              <nz-form-control><input nz-input [value]="dataCadastroLabel" disabled /></nz-form-control></nz-form-item>
           </div>
           <div class="form-row mensagem-cliente-row">
             <button
@@ -1124,6 +1126,11 @@ export class ClienteEditarComponent implements OnInit {
   ];
 
   get temWhats(): boolean { return !!(this.pessoa.numeroWhats?.trim()); }
+  get dataCadastroLabel(): string {
+    if (!this.pessoa.dataInclusao) return '—';
+    const d = new Date(this.pessoa.dataInclusao);
+    return Number.isNaN(d.getTime()) ? this.pessoa.dataInclusao : d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  }
   get temEndereco(): boolean { return !!(this.endereco.logradouro?.trim()); }
   get temUsuario(): boolean { return !!(this.pessoa.usuario?.trim()); }
   get podeEnviarMensagemCliente(): boolean { return this.temWhats && this.temUsuario; }

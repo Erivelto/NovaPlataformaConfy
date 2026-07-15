@@ -158,11 +158,8 @@ interface PessoaCobranca {
               <th nzWidth="150px">CNPJ</th>
               <th>Razão Social</th>
               <th nzWidth="140px">Prefeitura</th>
-              <th nzWidth="140px">WhatsApp</th>
-              <th nzWidth="130px">Data Cadastro</th>
-              <th nzWidth="70px" nzAlign="center">Mensagem</th>
-              <th nzWidth="70px" nzAlign="center">Editar</th>
-              <th nzWidth="80px" nzAlign="center">Cancelar</th>
+              <th nzWidth="130px">WhatsApp</th>
+              <th nzWidth="132px" nzAlign="center">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -188,25 +185,20 @@ interface PessoaCobranca {
                 <span *ngIf="c.numeroWhats; else semWhats">{{ c.numeroWhats }}</span>
                 <ng-template #semWhats><span class="sem-dado">Sem WhatsApp</span></ng-template>
               </td>
-              <td>{{ c.dataInclusao | date:'dd/MM/yyyy' }}</td>
-              <td nzAlign="center">
-                <button nz-button nzSize="small" nz-tooltip nzTooltipTitle="Mensagem ao Cliente" (click)="abrirMensagemIndividual(c)">
-                  <i nz-icon nzType="message"></i>
+              <td nzAlign="center" class="acoes-cell">
+                <button nz-button nzType="default" nzSize="small" nz-tooltip nzTooltipTitle="Faturamento" (click)="faturamento(c)">
+                  <i nz-icon nzType="bar-chart"></i>
                 </button>
-              </td>
-              <td nzAlign="center">
                 <button nz-button nzType="primary" nzSize="small" nz-tooltip nzTooltipTitle="Editar" (click)="editar(c)">
                   <i nz-icon nzType="edit"></i>
                 </button>
-              </td>
-              <td nzAlign="center">
                 <button nz-button nzDanger nzSize="small" nz-tooltip nzTooltipTitle="Cancelar cliente" (click)="abrirModalCancelamento(c)">
                   <i nz-icon nzType="close-circle"></i>
                 </button>
               </td>
             </tr>
             <tr *ngIf="clientesFiltrados.length === 0">
-              <td colspan="10" style="text-align:center;color:rgba(0,0,0,0.45);padding:32px">
+              <td colspan="7" style="text-align:center;color:rgba(0,0,0,0.45);padding:32px">
                 Nenhum cliente encontrado.
               </td>
             </tr>
@@ -299,6 +291,8 @@ interface PessoaCobranca {
     .kpi-action { cursor: pointer; transition: box-shadow .2s; }
     .kpi-action:hover { box-shadow: 0 4px 16px rgba(114,46,209,.2); }
     .sem-dado { color: #ff4d4f; font-weight: 500; }
+    .acoes-cell { white-space: nowrap; }
+    .acoes-cell .ant-btn { margin: 0 2px; }
     @media(max-width:720px) { .kpis { flex-direction: column; } }
   `]
 })
@@ -460,6 +454,12 @@ export class ClientesOnlineComponent implements OnInit {
     this.router.navigate(['/administrativo/cliente', c.codigo, 'editar']);
   }
 
+  faturamento(c: Pessoa): void {
+    this.router.navigate(['/administrativo/cliente', c.codigo, 'faturamento'], {
+      queryParams: { origem: 'clientes' }
+    });
+  }
+
   estaSelecionado(codigo: number): boolean {
     return this.selecionados.has(codigo);
   }
@@ -490,12 +490,6 @@ export class ClientesOnlineComponent implements OnInit {
     this.clientesMensagem = this.clientes
       .filter(c => this.selecionados.has(c.codigo))
       .map(c => ({ codigo: c.codigo, nome: c.razao || c.nome || String(c.codigo) }));
-    this.mensagemVisible = true;
-    this.cdr.markForCheck();
-  }
-
-  abrirMensagemIndividual(c: Pessoa): void {
-    this.clientesMensagem = [{ codigo: c.codigo, nome: c.razao || c.nome || String(c.codigo) }];
     this.mensagemVisible = true;
     this.cdr.markForCheck();
   }
