@@ -381,24 +381,19 @@ export class ReceitaImpostoComponent implements OnInit {
 
   private carregarDas(abaId: AbaImposto): void {
     this.erro = '';
-    this.http.get<DasItem | DasItem | null>(
+    this.http.get<DasItem | DasItem[]>(
       `${this.apiBase}/DAS/ObterListaEnvio/codigoPessoa/${this.codigoPessoa}`,
       { headers: this.headers }
-    ).pipe(timeout(10000), catchError(() => of(null))).subscribe({
+    ).pipe(timeout(10000)).subscribe({
       next: (res) => {
-        if (res == null) {
-          this.erro = 'Erro ao carregar os dados. Tente novamente.';
-          this.listaDas = [];
-        } else {
-          const raw = Array.isArray(res) ? res : [res];
-          this.listaDas = raw.filter(Boolean) as DasItem[];
-        }
+        const raw = Array.isArray(res) ? res : (res ? [res] : []);
+        this.listaDas = raw.map(item => this.mapDas(item)).filter(i => i.codigo > 0);
         this.pageIndex[abaId] = 1;
         this.carregando.delete(abaId);
         this.cdr.markForCheck();
       },
       error: (err) => {
-        this.erro = `Erro ao carregar os dados (${err.status}). Tente novamente.`;
+        this.erro = `Erro ao carregar os dados (${err?.status || 'timeout'}). Tente novamente.`;
         this.listaDas = [];
         this.carregando.delete(abaId);
         this.cdr.markForCheck();
@@ -606,6 +601,31 @@ export class ReceitaImpostoComponent implements OnInit {
     if (!raw) return 0;
     const t = new Date(raw).getTime();
     return isNaN(t) ? 0 : t;
+  }
+
+  private mapDas(raw: DasItem | Record<string, unknown>): DasItem {
+    const r = raw as Record<string, unknown>;
+    return {
+      codigo: Number(r['codigo'] ?? r['Codigo'] ?? 0),
+      codigoPessoa: Number(r['codigoPessoa'] ?? r['CodigoPessoa'] ?? 0),
+      periodo: String(r['periodo'] ?? r['Periodo'] ?? ''),
+      valorTributado: String(r['valorTributado'] ?? r['ValorTributado'] ?? ''),
+      valorTributo: String(r['valorTributo'] ?? r['ValorTributo'] ?? ''),
+      mensagem: String(r['mensagem'] ?? r['Mensagem'] ?? ''),
+      data: String(r['data'] ?? r['Data'] ?? ''),
+      excluido: Boolean(r['excluido'] ?? r['Excluido'] ?? false),
+      status: String(r['status'] ?? r['Status'] ?? ''),
+      nomeArquivo: String(r['nomeArquivo'] ?? r['NomeArquivo'] ?? ''),
+      statusContfy: r['statusContfy'] != null || r['StatusContfy'] != null
+        ? String(r['statusContfy'] ?? r['StatusContfy'])
+        : null,
+      documento: r['documento'] != null || r['Documento'] != null
+        ? String(r['documento'] ?? r['Documento'])
+        : null,
+      razao: r['razao'] != null || r['Razao'] != null
+        ? String(r['razao'] ?? r['Razao'])
+        : null,
+    };
   }
 
   private mapArquivo(raw: unknown): ArquivoDebito {
