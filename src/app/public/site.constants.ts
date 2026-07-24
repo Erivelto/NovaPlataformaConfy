@@ -34,7 +34,7 @@ export const MEDIA = {
   heroDecor: '/assets/site/hero-decor.png',
   heroPerson: '/assets/site/hero-person.png',
   startup: '/assets/site/startup.jpg',
-  favicon: '/logoIcon.ico',
+  favicon: '/assets/site/favicon-48x48.png',
 } as const;
 
 export const TRUST_ITEMS = [
