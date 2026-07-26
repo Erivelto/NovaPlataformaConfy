@@ -40,7 +40,7 @@ import { EnvioArquivoClienteComponent, ArquivoEnvioRef } from '../components/env
 import { environment } from '../../environments/environment';
 
 
-interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; ccm?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; status?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; dataInclusao?: string; dataAtulizacao?: string; dataAbertura?: string; contabilidade?: number; excluido?: boolean; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
+interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; ccm?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; status?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; observacao?: string; dataInclusao?: string; dataAtulizacao?: string; dataAbertura?: string; contabilidade?: number; excluido?: boolean; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
 interface PessoaCertificadoData { codigo: number; codigoPessoa: number; validade: string; diretorio: string; codigoAcesso: string; }
 interface EnderecoData { codigo?: number; codigoPessoa?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; excluido?: boolean; }
 interface ValidacaoPessoa { usuario: boolean; celular: boolean; prefeitura: boolean; dadosDAS: boolean; cobranca: boolean; documentos: boolean; }
@@ -223,6 +223,21 @@ interface CobrancaAdicionalForm {
                   <nz-option [nzValue]="1" nzLabel="Comércio"></nz-option>
                 </nz-select>
               </nz-form-control></nz-form-item>
+          </div>
+
+          <div class="form-row">
+            <nz-form-item class="flex1">
+              <nz-form-label>Observação</nz-form-label>
+              <nz-form-control>
+                <textarea
+                  nz-input
+                  [(ngModel)]="pessoa.observacao"
+                  rows="5"
+                  maxlength="4000"
+                  placeholder="Anotações internas sobre o cliente (até 4000 caracteres)"></textarea>
+                <div class="observacao-counter">{{ (pessoa.observacao || '').length }}/4000</div>
+              </nz-form-control>
+            </nz-form-item>
           </div>
 
           <nz-divider nzText="Configurações" nzOrientation="left"></nz-divider>
@@ -1024,6 +1039,7 @@ interface CobrancaAdicionalForm {
     .user-plat-label { font-size:.8rem;color:rgba(0,0,0,.45);text-transform:uppercase;letter-spacing:.05em; }
     .user-plat-email { font-size:1.15rem;font-weight:700;color:#1890ff; }
     .form-section { padding: 8px 4px; }
+    .observacao-counter { margin-top: 4px; font-size: .75rem; color: rgba(0,0,0,.45); text-align: right; }
     .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 0; align-items: flex-start; }
     .acoes-rodape { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
     .btn-acao-verde { background: #52c41a; border-color: #52c41a; }
@@ -1347,6 +1363,7 @@ export class ClienteEditarComponent implements OnInit {
       mei: !!p.mei,
       fisica: !!p.fisica,
       numeroWhats: p.numeroWhats ?? '',
+      observacao: p.observacao ?? '',
       excluido: !!p.excluido,
       dataInclusao: p.dataInclusao,
       dataAtulizacao: new Date().toISOString(),
@@ -1386,6 +1403,7 @@ export class ClienteEditarComponent implements OnInit {
       mei: raw.mei ?? raw.MEI,
       fisica: raw.fisica ?? raw.Fisica,
       numeroWhats: raw.numeroWhats ?? raw.NumeroWhats,
+      observacao: raw.observacao ?? raw.Observacao ?? '',
       dataInclusao: raw.dataInclusao ?? raw.DataInclusao,
       dataAtulizacao: raw.dataAtulizacao ?? raw.DataAtulizacao,
       dataAbertura: raw.dataAbertura ?? raw.DataAbertura,
