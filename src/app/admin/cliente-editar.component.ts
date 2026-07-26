@@ -40,7 +40,7 @@ import { EnvioArquivoClienteComponent, ArquivoEnvioRef } from '../components/env
 import { environment } from '../../environments/environment';
 
 
-interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; ccm?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; status?: string; dataInclusao?: string; dataAtulizacao?: string; contabilidade?: number; excluido?: boolean; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
+interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; ccm?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; status?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; dataInclusao?: string; dataAtulizacao?: string; dataAbertura?: string; contabilidade?: number; excluido?: boolean; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
 interface PessoaCertificadoData { codigo: number; codigoPessoa: number; validade: string; diretorio: string; codigoAcesso: string; }
 interface EnderecoData { codigo?: number; codigoPessoa?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; excluido?: boolean; }
 interface ValidacaoPessoa { usuario: boolean; celular: boolean; prefeitura: boolean; dadosDAS: boolean; cobranca: boolean; documentos: boolean; }
@@ -1239,6 +1239,7 @@ export class ClienteEditarComponent implements OnInit {
     const safe = <T>(o: any) => o.pipe(timeout(10000), catchError(() => of(null)));
     forkJoin({
       pessoa:     safe(this.http.get<any>(`${this.api}/Pessoa/${this.codigoPessoa}`, { headers: this.h })),
+      endereco:   safe(this.http.get<any>(`${this.api}/Endereco/${this.codigoPessoa}`, { headers: this.h })),
       validacao:  safe(this.http.get<any>(`${this.api}/Pessoa/GetValidacaoPessoa/${this.codigoPessoa}`, { headers: this.h })),
       prefeituras: safe(this.http.get<Prefeitura[]>(`${this.api}/Prefeitura`, { headers: this.h })),
       uploads:    safe(this.http.get<PessoaUpload[]>(`${this.api}/PessoaUpload/ObterPorCodigo/${this.codigoPessoa}`, { headers: this.h })),
@@ -1253,8 +1254,8 @@ export class ClienteEditarComponent implements OnInit {
         // Injeta o e-mail do usuário de plataforma (vem do Identity, não da tabela Pessoa)
         const emailPlat = (r.userPlat as any)?.email ?? null;
         this.pessoa = { ...this.mapPessoa(p), usuario: emailPlat };
-        this.endereco = p.endereco ? { ...p.endereco } : {};
-        this.statusLogin = p.status === 'bloqueado';
+        this.endereco = r.endereco ? this.mapEndereco(r.endereco) : (p.endereco ? this.mapEndereco(p.endereco) : {});
+        this.statusLogin = String((r.userPlat as any)?.status ?? '').toLowerCase() === 'bloqueado';
         this.aplicarCertificado(p.certificado);
       }
       this.validacao = r.validacao ? (r.validacao as ValidacaoPessoa) : null;
@@ -1309,6 +1310,64 @@ export class ClienteEditarComponent implements OnInit {
     };
   }
 
+  private mapEndereco(raw: any): EnderecoData {
+    if (!raw) return {};
+    return {
+      codigo: raw.codigo ?? raw.Codigo,
+      codigoPessoa: raw.codigoPessoa ?? raw.CodigoPessoa,
+      tipoEnd: raw.tipoEnd ?? raw.TipoEnd ?? '',
+      logradouro: raw.logradouro ?? raw.Logradouro ?? '',
+      numrero: raw.numrero ?? raw.Numrero ?? '',
+      complemento: raw.complemento ?? raw.Complemento ?? '',
+      bairro: raw.bairro ?? raw.Bairro ?? '',
+      cidade: raw.cidade ?? raw.Cidade ?? '',
+      uf: raw.uf ?? raw.UF ?? '',
+      cep: raw.cep ?? raw.CEP ?? '',
+      excluido: raw.excluido ?? raw.Excluido ?? false
+    };
+  }
+
+  private buildPessoaSavePayload(): Record<string, unknown> {
+    const p = this.pessoa;
+    const status = typeof p.status === 'number' ? p.status : Number(p.status ?? 0) || 0;
+    return {
+      codigo: this.codigoPessoa,
+      nome: p.nome ?? '',
+      razao: p.razao ?? '',
+      documento: (p.documento || '').replace(/\D/g, ''),
+      incricaoMunicipal: (p.incricaoMunicipal || '').replace(/\D/g, ''),
+      ccm: (p.ccm || '').replace(/\D/g, ''),
+      descricaoAtividade: p.descricaoAtividade ?? '',
+      cnae: p.cnae ?? '',
+      tipoPessoa: p.tipoPessoa ?? 0,
+      status,
+      fatAtivo: !!p.fatAtivo,
+      prolaboreAtivo: !!p.prolaboreAtivo,
+      dASAtivo: !!p.dASAtivo,
+      mei: !!p.mei,
+      fisica: !!p.fisica,
+      numeroWhats: p.numeroWhats ?? '',
+      excluido: !!p.excluido,
+      dataInclusao: p.dataInclusao,
+      dataAtulizacao: new Date().toISOString(),
+      dataAbertura: p.dataAbertura || new Date().toISOString(),
+      endereco: {
+        codigo: this.endereco.codigo || 0,
+        codigoPessoa: this.codigoPessoa,
+        codigoRepLegal: 0,
+        tipoEnd: this.endereco.tipoEnd || '',
+        logradouro: this.endereco.logradouro || '',
+        numrero: this.endereco.numrero || '',
+        complemento: this.endereco.complemento || '',
+        bairro: this.endereco.bairro || '',
+        cidade: this.endereco.cidade || '',
+        uf: this.endereco.uf || '',
+        cep: (this.endereco.cep || '').replace(/\D/g, ''),
+        excluido: !!this.endereco.excluido
+      }
+    };
+  }
+
   private mapPessoa(raw: any): PessoaData {
     return {
       ...raw,
@@ -1329,6 +1388,8 @@ export class ClienteEditarComponent implements OnInit {
       numeroWhats: raw.numeroWhats ?? raw.NumeroWhats,
       dataInclusao: raw.dataInclusao ?? raw.DataInclusao,
       dataAtulizacao: raw.dataAtulizacao ?? raw.DataAtulizacao,
+      dataAbertura: raw.dataAbertura ?? raw.DataAbertura,
+      status: raw.status ?? raw.Status ?? 0,
       excluido: raw.excluido ?? raw.Excluido,
       endereco: raw.endereco ?? raw.Endereco,
       certificado: raw.certificado ?? raw.Certificado
@@ -1428,18 +1489,15 @@ export class ClienteEditarComponent implements OnInit {
       : this.http.put(`${this.api}/Autenticacao/Desbloqueio/${this.codigoPessoa}`, {}, { headers: this.h });
 
     bloqueioObs.pipe(catchError(() => of(null))).subscribe(() => {
-      const payload = {
-        ...this.pessoa,
-        endereco: { ...this.endereco, codigoPessoa: this.codigoPessoa },
-        documento: (this.pessoa.documento || '').replace(/\D/g, ''),
-        incricaoMunicipal: (this.pessoa.incricaoMunicipal || '').replace(/\D/g, ''),
-        ccm: (this.pessoa.ccm || '').replace(/\D/g, ''),
-        cep: (this.endereco.cep || '').replace(/\D/g, ''),
-        dataAtulizacao: new Date().toISOString()
-      };
+      const payload = this.buildPessoaSavePayload();
       this.http.put(`${this.api}/Pessoa`, payload, { headers: this.h }).subscribe({
         next: () => { this.message.success('Dados salvos com sucesso!'); this.salvando = false; this.cdr.markForCheck(); },
-        error: (e) => { this.message.error(`Erro ao salvar (${e.status})`); this.salvando = false; this.cdr.markForCheck(); }
+        error: (e) => {
+          const msg = e?.error?.message || e?.error;
+          this.message.error(msg ? String(msg) : `Erro ao salvar (${e.status})`);
+          this.salvando = false;
+          this.cdr.markForCheck();
+        }
       });
     });
   }
