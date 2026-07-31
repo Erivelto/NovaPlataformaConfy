@@ -86,7 +86,7 @@ interface ListaStatusAgendamento {
               <th>Nome</th>
               <th nzWidth="110px">Data</th>
               <th nzWidth="100px" [nzSortFn]="sortValor">Valor</th>
-              <th nzWidth="150px">Status</th>
+              <th nzWidth="150px" [nzSortFn]="sortStatus" nzSortOrder="ascend">Status</th>
               <th nzWidth="110px" nzAlign="center"></th>
             </tr>
           </thead>
@@ -150,6 +150,10 @@ export class AgendamentoNfeComponent implements OnInit {
   sortValor = (a: ListaStatusAgendamento, b: ListaStatusAgendamento) =>
     this.parseValor(a.valor) - this.parseValor(b.valor);
 
+  sortStatus = (a: ListaStatusAgendamento, b: ListaStatusAgendamento) =>
+    this.prioridadeStatus(a.status) - this.prioridadeStatus(b.status)
+    || this.parseValor(a.valor) - this.parseValor(b.valor);
+
   private get h(): HttpHeaders {
     const t = localStorage.getItem('auth_token');
     return t ? new HttpHeaders({ Authorization: `Bearer ${t}` }) : new HttpHeaders();
@@ -188,7 +192,7 @@ export class AgendamentoNfeComponent implements OnInit {
           { label: 'Aguardando', value: s.aguardando ?? 0, icon: 'clock-circle', color: '#1890ff' }
         ];
         this.lista = lista.map((item: unknown) => this.normalizarItem(item));
-        this.ordenarPorValor();
+        this.ordenarPorStatus();
         this.aplicarFiltro();
         this.loading = false;
         this.cdr.markForCheck();
@@ -219,6 +223,7 @@ export class AgendamentoNfeComponent implements OnInit {
           .some(v => String(v ?? '').toLowerCase().includes(termo))
       );
     }
+    this.ordenarLista(this.listaFiltrada);
     this.pageIndex = 1;
   }
 
@@ -251,8 +256,25 @@ export class AgendamentoNfeComponent implements OnInit {
     };
   }
 
-  private ordenarPorValor(): void {
-    this.lista.sort((a, b) => this.parseValor(a.valor) - this.parseValor(b.valor));
+  private ordenarPorStatus(): void {
+    this.ordenarLista(this.lista);
+  }
+
+  /** Ordem: Erro → Aguardando → Executando → Sucesso; desempate por valor. */
+  private ordenarLista(itens: ListaStatusAgendamento[]): void {
+    itens.sort((a, b) =>
+      this.prioridadeStatus(a.status) - this.prioridadeStatus(b.status)
+      || this.parseValor(a.valor) - this.parseValor(b.valor)
+    );
+  }
+
+  private prioridadeStatus(status: string): number {
+    const s = (status || '').toLowerCase();
+    if (s.includes('erro')) return 0;
+    if (s.includes('aguardando')) return 1;
+    if (s.includes('executando') || s.includes('execusao') || s.includes('execução')) return 2;
+    if (s.includes('sucesso')) return 3;
+    return 4;
   }
 
   private parseValor(valor: string): number {
