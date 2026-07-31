@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -13,6 +14,9 @@ import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
+import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzMessageModule, NzMessageService } from 'ng-zorro-antd/message';
 import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
@@ -74,10 +78,11 @@ interface DadosEmissaoNota {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule, RouterModule,
+    CommonModule, FormsModule, RouterModule,
     NzCardModule, NzButtonModule, NzIconModule, NzSkeletonModule,
     NzCollapseModule, NzGridModule, NzDividerModule, NzAlertModule,
-    NzPopconfirmModule, NzMessageModule, PageTitleComponent
+    NzPopconfirmModule, NzModalModule, NzInputModule, NzFormModule,
+    NzMessageModule, PageTitleComponent
   ],
   template: `
     <div class="page">
@@ -139,7 +144,23 @@ interface DadosEmissaoNota {
           </nz-collapse-panel>
         </nz-collapse>
 
-        <ng-container *ngIf="corpo.status !== 'O'">
+        <ng-container *ngIf="isExecutando">
+          <nz-alert
+            nzType="warning"
+            nzShowIcon
+            nzMessage="Agendamento em execução"
+            nzDescription="Informe o número da NF-e já emitida para encerrar este agendamento e registrar a nota com os dados abaixo."
+            style="margin-top:16px">
+          </nz-alert>
+
+          <div class="acoes">
+            <button nz-button nzType="primary" (click)="abrirModalEncerrar()" [disabled]="acaoEmAndamento">
+              <i nz-icon nzType="check-circle"></i> Encerrar Manualmente
+            </button>
+          </div>
+        </ng-container>
+
+        <ng-container *ngIf="mostrarAcoesErro">
           <nz-alert
             nzType="error"
             nzShowIcon
@@ -168,6 +189,39 @@ interface DadosEmissaoNota {
           </div>
         </ng-container>
       </ng-container>
+
+      <nz-modal
+        [(nzVisible)]="modalEncerrarVisible"
+        nzTitle="Encerrar manualmente"
+        [nzFooter]="modalEncerrarFooter"
+        (nzOnCancel)="fecharModalEncerrar()">
+        <ng-template #modalEncerrarFooter>
+          <button nz-button (click)="fecharModalEncerrar()" [disabled]="acaoEmAndamento">Cancelar</button>
+          <button nz-button nzType="primary" [nzLoading]="acaoEmAndamento" (click)="confirmarEncerrarManual()">Confirmar</button>
+        </ng-template>
+        <ng-container *nzModalContent>
+          <p class="modal-desc">
+            Informe o número da NF-e emitida. O registro usará a data, o valor e a descrição deste agendamento.
+          </p>
+          <nz-form-item>
+            <nz-form-label nzRequired>Número NF-e</nz-form-label>
+            <nz-form-control>
+              <input
+                nz-input
+                type="number"
+                min="1"
+                [(ngModel)]="numeroNfeManual"
+                placeholder="Ex.: 123"
+                (keyup.enter)="confirmarEncerrarManual()" />
+            </nz-form-control>
+          </nz-form-item>
+          <div class="modal-resumo" *ngIf="corpo">
+            <div><strong>Data do agendamento:</strong> {{ formatarData(corpo.dataPrimeiraEmissao) }}</div>
+            <div><strong>Valor:</strong> {{ corpo.valor || '—' }}</div>
+            <div><strong>Descrição:</strong> {{ corpo.descricao || '—' }}</div>
+          </div>
+        </ng-container>
+      </nz-modal>
     </div>
   `,
   styles: [`
@@ -180,6 +234,8 @@ interface DadosEmissaoNota {
     .fld-value { background: #fafafa; border: 1px solid #f0f0f0; border-radius: 4px; padding: 6px 10px; min-height: 34px; margin-bottom: 8px; word-break: break-word; }
     .fld-block { white-space: pre-wrap; min-height: 60px; }
     .acoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    .modal-desc { margin-bottom: 16px; color: rgba(0,0,0,.65); }
+    .modal-resumo { margin-top: 12px; padding: 10px 12px; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 4px; font-size: .9rem; line-height: 1.6; }
   `]
 })
 export class AgendamentoNfeDetalheComponent implements OnInit {
@@ -193,6 +249,21 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
   pessoa: Pessoa | null = null;
   tomador: TomadorEmissaoNota | null = null;
   dadosEmissao: DadosEmissaoNota | null = null;
+  modalEncerrarVisible = false;
+  numeroNfeManual: number | null = null;
+
+  get isExecutando(): boolean {
+    const label = (this.statusLista || '').toLowerCase();
+    const codigo = (this.corpo?.status || '').toUpperCase();
+    return label.includes('executando') || codigo === 'I';
+  }
+
+  get mostrarAcoesErro(): boolean {
+    if (!this.corpo || this.corpo.status === 'O' || this.isExecutando) return false;
+    const codigo = (this.corpo.status || '').toUpperCase();
+    const label = (this.statusLista || '').toLowerCase();
+    return codigo === 'E' || codigo === 'C' || label.includes('erro') || label.includes('aguardando');
+  }
 
   get subtitulo(): string {
     if (!this.corpo) return 'Carregando agendamento...';
@@ -280,6 +351,48 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
     });
   }
 
+  abrirModalEncerrar(): void {
+    this.numeroNfeManual = null;
+    this.modalEncerrarVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  fecharModalEncerrar(): void {
+    if (this.acaoEmAndamento) return;
+    this.modalEncerrarVisible = false;
+    this.numeroNfeManual = null;
+    this.cdr.markForCheck();
+  }
+
+  confirmarEncerrarManual(): void {
+    if (!this.corpo) return;
+    const numero = Math.floor(Number(this.numeroNfeManual ?? 0));
+    if (!numero || numero <= 0) {
+      this.message.warning('Informe o número da NF-e.');
+      return;
+    }
+
+    this.acaoEmAndamento = true;
+    this.cdr.markForCheck();
+
+    this.http.post<{ success?: boolean; numeroNfe?: number; message?: string }>(
+      `${this.api}/NotaFiscal/AdicionarDeAgendamentoManual`,
+      { agendamento: this.corpo.codigo, numeroNfe: numero },
+      { headers: this.h }
+    ).subscribe({
+      next: (res) => {
+        if (!res?.success || !(res.numeroNfe ?? 0)) {
+          this.message.error(res?.message || 'Não foi possível registrar a NF-e informada.');
+          this.acaoEmAndamento = false;
+          this.cdr.markForCheck();
+          return;
+        }
+        this.atualizarAgendamentoEmitido(res.numeroNfe!, 'Agendamento encerrado manualmente.', true);
+      },
+      error: (e) => this.tratarErroAcao('Erro ao encerrar agendamento manualmente.', e)
+    });
+  }
+
   emitidoManualmente(): void {
     if (!this.corpo) return;
     const codigo = this.corpo.codigo;
@@ -319,7 +432,7 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
     });
   }
 
-  private atualizarAgendamentoEmitido(ultimaNfe: number): void {
+  private atualizarAgendamentoEmitido(ultimaNfe: number, mensagemSucesso = 'Agendamento marcado como emitido manualmente.', manterDataAgendamento = false): void {
     if (!this.corpo) return;
     const payload = {
       codigo: this.corpo.codigo,
@@ -328,7 +441,9 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
       codigoTomador: this.corpo.codigoTomador,
       descricao: this.corpo.descricao,
       valor: this.corpo.valor,
-      dataPrimeiraEmissao: new Date().toISOString(),
+      dataPrimeiraEmissao: manterDataAgendamento && this.corpo.dataPrimeiraEmissao
+        ? this.corpo.dataPrimeiraEmissao
+        : new Date().toISOString(),
       repetir: this.corpo.repetir,
       codigoServico: this.corpo.codigoServico,
       codigoPrefeitura: this.corpo.codigoPrefeitura,
@@ -337,7 +452,8 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
     };
     this.http.put<CorpoEmissaoNota>(`${this.api}/CorpoEmissaoNota`, payload, { headers: this.h }).subscribe({
       next: () => {
-        this.message.success('Agendamento marcado como emitido manualmente.');
+        this.modalEncerrarVisible = false;
+        this.message.success(mensagemSucesso);
         this.acaoEmAndamento = false;
         this.voltar();
       },
