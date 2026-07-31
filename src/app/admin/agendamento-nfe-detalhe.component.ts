@@ -287,14 +287,29 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
     this.acaoEmAndamento = true;
     this.cdr.markForCheck();
 
-    this.http.get<boolean>(`${this.api}/NotaFiscal/AdicionarDeAgendamento/${codigo}`, { headers: this.h }).subscribe({
-      next: (ok) => {
+    this.http.get<{ success?: boolean; numeroNfe?: number; message?: string } | boolean>(
+      `${this.api}/NotaFiscal/AdicionarDeAgendamento/${codigo}?json=1`,
+      { headers: this.h }
+    ).subscribe({
+      next: (res) => {
+        const payload = typeof res === 'object' && res !== null && !Array.isArray(res)
+          ? res as { success?: boolean; numeroNfe?: number; message?: string }
+          : null;
+        const ok = payload ? payload.success !== false && (payload.numeroNfe ?? 0) > 0 : res === true;
+        const numeroNfe = payload?.numeroNfe ?? 0;
+
         if (!ok) {
-          this.message.error('Não foi possível registrar a emissão manual.');
+          this.message.error(payload?.message || 'Não foi possível registrar a emissão manual.');
           this.acaoEmAndamento = false;
           this.cdr.markForCheck();
           return;
         }
+
+        if (numeroNfe > 0) {
+          this.atualizarAgendamentoEmitido(numeroNfe);
+          return;
+        }
+
         this.http.get<number>(`${this.api}/NotaFiscal/NotaFiscal/UltimaNfe/${codigoPessoa}`, { headers: this.h }).subscribe({
           next: (ultimaNfe) => this.atualizarAgendamentoEmitido(ultimaNfe),
           error: (e) => this.tratarErroAcao('Erro ao obter número da NF-e.', e)
