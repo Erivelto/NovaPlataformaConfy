@@ -287,38 +287,56 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
     this.acaoEmAndamento = true;
     this.cdr.markForCheck();
 
-    this.http.get<boolean>(`${this.api}/NotaFiscal/AdicionarDeAgendamento/${codigo}`, { headers: this.h })
-      .pipe(catchError(() => of(false)))
-      .subscribe(ok => {
+    this.http.get<boolean>(`${this.api}/NotaFiscal/AdicionarDeAgendamento/${codigo}`, { headers: this.h }).subscribe({
+      next: (ok) => {
         if (!ok) {
           this.message.error('Não foi possível registrar a emissão manual.');
           this.acaoEmAndamento = false;
           this.cdr.markForCheck();
           return;
         }
-        this.http.get<number>(`${this.api}/NotaFiscal/NotaFiscal/UltimaNfe/${codigoPessoa}`, { headers: this.h })
-          .pipe(catchError(() => of(0)))
-          .subscribe(ultimaNfe => {
-            const payload = {
-              ...this.corpo!,
-              status: 'O',
-              dataPrimeiraEmissao: new Date().toISOString(),
-              codigoEmissaoNota: ultimaNfe || this.corpo!.codigoEmissaoNota
-            };
-            this.http.put<CorpoEmissaoNota>(`${this.api}/CorpoEmissaoNota`, payload, { headers: this.h }).subscribe({
-              next: () => {
-                this.message.success('Agendamento marcado como emitido manualmente.');
-                this.acaoEmAndamento = false;
-                this.voltar();
-              },
-              error: () => {
-                this.message.error('Erro ao atualizar status do agendamento.');
-                this.acaoEmAndamento = false;
-                this.cdr.markForCheck();
-              }
-            });
-          });
-      });
+        this.http.get<number>(`${this.api}/NotaFiscal/NotaFiscal/UltimaNfe/${codigoPessoa}`, { headers: this.h }).subscribe({
+          next: (ultimaNfe) => this.atualizarAgendamentoEmitido(ultimaNfe),
+          error: (e) => this.tratarErroAcao('Erro ao obter número da NF-e.', e)
+        });
+      },
+      error: (e) => this.tratarErroAcao('Erro ao registrar emissão manual.', e)
+    });
+  }
+
+  private atualizarAgendamentoEmitido(ultimaNfe: number): void {
+    if (!this.corpo) return;
+    const payload = {
+      codigo: this.corpo.codigo,
+      codigoEmissaoNota: ultimaNfe || this.corpo.codigoEmissaoNota,
+      codigoPessoa: this.corpo.codigoPessoa,
+      codigoTomador: this.corpo.codigoTomador,
+      descricao: this.corpo.descricao,
+      valor: this.corpo.valor,
+      dataPrimeiraEmissao: new Date().toISOString(),
+      repetir: this.corpo.repetir,
+      codigoServico: this.corpo.codigoServico,
+      codigoPrefeitura: this.corpo.codigoPrefeitura,
+      excluido: this.corpo.excluido,
+      status: 'O'
+    };
+    this.http.put<CorpoEmissaoNota>(`${this.api}/CorpoEmissaoNota`, payload, { headers: this.h }).subscribe({
+      next: () => {
+        this.message.success('Agendamento marcado como emitido manualmente.');
+        this.acaoEmAndamento = false;
+        this.voltar();
+      },
+      error: (e) => this.tratarErroAcao('Erro ao atualizar status do agendamento.', e)
+    });
+  }
+
+  private tratarErroAcao(mensagemPadrao: string, erro: unknown): void {
+    const e = erro as { error?: { message?: string } | string; status?: number; message?: string };
+    const detalhe = typeof e?.error === 'string' ? e.error : e?.error?.message;
+    this.message.error(detalhe ? `${mensagemPadrao} ${detalhe}` : `${mensagemPadrao} (${e?.status ?? '—'})`);
+    console.error('[agendamento-nfe-detalhe]', mensagemPadrao, erro);
+    this.acaoEmAndamento = false;
+    this.cdr.markForCheck();
   }
 
   removerAgendamento(): void {
