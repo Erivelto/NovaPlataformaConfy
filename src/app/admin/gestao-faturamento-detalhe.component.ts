@@ -78,6 +78,9 @@ interface PessoaUploadNotas {
         <app-page-title
           title="Notas Fiscais"
           [subtitle]="subtituloCliente">
+          <button nz-button nzType="primary" class="btn-receita-anual" (click)="abrirReceitaAnual()">
+            <i nz-icon nzType="bar-chart"></i> Receita Anual
+          </button>
         </app-page-title>
       </div>
 
@@ -322,6 +325,14 @@ interface PessoaUploadNotas {
       margin-bottom: 4px;
     }
     .page-header app-page-title { flex: 1; min-width: 200px; }
+    .btn-receita-anual {
+      background: #52c41a;
+      border-color: #52c41a;
+    }
+    .btn-receita-anual:hover, .btn-receita-anual:focus {
+      background: #73d13d;
+      border-color: #73d13d;
+    }
     .filtros {
       display: flex;
       gap: 12px;
@@ -819,5 +830,9 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
 
   voltar(): void {
     this.router.navigate(['/administrativo/gestao-faturamento']);
+  }
+
+  abrirReceitaAnual(): void {
+    this.router.navigate(['/administrativo/receita-anual', this.codigoPessoa]);
   }
 }
