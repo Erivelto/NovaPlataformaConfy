@@ -145,9 +145,6 @@ interface DadosEmissaoNota {
                 <ng-template #semPrefeitura><span class="sem-dado">Sem Prefeitura</span></ng-template>
               </td>
               <td nzAlign="center" class="acoes-cell">
-                <button nz-button nzType="default" nzSize="small" nz-tooltip nzTooltipTitle="Faturamento" (click)="faturamento(c)">
-                  <i nz-icon nzType="bar-chart"></i>
-                </button>
                 <a
                   nz-button
                   nzType="primary"
@@ -318,17 +315,6 @@ export class ClientesFisicaComponent implements OnInit {
 
   rotaEditar(c: Pessoa): (string | number)[] {
     return rotaEditarCliente(resolveCodigoPessoa(c));
-  }
-
-  faturamento(c: Pessoa): void {
-    const codigo = resolveCodigoPessoa(c);
-    if (!codigo) {
-      this.message.error('Não foi possível abrir o faturamento: código inválido.');
-      return;
-    }
-    this.router.navigate(['/administrativo/cliente', codigo, 'faturamento'], {
-      queryParams: { origem: 'clientes-fisica' }
-    });
   }
 
   estaSelecionado(codigo: number): boolean {

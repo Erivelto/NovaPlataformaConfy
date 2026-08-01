@@ -172,13 +172,12 @@ interface DadosEmissaoNota {
               <td nzAlign="center" class="acoes-cell">
                 <button
                   nz-button
-                  nzType="primary"
+                  nzType="default"
                   nzSize="small"
                   nz-tooltip
-                  nzTooltipTitle="Detalhes"
+                  nzTooltipTitle="Faturamento"
                   (click)="detalhes(c)">
-                  <i nz-icon nzType="eye"></i>
-                  Detalhes
+                  <i nz-icon nzType="bar-chart"></i>
                 </button>
               </td>
             </tr>
