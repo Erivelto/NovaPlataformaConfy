@@ -72,16 +72,17 @@ interface PessoaUploadNotas {
   template: `
     <div class="gestao-faturamento-detalhe">
       <div class="page-header">
-        <button nz-button nzType="default" (click)="voltar()">
+        <button nz-button nzType="default" class="btn-voltar" (click)="voltar()">
           <i nz-icon nzType="arrow-left"></i> Voltar
         </button>
         <app-page-title
+          class="page-header-title"
           title="Notas Fiscais"
           [subtitle]="subtituloCliente">
-          <button nz-button nzType="primary" class="btn-receita-anual" (click)="abrirReceitaAnual()">
-            <i nz-icon nzType="bar-chart"></i> Receita Anual
-          </button>
         </app-page-title>
+        <button nz-button nzType="primary" class="btn-receita-anual" (click)="abrirReceitaAnual()">
+          <i nz-icon nzType="bar-chart"></i> Receita Anual
+        </button>
       </div>
 
       <nz-card>
@@ -324,8 +325,11 @@ interface PessoaUploadNotas {
       flex-wrap: wrap;
       margin-bottom: 4px;
     }
-    .page-header app-page-title { flex: 1; min-width: 200px; }
+    .page-header-title { flex: 1; min-width: 220px; }
+    .btn-voltar { flex-shrink: 0; margin-top: 12px; }
     .btn-receita-anual {
+      flex-shrink: 0;
+      margin-top: 12px;
       background: #52c41a;
       border-color: #52c41a;
     }
