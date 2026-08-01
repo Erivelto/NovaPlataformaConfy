@@ -20,7 +20,9 @@ import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { Router } from '@angular/router';
 import { LoginService } from '../services/login.service';
+import { ArquivoService } from '../services/arquivo.service';
 import { environment } from '../../environments/environment';
+import { catchError, of, timeout } from 'rxjs';
 
 interface NotaFiscal {
   numeroNFE: number;
@@ -31,6 +33,14 @@ interface NotaFiscal {
   valor?: string | number;
   tomador?: string;
   descricao?: string;
+}
+
+interface PessoaUploadNotas {
+  codigo: number;
+  codigoPessoa: number;
+  arquivo: string;
+  tipo: string;
+  numeroNfe?: number;
 }
 
 @Component({
@@ -83,7 +93,7 @@ interface NotaFiscal {
               <th nzWidth="140px">Data de Emissão</th>
               <th>Valor</th>
               <th nzWidth="140px">Status</th>
-              <th nzWidth="80px"></th>
+              <th nzWidth="180px" nzAlign="center">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -96,9 +106,17 @@ interface NotaFiscal {
                   {{ item.cancelada ? 'Cancelada' : 'Emitida' }}
                 </nz-tag>
               </td>
-              <td>
+              <td nzAlign="center" class="acoes-cell">
                 <button nz-button nzSize="small" (click)="verDetalhe(item)">
                   <i nz-icon nzType="eye"></i> Ver
+                </button>
+                <button
+                  *ngIf="temAnexo(item.numeroNFE)"
+                  nz-button
+                  nzSize="small"
+                  nzType="default"
+                  (click)="baixarAnexo(item.numeroNFE)">
+                  <i nz-icon nzType="download"></i> PDF
                 </button>
               </td>
             </tr>
@@ -208,6 +226,8 @@ interface NotaFiscal {
   styles: [`
     .notas-fiscais { padding: 8px 4px; }
     .row-cancelada td { color: #cf1322 !important; }
+    .acoes-cell { white-space: nowrap; }
+    .acoes-cell .ant-btn { margin: 0 2px; }
 
     /* Detalhe */
     .detalhe-grid { display: flex; flex-direction: column; gap: 16px; }
@@ -247,6 +267,8 @@ export class NotasFiscaisComponent implements OnInit {
   adicionarValor = '';
   salvando = false;
 
+  anexosPorNfe = new Map<number, PessoaUploadNotas>();
+
   private codigoPessoa = 0;
 
   constructor(
@@ -254,7 +276,8 @@ export class NotasFiscaisComponent implements OnInit {
     private loginService: LoginService,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private arquivoService: ArquivoService
   ) {}
 
   ngOnInit(): void {
@@ -293,6 +316,7 @@ export class NotasFiscaisComponent implements OnInit {
             return new Date(b.dataEmissao).getTime() - new Date(a.dataEmissao).getTime();
           });
         this.loading = false;
+        this.carregarAnexos();
         this.cdr.markForCheck();
       },
       error: (err) => {
@@ -314,6 +338,46 @@ export class NotasFiscaisComponent implements OnInit {
   verDetalhe(nota: NotaFiscal): void {
     this.notaSelecionada = nota;
     this.detalheVisible = true;
+  }
+
+  temAnexo(numeroNfe: number): boolean {
+    return this.anexosPorNfe.has(this.nfeKey(numeroNfe));
+  }
+
+  baixarAnexo(numeroNfe: number): void {
+    const anexo = this.anexosPorNfe.get(this.nfeKey(numeroNfe));
+    if (!anexo) {
+      this.message.warning('PDF não disponível para esta nota.');
+      return;
+    }
+    this.arquivoService.abrir(anexo.codigoPessoa, anexo.arquivo, `Notas Fiscal NF-e ${numeroNfe}`);
+  }
+
+  private carregarAnexos(): void {
+    this.http.get<any[]>(`${this.apiBase}/PessoaUploadNotas/ObterPorCodigo/${this.codigoPessoa}`, { headers: this.headers })
+      .pipe(timeout(10000), catchError(() => of([])))
+      .subscribe(lista => {
+        this.anexosPorNfe.clear();
+        (lista || []).forEach(item => {
+          const anexo = this.mapAnexo(item);
+          if (anexo.numeroNfe) this.anexosPorNfe.set(this.nfeKey(anexo.numeroNfe), anexo);
+        });
+        this.cdr.markForCheck();
+      });
+  }
+
+  private nfeKey(numero: number | string | undefined | null): number {
+    return Number(numero ?? 0);
+  }
+
+  private mapAnexo(raw: any): PessoaUploadNotas {
+    return {
+      codigo: raw.codigo ?? raw.Codigo,
+      codigoPessoa: raw.codigoPessoa ?? raw.CodigoPessoa,
+      arquivo: String(raw.arquivo ?? raw.Arquivo),
+      tipo: raw.tipo ?? raw.Tipo ?? 'Notas Fiscal',
+      numeroNfe: Number(raw.numeroNfe ?? raw.NumeroNfe ?? 0) || undefined
+    };
   }
 
   abrirAdicionarModal(): void {
