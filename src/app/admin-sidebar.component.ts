@@ -50,6 +50,9 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
             <li nz-menu-item (click)="go('/administrativo/gestao-debitos')" [nzSelected]="isActive('/administrativo/gestao-debitos')">
               <span nz-icon nzType="idcard"></span> Gestão Débitos
             </li>
+            <li nz-menu-item (click)="go('/administrativo/gestao-faturamento')" [nzSelected]="isActive('/administrativo/gestao-faturamento')">
+              <span nz-icon nzType="bar-chart"></span> Gestão Faturamento
+            </li>
             <li nz-menu-item (click)="go('/administrativo/devedores')" [nzSelected]="isActive('/administrativo/devedores')">
               <span nz-icon nzType="dollar"></span> Clientes Devedores Mês Atual
             </li>
