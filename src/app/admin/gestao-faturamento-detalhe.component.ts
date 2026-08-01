@@ -19,6 +19,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzMessageModule, NzMessageService } from 'ng-zorro-antd/message';
 import { NzUploadFile, NzUploadModule } from 'ng-zorro-antd/upload';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
+import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
@@ -65,7 +66,7 @@ interface PessoaUploadNotas {
     NzAlertModule, NzIconModule, NzModalModule,
     NzSkeletonModule, NzDividerModule, NzButtonModule,
     NzDatePickerModule, NzSelectModule, NzMessageModule,
-    NzUploadModule, NzPopconfirmModule,
+    NzUploadModule, NzPopconfirmModule, NzToolTipModule,
     PageTitleComponent, ExportExcelButtonComponent, EnvioArquivoClienteComponent
   ],
   template: `
