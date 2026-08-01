@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -24,6 +24,7 @@ import { ClienteMensagemRef, MensagemClienteLoteComponent } from '../components/
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtDate } from '../utils/excel-export.helpers';
 import { environment } from '../../environments/environment';
+import { normalizePessoa, resolveCodigoPessoa, rotaEditarCliente } from '../utils/pessoa.helpers';
 
 interface Pessoa {
   codigo: number; documento: string; nome: string; razao: string;
@@ -44,7 +45,7 @@ interface DadosEmissaoNota {
   imports: [CommonModule, FormsModule, NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule, NzModalModule,
     NzMessageModule, NzFormModule, NzSelectModule, NzCheckboxModule, PageTitleComponent,
-    ExportExcelButtonComponent, MensagemClienteLoteComponent],
+    ExportExcelButtonComponent, MensagemClienteLoteComponent, RouterModule],
   template: `
     <div class="page">
       <app-page-title title="Clientes Física" subtitle="Clientes Pessoa Física na Plataforma">
@@ -147,9 +148,15 @@ interface DadosEmissaoNota {
                 <button nz-button nzType="default" nzSize="small" nz-tooltip nzTooltipTitle="Faturamento" (click)="faturamento(c)">
                   <i nz-icon nzType="bar-chart"></i>
                 </button>
-                <button nz-button nzType="primary" nzSize="small" nz-tooltip nzTooltipTitle="Editar" (click)="editar(c)">
+                <a
+                  nz-button
+                  nzType="primary"
+                  nzSize="small"
+                  nz-tooltip
+                  nzTooltipTitle="Editar"
+                  [routerLink]="rotaEditar(c)">
                   <i nz-icon nzType="edit"></i>
-                </button>
+                </a>
                 <button nz-button nzDanger nzSize="small" nz-tooltip nzTooltipTitle="Cancelar cliente" (click)="abrirCancelamento(c)">
                   <i nz-icon nzType="close-circle"></i>
                 </button>
@@ -241,9 +248,19 @@ export class ClientesFisicaComponent implements OnInit {
     }).subscribe({ next: ({ pessoas, status, emissao }) => {
       const emissaoMap = new Map<number, DadosEmissaoNota>();
       (emissao as DadosEmissaoNota[]).forEach(e => emissaoMap.set(e.codigoPessoa, e));
-      const sm = new Map<number, Pessoa>(); (status as Pessoa[]).filter(p => p.fisica).forEach(p => sm.set(p.codigo, p));
+      const sm = new Map<number, Pessoa>();
+      (status as Pessoa[]).filter(p => p.fisica).forEach(p => {
+        const n = normalizePessoa(p as unknown as Record<string, unknown>);
+        sm.set(n.codigo, { ...n, ...p, codigo: n.codigo });
+      });
       const agora = new Date();
-      this.clientes = (pessoas as Pessoa[]).filter(p => p.fisica).map(p => {
+      this.clientes = (pessoas as Pessoa[])
+        .map(p => {
+          const n = normalizePessoa(p as unknown as Record<string, unknown>);
+          return { ...p, ...n };
+        })
+        .filter(p => p.fisica)
+        .map(p => {
         const diff = (agora.getTime() - new Date(p.dataInclusao).getTime()) / 86400000;
         const emissaoData = emissaoMap.get(p.codigo);
         return {
@@ -290,9 +307,26 @@ export class ClientesFisicaComponent implements OnInit {
     this.pageIndex = 1;
     this.cdr.markForCheck();
   }
-  editar(c: Pessoa): void { this.router.navigate(['/administrativo/cliente', c.codigo, 'editar']); }
+  editar(c: Pessoa): void {
+    const codigo = resolveCodigoPessoa(c);
+    if (!codigo) {
+      this.message.error('Não foi possível abrir o cliente: código inválido.');
+      return;
+    }
+    void this.router.navigate(rotaEditarCliente(codigo));
+  }
+
+  rotaEditar(c: Pessoa): (string | number)[] {
+    return rotaEditarCliente(resolveCodigoPessoa(c));
+  }
+
   faturamento(c: Pessoa): void {
-    this.router.navigate(['/administrativo/cliente', c.codigo, 'faturamento'], {
+    const codigo = resolveCodigoPessoa(c);
+    if (!codigo) {
+      this.message.error('Não foi possível abrir o faturamento: código inválido.');
+      return;
+    }
+    this.router.navigate(['/administrativo/cliente', codigo, 'faturamento'], {
       queryParams: { origem: 'clientes-fisica' }
     });
   }

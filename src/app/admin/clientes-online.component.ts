@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -26,6 +26,7 @@ import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtDate } from '../utils/excel-export.helpers';
 import { LoginService } from '../services/login.service';
 import { environment } from '../../environments/environment';
+import { normalizePessoa, resolveCodigoPessoa, rotaEditarCliente } from '../utils/pessoa.helpers';
 
 interface Pessoa {
   codigo: number;
@@ -60,7 +61,7 @@ interface PessoaCobranca {
     NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule,
     NzModalModule, NzMessageModule, NzFormModule, NzSelectModule, NzCheckboxModule,
-    PageTitleComponent, ExportExcelButtonComponent, MensagemClienteLoteComponent
+    PageTitleComponent, ExportExcelButtonComponent, MensagemClienteLoteComponent, RouterModule
   ],
   template: `
     <div class="clientes-online">
@@ -189,9 +190,15 @@ interface PessoaCobranca {
                 <button nz-button nzType="default" nzSize="small" nz-tooltip nzTooltipTitle="Faturamento" (click)="faturamento(c)">
                   <i nz-icon nzType="bar-chart"></i>
                 </button>
-                <button nz-button nzType="primary" nzSize="small" nz-tooltip nzTooltipTitle="Editar" (click)="editar(c)">
+                <a
+                  nz-button
+                  nzType="primary"
+                  nzSize="small"
+                  nz-tooltip
+                  nzTooltipTitle="Editar"
+                  [routerLink]="rotaEditar(c)">
                   <i nz-icon nzType="edit"></i>
-                </button>
+                </a>
                 <button nz-button nzDanger nzSize="small" nz-tooltip nzTooltipTitle="Cancelar cliente" (click)="abrirModalCancelamento(c)">
                   <i nz-icon nzType="close-circle"></i>
                 </button>
@@ -371,8 +378,16 @@ export class ClientesOnlineComponent implements OnInit {
 
         // Merge: prefere dados de /Status quando o mesmo codigo existir (igual ao getPessoa() do legado)
         const statusMap = new Map<number, Pessoa>();
-        (status as Pessoa[]).filter(p => !p.fisica).forEach(p => statusMap.set(p.codigo, p));
-        const listGeral = (pessoas as Pessoa[]).filter(p => !p.fisica);
+        (status as Pessoa[]).filter(p => !p.fisica).forEach(p => {
+          const n = normalizePessoa(p as unknown as Record<string, unknown>);
+          statusMap.set(n.codigo, { ...n, ...p, codigo: n.codigo });
+        });
+        const listGeral = (pessoas as Pessoa[])
+          .map(p => {
+            const n = normalizePessoa(p as unknown as Record<string, unknown>);
+            return { ...p, ...n };
+          })
+          .filter(p => !p.fisica);
         const merged = listGeral.map(p => statusMap.get(p.codigo) ?? p);
 
         const agora = new Date();
@@ -451,11 +466,25 @@ export class ClientesOnlineComponent implements OnInit {
   }
 
   editar(c: Pessoa): void {
-    this.router.navigate(['/administrativo/cliente', c.codigo, 'editar']);
+    const codigo = resolveCodigoPessoa(c);
+    if (!codigo) {
+      this.message.error('Não foi possível abrir o cliente: código inválido.');
+      return;
+    }
+    void this.router.navigate(rotaEditarCliente(codigo));
+  }
+
+  rotaEditar(c: Pessoa): (string | number)[] {
+    return rotaEditarCliente(resolveCodigoPessoa(c));
   }
 
   faturamento(c: Pessoa): void {
-    this.router.navigate(['/administrativo/cliente', c.codigo, 'faturamento'], {
+    const codigo = resolveCodigoPessoa(c);
+    if (!codigo) {
+      this.message.error('Não foi possível abrir o faturamento: código inválido.');
+      return;
+    }
+    this.router.navigate(['/administrativo/cliente', codigo, 'faturamento'], {
       queryParams: { origem: 'clientes' }
     });
   }
