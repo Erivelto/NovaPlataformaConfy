@@ -412,45 +412,49 @@ interface CobrancaAdicionalForm {
           <!-- Emissão NF -->
           <nz-divider nzText="Emissão de Nota Fiscal" nzOrientation="left"></nz-divider>
 
-          <!-- Registro existente -->
-          <ng-container *ngIf="emissoes.length > 0; else semEmissao">
-            <div class="das-info-box">
-              <div class="das-info-row">
-                <div class="das-info-item" style="flex:2">
-                  <span class="das-info-label">Usuário</span>
-                  <span class="das-info-val">{{ emissoes[0].usuario || '—' }}</span>
-                </div>
-                <div class="das-info-item" style="flex:1.5">
-                  <span class="das-info-label">Codigo Acesso</span>
-                  <span class="das-info-val">{{ emissoes[0].senha || '—' }}</span>
-                </div>
-                <div class="das-info-item" style="flex:2">
-                  <span class="das-info-label">Prefeitura</span>
-                  <span class="das-info-val">{{ emissoes[0].prefeitura || '—' }}</span>
-                </div>
-                <div class="das-info-item" style="flex:1.2">
-                  <span class="das-info-label">Cód. Prefeitura</span>
-                  <span class="das-info-val">{{ emissoes[0].codigoPrefeitura || '—' }}</span>
-                </div>
-                <button nz-button nzType="primary" nzGhost nzSize="small"
-                  (click)="editarEmissao(emissoes[0])"
-                  style="align-self:flex-end;flex-shrink:0">
-                  <i nz-icon nzType="edit"></i> Editar
-                </button>
-              </div>
-            </div>
-          </ng-container>
+          <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+            <button nz-button nzType="primary" (click)="abrirNovaEmissao()">
+              <i nz-icon nzType="plus"></i> Nova Credencial NF
+            </button>
+          </div>
 
-          <!-- Sem registro -->
-          <ng-template #semEmissao>
-            <div class="sem-anexo-box">
-              <i nz-icon nzType="file-text" style="font-size:32px;color:rgba(0,0,0,.25)"></i>
-              <span style="color:rgba(0,0,0,.45);margin:8px 0">Nenhuma credencial NF cadastrada.</span>
-              <button nz-button nzType="primary" nzGhost (click)="abrirNovaEmissao()">
-                <i nz-icon nzType="plus"></i> Cadastrar Credencial NF
-              </button>
-            </div>
-          </ng-template>
+          <nz-table [nzData]="emissoes" nzBordered nzSize="middle" [nzShowPagination]="false">
+            <thead><tr>
+              <th nzWidth="80px">Código</th>
+              <th>Usuário</th>
+              <th nzWidth="140px">Cód. Acesso</th>
+              <th>Prefeitura</th>
+              <th nzWidth="130px">Cód. Prefeitura</th>
+              <th nzWidth="110px" nzAlign="center">Status</th>
+              <th nzWidth="110px" nzAlign="center">Ação</th>
+            </tr></thead>
+            <tbody>
+              <tr *ngFor="let e of emissoes" [class.emissao-excluida]="e.excluido">
+                <td>{{ e.codigo }}</td>
+                <td>{{ e.usuario || '—' }}</td>
+                <td>{{ e.senha || '—' }}</td>
+                <td>{{ e.prefeitura || '—' }}</td>
+                <td>{{ e.codigoPrefeitura || '—' }}</td>
+                <td nzAlign="center">
+                  <nz-tag [nzColor]="e.excluido ? 'default' : 'success'">{{ e.excluido ? 'Desativado' : 'Ativo' }}</nz-tag>
+                </td>
+                <td nzAlign="center">
+                  <button *ngIf="!e.excluido" nz-button nzSize="small" nzType="primary" (click)="editarEmissao(e)" style="margin-right:6px">
+                    <i nz-icon nzType="edit"></i>
+                  </button>
+                  <button *ngIf="!e.excluido" nz-button nzDanger nzSize="small" nz-popconfirm
+                    nzPopconfirmTitle="Desativar esta credencial de emissão NF?"
+                    [nzLoading]="excluindoEmissao.has(e.codigo)" (nzOnConfirm)="excluirEmissao(e)">
+                    <i nz-icon nzType="delete"></i>
+                  </button>
+                  <span *ngIf="e.excluido" style="color:rgba(0,0,0,.25)">—</span>
+                </td>
+              </tr>
+              <tr *ngIf="emissoes.length === 0">
+                <td colspan="7" style="text-align:center;padding:24px;color:rgba(0,0,0,.45)">Nenhuma credencial NF cadastrada.</td>
+              </tr>
+            </tbody>
+          </nz-table>
 
           <!-- DAS -->
           <nz-divider nzText="Dados DAS" nzOrientation="left" style="margin-top:24px"></nz-divider>
@@ -1066,6 +1070,7 @@ interface CobrancaAdicionalForm {
     .novo-tipo-doc-box input { flex: 1; }
     .btn-boleto { display:inline-block;padding:4px 14px;background:#1890ff;color:#fff;border-radius:20px;font-size:.85rem;font-weight:500;text-decoration:none; }
     .btn-boleto:hover { background:#40a9ff;color:#fff; }
+    .emissao-excluida td { color: rgba(0,0,0,.45); background: #fafafa; }
   `]
 })
 export class ClienteEditarComponent implements OnInit {
@@ -1142,7 +1147,8 @@ export class ClienteEditarComponent implements OnInit {
   get temUsuario(): boolean { return !!(this.pessoa.usuario?.trim()); }
   get podeEnviarMensagemCliente(): boolean { return this.temWhats && this.temUsuario; }
   get temRepresentante(): boolean { return this.representantes.length > 0; }
-  get temDadosRobo(): boolean { return this.emissoes.length > 0 || this.dadosDasList.length > 0; }
+  get temEmissaoAtiva(): boolean { return this.emissoes.some(e => !e.excluido); }
+  get temDadosRobo(): boolean { return this.temEmissaoAtiva || this.dadosDasList.length > 0; }
   get temCobranca(): boolean { return this.cobranca.codigo > 0; }
   get temCertificado(): boolean { return !!(this.certificado?.codigo); }
   get certificadoVencido(): boolean {
@@ -1179,6 +1185,7 @@ export class ClienteEditarComponent implements OnInit {
 
   // Emissão NF
   emissaoVisible = false; salvandoEmissao = false;
+  excluindoEmissao = new Set<number>();
   emissaoForm: Partial<DadosEmissao> = { codigo: 0, codigoPessoa: 0, usuario: '', senha: '', prefeitura: '', codigoPrefeitura: '' };
 
   // DAS
@@ -1250,7 +1257,6 @@ export class ClienteEditarComponent implements OnInit {
       validacao:  safe(this.http.get<any>(`${this.api}/Pessoa/GetValidacaoPessoa/${this.codigoPessoa}`, { headers: this.h })),
       prefeituras: safe(this.http.get<Prefeitura[]>(`${this.api}/Prefeitura`, { headers: this.h })),
       uploads:    safe(this.http.get<PessoaUpload[]>(`${this.api}/PessoaUpload/ObterPorCodigo/${this.codigoPessoa}`, { headers: this.h })),
-      emissao:    safe(this.http.get<DadosEmissao[]>(`${this.api}/DadosEmissaoNota`, { headers: this.h })),
       cobranca:   safe(this.http.get<DadosCobranca>(`${this.api}/DadosDeCobranca/${this.codigoPessoa}`, { headers: this.h })),
       faturas:    safe(this.http.get<PessoaCobranca[]>(`${this.api}/PessoaCobranca/ObterPagamentoTresUltimos/${this.codigoPessoa}`, { headers: this.h })),
       cobrAdic:   safe(this.http.get<PessoaCobrancaAdicional[]>(`${this.api}/PessoaCobrancaAdicional/ObterPorCodigo/${this.codigoPessoa}`, { headers: this.h })),
@@ -1271,7 +1277,6 @@ export class ClienteEditarComponent implements OnInit {
         ? (r.uploads as any[]).map(item => this.mapDocumento(item))
         : [];
       this.mesclarTiposDosDocumentos();
-      this.emissoes = Array.isArray(r.emissao) ? (r.emissao as DadosEmissao[]).filter((e: DadosEmissao) => e.codigoPessoa === this.codigoPessoa) : [];
       if (r.cobranca && (r.cobranca as DadosCobranca).codigo) {
         this.cobranca = { ...(r.cobranca as DadosCobranca), codigoPessoa: this.codigoPessoa };
       } else {
@@ -1282,8 +1287,19 @@ export class ClienteEditarComponent implements OnInit {
         ? (r.cobrAdic as any[]).map(item => this.mapCobrancaAdicional(item)).sort((a, b) => (b.anoReferencia - a.anoReferencia) || (b.mesReferencia - a.mesReferencia))
         : [];
       this.carregarRepresentantes();
+      this.carregarEmissoes();
       this.carregarDAS();
     }, error: () => { this.loading = false; this.cdr.markForCheck(); }});
+  }
+
+  carregarEmissoes() {
+    this.http.get<DadosEmissao[]>(`${this.api}/DadosEmissaoNota/ListaPorPessoa/${this.codigoPessoa}`, { headers: this.h })
+      .pipe(timeout(8000), catchError(() => of([])))
+      .subscribe(r => {
+        const lista = Array.isArray(r) ? r : [];
+        this.emissoes = lista.map(item => this.mapEmissao(item));
+        this.cdr.markForCheck();
+      });
   }
 
   carregarRepresentantes() {
@@ -1295,6 +1311,19 @@ export class ClienteEditarComponent implements OnInit {
         this.loading = false;
         this.cdr.markForCheck();
       });
+  }
+
+  private mapEmissao(item: any): DadosEmissao {
+    return {
+      codigo: item.codigo ?? item.Codigo ?? 0,
+      codigoPessoa: item.codigoPessoa ?? item.CodigoPessoa ?? this.codigoPessoa,
+      usuario: item.usuario ?? item.Usuario ?? '',
+      senha: item.senha ?? item.Senha ?? '',
+      prefeitura: item.prefeitura ?? item.Prefeitura ?? '',
+      urlPrefeitura: item.urlPrefeitura ?? item.UrlPrefeitura,
+      codigoPrefeitura: item.codigoPrefeitura ?? item.CodigoPrefeitura ?? '',
+      excluido: !!(item.excluido ?? item.Excluido)
+    };
   }
 
   private mapRepresentante(item: any): RepresentanteLegal {
@@ -1684,17 +1713,54 @@ export class ClienteEditarComponent implements OnInit {
     });
   }
 
-  abrirNovaEmissao() { this.emissaoForm = { codigo: 0, codigoPessoa: this.codigoPessoa, usuario: '', senha: '', prefeitura: '', codigoPrefeitura: '' }; this.emissaoVisible = true; this.cdr.markForCheck(); }
-  editarEmissao(e: DadosEmissao) { this.emissaoForm = { ...e }; this.emissaoVisible = true; this.cdr.markForCheck(); }
+  abrirNovaEmissao() {
+    this.emissaoForm = { codigo: 0, codigoPessoa: this.codigoPessoa, usuario: '', senha: '', prefeitura: '', codigoPrefeitura: '', excluido: false };
+    this.emissaoVisible = true;
+    this.cdr.markForCheck();
+  }
+  editarEmissao(e: DadosEmissao) {
+    if (e.excluido) return;
+    this.emissaoForm = { ...e };
+    this.emissaoVisible = true;
+    this.cdr.markForCheck();
+  }
   salvarEmissao() {
     if (!this.emissaoForm.usuario?.trim() || !this.emissaoForm.prefeitura?.trim()) { this.message.warning('Preencha prefeitura e usuário.'); return; }
     this.salvandoEmissao = true; this.cdr.markForCheck();
-    const obs = this.emissaoForm.codigo
-      ? this.http.put(`${this.api}/DadosEmissaoNota`, { ...this.emissaoForm, codigoPessoa: this.codigoPessoa }, { headers: this.h })
-      : this.http.post(`${this.api}/DadosEmissaoNota`, { ...this.emissaoForm, codigoPessoa: this.codigoPessoa }, { headers: this.h });
+    const isEdicao = !!(this.emissaoForm.codigo && this.emissaoForm.codigo > 0);
+    const payload = {
+      ...this.emissaoForm,
+      codigoPessoa: this.codigoPessoa,
+      excluido: false
+    };
+    const obs = isEdicao
+      ? this.http.put(`${this.api}/DadosEmissaoNota`, payload, { headers: this.h })
+      : this.http.post(`${this.api}/DadosEmissaoNota`, payload, { headers: this.h });
     obs.subscribe({
-      next: () => { this.message.success('Credencial NF salva!'); this.salvandoEmissao = false; this.emissaoVisible = false; this.carregar(); },
+      next: () => {
+        this.message.success(isEdicao ? 'Credencial NF atualizada!' : 'Nova credencial NF cadastrada!');
+        this.salvandoEmissao = false;
+        this.emissaoVisible = false;
+        this.carregarEmissoes();
+      },
       error: (e) => { this.message.error(`Erro (${e.status})`); this.salvandoEmissao = false; this.cdr.markForCheck(); }
+    });
+  }
+  excluirEmissao(e: DadosEmissao) {
+    if (!e.codigo || e.excluido || this.excluindoEmissao.has(e.codigo)) return;
+    this.excluindoEmissao.add(e.codigo);
+    this.cdr.markForCheck();
+    this.http.delete(`${this.api}/DadosEmissaoNota?codigo=${e.codigo}`, { headers: this.h }).subscribe({
+      next: () => {
+        this.message.success('Credencial NF desativada.');
+        this.excluindoEmissao.delete(e.codigo);
+        this.carregarEmissoes();
+      },
+      error: (err) => {
+        this.message.error(err?.error?.message || err?.error || `Erro ao desativar credencial (${err.status})`);
+        this.excluindoEmissao.delete(e.codigo);
+        this.cdr.markForCheck();
+      }
     });
   }
 
