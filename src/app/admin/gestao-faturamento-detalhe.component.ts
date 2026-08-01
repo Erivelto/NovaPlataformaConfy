@@ -80,9 +80,6 @@ interface PessoaUploadNotas {
           title="Notas Fiscais"
           [subtitle]="subtituloCliente">
         </app-page-title>
-        <button nz-button nzType="primary" class="btn-receita-anual" (click)="abrirReceitaAnual()">
-          <i nz-icon nzType="bar-chart"></i> Receita Anual
-        </button>
       </div>
 
       <nz-card>
@@ -140,11 +137,16 @@ interface PessoaUploadNotas {
               · {{ notasBrutas.length }} retornada(s) pela API
             </ng-container>
           </span>
-          <app-export-excel-button
-            [data]="$any(notasFiltradas)"
-            [columns]="exportColumns"
-            [fileName]="exportFileName"
-            [loading]="loadingNotas" />
+          <div class="toolbar-acoes">
+            <button nz-button nzType="primary" class="btn-receita-anual" (click)="abrirReceitaAnual()">
+              <i nz-icon nzType="bar-chart"></i> Receita Anual
+            </button>
+            <app-export-excel-button
+              [data]="$any(notasFiltradas)"
+              [columns]="exportColumns"
+              [fileName]="exportFileName"
+              [loading]="loadingNotas" />
+          </div>
         </div>
 
         <ng-container *ngIf="loadingNotas">
@@ -328,8 +330,6 @@ interface PessoaUploadNotas {
     .page-header-title { flex: 1; min-width: 220px; }
     .btn-voltar { flex-shrink: 0; margin-top: 12px; }
     .btn-receita-anual {
-      flex-shrink: 0;
-      margin-top: 12px;
       background: #52c41a;
       border-color: #52c41a;
     }
@@ -372,6 +372,12 @@ interface PessoaUploadNotas {
       gap: 8px;
       flex-wrap: wrap;
       margin-bottom: 12px;
+    }
+    .toolbar-acoes {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .resultado-info { color: rgba(0,0,0,.45); font-size: .9rem; }
     .row-cancelada td { color: #cf1322 !important; }
