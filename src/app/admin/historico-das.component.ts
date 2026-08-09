@@ -329,7 +329,7 @@ interface Relatorio {
             (click)="abrirEnvioLoteAguardando()">
             <i nz-icon nzType="send"></i> Enviar selecionados ({{ selecionadosAguardando.size }})
           </button>
-          <app-export-excel-button [data]="$any(rows)" [columns]="exportColumnsDasFat" fileName="historico-das-aguardando" />
+          <app-export-excel-button [data]="$any(rows)" [columns]="exportColumnsDasAguardando" fileName="historico-das-aguardando" />
         </div>
         <nz-table [nzData]="rows" nzSize="small" nzBordered [nzPageSize]="15"
           [nzShowPagination]="rows.length > 15" class="sec-table" nzTableLayout="fixed">
@@ -348,7 +348,6 @@ interface Relatorio {
             <th nzWidth="105px" nzAlign="right">Val. Tributado</th>
             <th nzWidth="95px" nzAlign="right">Val. Tributo</th>
             <th nzWidth="160px">Mensagem</th>
-            <th nzWidth="105px" nzAlign="center">Status</th>
             <th nzWidth="150px" nzAlign="center">Ação</th>
           </tr></thead>
           <tbody>
@@ -367,7 +366,6 @@ interface Relatorio {
               <td nzAlign="right" class="mono">{{ r.valorTributado | dasValor }}</td>
               <td nzAlign="right" class="mono val-tributo">{{ r.valorTributo | dasValor }}</td>
               <td><span class="msg-cell" nz-tooltip [nzTooltipTitle]="r.mensagem">{{ r.mensagem || '—' }}</span></td>
-              <td nzAlign="center"><nz-tag [nzColor]="statusColor(r.status)">{{ r.status || '—' }}</nz-tag></td>
               <td nzAlign="center" class="acoes-cell">
                 <button *ngIf="r.nomeArquivo" nz-button nzType="link" nzSize="small" (click)="abrirArquivo(r)">Baixar</button>
                 <button *ngIf="r.nomeArquivo" nz-button nzType="link" nzSize="small" (click)="abrirEnvioDas(r)">
@@ -376,7 +374,7 @@ interface Relatorio {
                 <span *ngIf="!r.nomeArquivo" class="muted">—</span>
               </td>
             </tr>
-            <tr *ngIf="!rows.length"><td colspan="11" class="empty-row">Nenhum registro.</td></tr>
+            <tr *ngIf="!rows.length"><td colspan="10" class="empty-row">Nenhum registro.</td></tr>
           </tbody>
         </nz-table>
       </ng-template>
@@ -507,6 +505,17 @@ export class HistoricoDasComponent implements OnInit {
     { key: 'valorTributo', title: 'Val. Tributo' },
     { key: 'mensagem', title: 'Mensagem' },
     { key: 'status', title: 'Status' }
+  ];
+
+  readonly exportColumnsDasAguardando: ExcelExportColumn<DasItem>[] = [
+    { key: 'codigoPessoa', title: 'Cód.' },
+    { key: 'documento', title: 'CNPJ' },
+    { key: 'razao', title: 'Razão Social' },
+    { key: 'prefeitura', title: 'Prefeitura' },
+    { key: 'periodo', title: 'Período' },
+    { key: 'valorTributado', title: 'Val. Tributado' },
+    { key: 'valorTributo', title: 'Val. Tributo' },
+    { key: 'mensagem', title: 'Mensagem' }
   ];
 
   private get h(): HttpHeaders {
