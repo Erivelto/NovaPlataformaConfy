@@ -17,6 +17,8 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzMessageModule, NzMessageService } from 'ng-zorro-antd/message';
+import { NzFormModule } from 'ng-zorro-antd/form';
+import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzUploadFile, NzUploadModule } from 'ng-zorro-antd/upload';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
@@ -66,6 +68,7 @@ interface PessoaUploadNotas {
     NzAlertModule, NzIconModule, NzModalModule,
     NzSkeletonModule, NzDividerModule, NzButtonModule,
     NzDatePickerModule, NzSelectModule, NzMessageModule,
+    NzFormModule, NzInputModule,
     NzUploadModule, NzPopconfirmModule, NzToolTipModule,
     PageTitleComponent, ExportExcelButtonComponent, EnvioArquivoClienteComponent
   ],
@@ -138,6 +141,9 @@ interface PessoaUploadNotas {
             </ng-container>
           </span>
           <div class="toolbar-acoes">
+            <button nz-button nzType="primary" (click)="abrirAddFaturamentoModal()">
+              <i nz-icon nzType="plus"></i> Adic. Total NF
+            </button>
             <button nz-button nzType="primary" class="btn-receita-anual" (click)="abrirReceitaAnual()">
               <i nz-icon nzType="bar-chart"></i> Receita Anual
             </button>
@@ -317,6 +323,50 @@ interface PessoaUploadNotas {
     <app-envio-arquivo-cliente
       [(visible)]="envioVisible"
       [itens]="envioItens" />
+
+    <nz-modal
+      [(nzVisible)]="addFaturamentoVisible"
+      nzTitle="Adic. Total NF"
+      [nzWidth]="440"
+      [nzFooter]="footerAddFaturamento"
+      (nzOnCancel)="fecharAddFaturamentoModal()">
+      <ng-container *nzModalContent>
+        <nz-alert
+          nzType="warning"
+          nzMessage="Atenção"
+          nzDescription="Informe o mês/ano e o valor do faturamento. Os dados serão registrados como nota fiscal manual (status Prefeitura)."
+          nzShowIcon
+          style="margin-bottom:16px">
+        </nz-alert>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" nzRequired>Mês/Ano</nz-form-label>
+          <nz-form-control [nzSpan]="24" nzExtra="Formato: MM/AAAA">
+            <input
+              nz-input
+              placeholder="MM/AAAA"
+              [(ngModel)]="addFaturamentoMesAno"
+              maxlength="7"
+              (input)="formatarMesAnoFaturamento($event)" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" nzRequired>Valor</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <input
+              nz-input
+              [value]="addFaturamentoValor"
+              (input)="onAddFaturamentoValorInput($event)"
+              placeholder="R$ 0,00"
+              inputmode="numeric"
+              style="width:220px" />
+          </nz-form-control>
+        </nz-form-item>
+      </ng-container>
+      <ng-template #footerAddFaturamento>
+        <button nz-button (click)="fecharAddFaturamentoModal()" [disabled]="salvandoAddFaturamento">Cancelar</button>
+        <button nz-button nzType="primary" (click)="salvarAddFaturamento()" [nzLoading]="salvandoAddFaturamento">Salvar</button>
+      </ng-template>
+    </nz-modal>
   `,
   styles: [`
     .gestao-faturamento-detalhe { padding: 8px 4px; }
@@ -436,6 +486,11 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
 
   envioVisible = false;
   envioItens: ArquivoEnvioRef[] = [];
+
+  addFaturamentoVisible = false;
+  addFaturamentoMesAno = '';
+  addFaturamentoValor = '';
+  salvandoAddFaturamento = false;
 
   readonly exportColumns: ExcelExportColumn[] = [
     { key: 'numeroNFE', title: 'Nº da Nota' },
@@ -844,5 +899,114 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
 
   abrirReceitaAnual(): void {
     this.router.navigate(['/administrativo/receita-anual', this.codigoPessoa]);
+  }
+
+  abrirAddFaturamentoModal(): void {
+    this.addFaturamentoMesAno = '';
+    this.addFaturamentoValor = 'R$ 0,00';
+    this.addFaturamentoVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  fecharAddFaturamentoModal(): void {
+    this.addFaturamentoVisible = false;
+    this.cdr.markForCheck();
+  }
+
+  formatarMesAnoFaturamento(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let v = input.value.replace(/\D/g, '');
+    if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2, 6);
+    this.addFaturamentoMesAno = v;
+    input.value = v;
+  }
+
+  onAddFaturamentoValorInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let digits = input.value.replace(/\D/g, '');
+    digits = digits.replace(/^0+/, '') || '0';
+    while (digits.length < 3) digits = '0' + digits;
+    const intPart = digits.slice(0, -2);
+    const decPart = digits.slice(-2);
+    const intFormatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    this.addFaturamentoValor = `R$ ${intFormatted},${decPart}`;
+    setTimeout(() => {
+      input.value = this.addFaturamentoValor;
+      const len = input.value.length;
+      input.setSelectionRange(len, len);
+    });
+  }
+
+  salvarAddFaturamento(): void {
+    const mesAno = this.addFaturamentoMesAno.trim();
+    const valorStr = this.addFaturamentoValor.trim();
+
+    if (!/^\d{2}\/\d{4}$/.test(mesAno)) {
+      this.message.warning('Informe o mês/ano no formato MM/AAAA.');
+      return;
+    }
+    if (!valorStr || valorStr === 'R$ 0,00') {
+      this.message.warning('Informe o valor.');
+      return;
+    }
+
+    const [mesStr, anoStr] = mesAno.split('/');
+    const mes = parseInt(mesStr, 10);
+    const ano = parseInt(anoStr, 10);
+
+    if (mes < 1 || mes > 12) {
+      this.message.warning('Mês inválido.');
+      return;
+    }
+
+    const valorDecimal = parseFloat(valorStr.replace('R$ ', '').replace(/\./g, '').replace(',', '.'));
+    if (isNaN(valorDecimal) || valorDecimal <= 0) {
+      this.message.warning('Valor inválido.');
+      return;
+    }
+
+    this.salvandoAddFaturamento = true;
+    this.cdr.markForCheck();
+
+    this.http
+      .get<number>(`${this.api}/NotaFiscal/NotaFiscal/UltimaNfe/${this.codigoPessoa}`, { headers: this.headers })
+      .subscribe({
+        next: (ultimaNfe) => {
+          const nfe = typeof ultimaNfe === 'number' ? ultimaNfe : 0;
+          const mesPad = String(mes).padStart(2, '0');
+          const body = {
+            codigoPessoa: this.codigoPessoa,
+            codigoVerificacao: '',
+            urlNfe: '',
+            dataEmissao: `${ano}-${mesPad}-01T00:00:00`,
+            valorTotal: valorDecimal,
+            numeroNFE: nfe + 1,
+            statusPrefeitura: 'P',
+            dataEnvio: new Date().toISOString()
+          };
+
+          this.http
+            .post(`${this.api}/NotaFiscal`, body, { headers: this.headers })
+            .subscribe({
+              next: () => {
+                this.salvandoAddFaturamento = false;
+                this.addFaturamentoVisible = false;
+                this.message.success('Nota fiscal adicionada com sucesso!');
+                this.carregarNotas();
+                this.cdr.markForCheck();
+              },
+              error: (err) => {
+                this.salvandoAddFaturamento = false;
+                this.message.error(`Erro ao salvar nota fiscal (${err.status}).`);
+                this.cdr.markForCheck();
+              }
+            });
+        },
+        error: (err) => {
+          this.salvandoAddFaturamento = false;
+          this.message.error(`Erro ao buscar última NF (${err.status}).`);
+          this.cdr.markForCheck();
+        }
+      });
   }
 }
