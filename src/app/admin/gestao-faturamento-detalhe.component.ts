@@ -28,6 +28,7 @@ import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtCurrency, fmtDate } from '../utils/excel-export.helpers';
 import { ArquivoService } from '../services/arquivo.service';
 import { EnvioArquivoClienteComponent, ArquivoEnvioRef } from '../components/envio-arquivo-cliente.component';
+import { NovaSolicitacaoNfeComponent } from '../components/nova-solicitacao-nfe.component';
 import { environment } from '../../environments/environment';
 
 interface NotaFiscal {
@@ -70,7 +71,8 @@ interface PessoaUploadNotas {
     NzDatePickerModule, NzSelectModule, NzMessageModule,
     NzFormModule, NzInputModule,
     NzUploadModule, NzPopconfirmModule, NzToolTipModule,
-    PageTitleComponent, ExportExcelButtonComponent, EnvioArquivoClienteComponent
+    PageTitleComponent, ExportExcelButtonComponent, EnvioArquivoClienteComponent,
+    NovaSolicitacaoNfeComponent
   ],
   template: `
     <div class="gestao-faturamento-detalhe">
@@ -141,6 +143,9 @@ interface PessoaUploadNotas {
             </ng-container>
           </span>
           <div class="toolbar-acoes">
+            <app-nova-solicitacao-nfe
+              [codigoPessoa]="codigoPessoa"
+              buttonLabel="Nova Solicitação Nfe" />
             <button nz-button nzType="primary" (click)="abrirAddFaturamentoModal()">
               <i nz-icon nzType="plus"></i> Adic. Total NF
             </button>
