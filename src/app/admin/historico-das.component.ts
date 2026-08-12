@@ -47,6 +47,7 @@ interface DasItem {
   codigo: number; codigoPessoa: number; documento: string; razao: string;
   prefeitura: string; periodo: string; valorTributado: string; valorTributo: string;
   mensagem: string; status: string; nomeArquivo: string;
+  erroConsultaRobo?: boolean; erroConsultaDetalhe?: string;
 }
 interface Relatorio {
   totalSemCadastro: number; totalMEI: number; totalComErro: number;
@@ -220,7 +221,7 @@ interface Relatorio {
           <nz-collapse-panel [nzHeader]="hdr6" [nzActive]="false" [nzExtra]="cnt6">
             <ng-template #hdr6><span class="sec-hdr"><i nz-icon nzType="dollar" style="color:darkgoldenrod;margin-right:6px"></i>Sem valor de Faturamento</span></ng-template>
             <ng-template #cnt6><nz-badge [nzCount]="dados.semValorFaturamento.length" [nzStyle]="badgeStyle(dados.semValorFaturamento.length,'gold')"></nz-badge></ng-template>
-            <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semValorFaturamento, fileName: 'historico-das-sem-valor-faturamento', erro: false}"></ng-container>
+            <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semValorFaturamento, fileName: 'historico-das-sem-valor-faturamento', erro: false, marcarErroRobo: true}"></ng-container>
           </nz-collapse-panel>
 
           <!-- 7: Aguardando -->
@@ -281,7 +282,7 @@ interface Relatorio {
       </ng-template>
 
       <!-- Template: tabela DAS com botão Baixar -->
-      <ng-template #tabelaDASFat let-rows="rows" let-fileName="fileName" let-erro="erro">
+      <ng-template #tabelaDASFat let-rows="rows" let-fileName="fileName" let-erro="erro" let-marcarErroRobo="marcarErroRobo">
         <div class="sec-export"><app-export-excel-button [data]="$any(rows)" [columns]="exportColumnsDasFat" [fileName]="fileName" /></div>
         <nz-table [nzData]="rows" nzSize="small" nzBordered [nzPageSize]="15"
           [nzShowPagination]="rows.length > 15" class="sec-table" nzTableLayout="fixed">
@@ -298,7 +299,10 @@ interface Relatorio {
             <th nzWidth="80px" nzAlign="center">DAS</th>
           </tr></thead>
           <tbody>
-            <tr *ngFor="let r of rows" [class.row-erro]="erro || r.status === 'Não concluido'">
+            <tr *ngFor="let r of rows"
+              [class.row-erro]="erro || r.status === 'Não concluido'"
+              [class.row-erro-robo]="marcarErroRobo && r.erroConsultaRobo"
+              [nz-tooltip]="marcarErroRobo && r.erroConsultaRobo ? tooltipErroRobo(r) : null">
               <td class="mono">{{ r.codigoPessoa }}</td>
               <td class="mono">{{ r.documento | cnpj }}</td>
               <td class="razao-cell">{{ r.razao }}</td>
@@ -306,7 +310,15 @@ interface Relatorio {
               <td class="mono">{{ r.periodo | dasValor }}</td>
               <td nzAlign="right" class="mono">{{ r.valorTributado | dasValor }}</td>
               <td nzAlign="right" class="mono val-tributo">{{ r.valorTributo | dasValor }}</td>
-              <td><span class="msg-cell" nz-tooltip [nzTooltipTitle]="r.mensagem">{{ r.mensagem || '—' }}</span></td>
+              <td>
+                <ng-container *ngIf="marcarErroRobo && r.erroConsultaRobo; else msgPadrao">
+                  <span class="erro-robo-msg">Erro consulta robô - acessar prefeitura manualmente</span>
+                  <span *ngIf="r.mensagem" class="msg-cell muted">{{ r.mensagem }}</span>
+                </ng-container>
+                <ng-template #msgPadrao>
+                  <span class="msg-cell" nz-tooltip [nzTooltipTitle]="r.mensagem">{{ r.mensagem || '—' }}</span>
+                </ng-template>
+              </td>
               <td nzAlign="center"><nz-tag [nzColor]="statusColor(r.status)">{{ r.status || '—' }}</nz-tag></td>
               <td nzAlign="center">
                 <button *ngIf="r.nomeArquivo" nz-button nzType="link" nzSize="small"
@@ -466,6 +478,8 @@ interface Relatorio {
 
     .empty-row { text-align: center; padding: 28px; color: rgba(0,0,0,.3); font-style: italic; }
     .row-erro { color: #ff4d4f; }
+    .row-erro-robo { background-color: #fff3cd !important; }
+    .erro-robo-msg { display: block; color: #856404; font-weight: 600; font-size: .78rem; margin-bottom: 2px; }
   `]
 })
 export class HistoricoDasComponent implements OnInit {
@@ -539,16 +553,19 @@ export class HistoricoDasComponent implements OnInit {
     forkJoin({
       das: safe<Record<string, unknown>>(this.http.get<Record<string, unknown>[]>(`${this.api}/DAS`, { headers: this.h })),
       pessoas: safe<Record<string, unknown>>(this.http.get<Record<string, unknown>[]>(`${this.api}/Pessoa`, { headers: this.h })),
-      emissao: safe<Record<string, unknown>>(this.http.get<Record<string, unknown>[]>(`${this.api}/DadosEmissaoNota`, { headers: this.h }))
+      emissao: safe<Record<string, unknown>>(this.http.get<Record<string, unknown>[]>(`${this.api}/DadosEmissaoNota`, { headers: this.h })),
+      consultasErro: safe<Record<string, unknown>>(this.http.get<Record<string, unknown>[]>(`${this.api}/NotaFiscal/NotaFiscalConsulta/Erro/${mes}/${ano}`, { headers: this.h }))
     }).subscribe({
-      next: ({ das, pessoas, emissao }) => {
-        this.dados = this.montarRelatorio(
+      next: ({ das, pessoas, emissao, consultasErro }) => {
+        const relatorio = this.montarRelatorio(
           das as Record<string, unknown>[],
           pessoas as Record<string, unknown>[],
           emissao as Record<string, unknown>[],
           mes,
           ano
         );
+        this.aplicarErrosConsultaRobo(relatorio, consultasErro as Record<string, unknown>[]);
+        this.dados = relatorio;
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -679,6 +696,20 @@ export class HistoricoDasComponent implements OnInit {
     };
   }
 
+  private aplicarErrosConsultaRobo(relatorio: Relatorio, consultas: Record<string, unknown>[]): void {
+    const errosPorPessoa = new Map<number, string>();
+    consultas.forEach(c => {
+      const cod = Number(c['codigoPessoa'] ?? c['CodigoPessoa'] ?? 0);
+      if (cod) errosPorPessoa.set(cod, String(c['erroDetalhe'] ?? c['ErroDetalhe'] ?? ''));
+    });
+    relatorio.semValorFaturamento.forEach(d => {
+      if (errosPorPessoa.has(d.codigoPessoa)) {
+        d.erroConsultaRobo = true;
+        d.erroConsultaDetalhe = errosPorPessoa.get(d.codigoPessoa) || '';
+      }
+    });
+  }
+
   private mapDasItem(
     raw: Record<string, unknown>,
     emissaoMap: Map<number, string>,
@@ -706,6 +737,11 @@ export class HistoricoDasComponent implements OnInit {
       const tipo = d.periodo?.trim() ? `DAS ${d.periodo.trim()}` : 'DAS';
       this.arquivoService.abrir(d.codigoPessoa, d.nomeArquivo, tipo);
     }
+  }
+
+  tooltipErroRobo(r: DasItem): string {
+    const base = 'Erro na consulta do robô - acessar prefeitura manualmente';
+    return r.erroConsultaDetalhe ? `${base}: ${r.erroConsultaDetalhe}` : base;
   }
 
   alternarSelecaoAguardando(codigo: number, checked: boolean): void {
