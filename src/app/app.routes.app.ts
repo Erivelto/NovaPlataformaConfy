@@ -11,6 +11,10 @@ export const appRoutes: Routes = [
 		path: 'arquivo',
 		loadComponent: () => import('./arquivo-download.component').then(m => m.ArquivoDownloadComponent)
 	},
+	{
+		path: 'Arquivos/Resultado',
+		loadComponent: () => import('./arquivo-download.component').then(m => m.ArquivoDownloadComponent)
+	},
 	{ path: 'alterar-senha', loadComponent: () => import('./alterar-senha.component').then(m => m.AlterarSenhaComponent) },
 	{
 		path: '',

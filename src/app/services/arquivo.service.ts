@@ -25,12 +25,15 @@ export class ArquivoService {
   }
 
   /** URL amigável no domínio da plataforma (contabilcontfy.com.br). */
-  urlAmigavel(diretorioCompleto: number | string, nomeArquivo: string, tipo = ''): string {
+  urlAmigavel(diretorioCompleto: number | string, nomeArquivo: string, tipo = '', legadoDas = false): string {
     const base = environment.appUrl.replace(/\/$/, '');
     const params = new URLSearchParams({
       diretorioCompleto: String(diretorioCompleto),
       nomeArquivo
     });
+    if (legadoDas) {
+      return `${base}/Arquivos/Resultado?${params.toString()}`;
+    }
     if (tipo) {
       params.set('tipo', tipo);
     }
