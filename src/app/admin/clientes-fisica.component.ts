@@ -38,6 +38,14 @@ interface DadosEmissaoNota {
   [key: string]: any;
 }
 
+interface ResultadoMudarDeContador {
+  sucesso: boolean;
+  status: string;
+  mensagem: string;
+  codigoPessoa: number;
+  fisica: boolean;
+}
+
 @Component({
   selector: 'app-clientes-fisica',
   standalone: true,
@@ -76,7 +84,7 @@ interface DadosEmissaoNota {
       <nz-card style="margin-top:14px">
         <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <nz-input-group [nzPrefix]="pfx" style="max-width:380px">
-            <input nz-input placeholder="Buscar por CPF, nome ou código..." [(ngModel)]="filtro" (ngModelChange)="filtrar()" />
+            <input nz-input placeholder="Buscar por CNPJ, razão social ou código..." [(ngModel)]="filtro" (ngModelChange)="filtrar()" />
           </nz-input-group>
           <ng-template #pfx><i nz-icon nzType="search"></i></ng-template>
           <nz-select
@@ -120,8 +128,8 @@ interface DadosEmissaoNota {
                 (ngModelChange)="toggleSelecionarTodos($event)"></label>
             </th>
             <th nzWidth="80px">Código</th>
-            <th nzWidth="140px">CPF</th>
-            <th>Nome</th>
+            <th nzWidth="150px">CNPJ</th>
+            <th>Razão Social</th>
             <th nzWidth="140px">Prefeitura</th>
             <th nzWidth="132px" nzAlign="center">Ações</th>
           </tr></thead>
@@ -185,10 +193,30 @@ interface DadosEmissaoNota {
 
     <nz-modal [(nzVisible)]="adicionarVisible" nzTitle="Novo Cliente Física" [nzWidth]="500" [nzFooter]="ftAdd" (nzOnCancel)="adicionarVisible=false">
       <ng-container *nzModalContent>
-        <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>CPF</nz-form-label><nz-form-control [nzSpan]="24"><input nz-input [(ngModel)]="novo.cnpj" placeholder="000.000.000-00" /></nz-form-control></nz-form-item>
-        <nz-form-item><nz-form-label [nzSpan]="24">Celular</nz-form-label><nz-form-control [nzSpan]="24"><input nz-input [(ngModel)]="novo.celular" placeholder="(00) 00000-0000" /></nz-form-control></nz-form-item>
-        <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>E-mail</nz-form-label><nz-form-control [nzSpan]="24"><input nz-input [(ngModel)]="novo.email" /></nz-form-control></nz-form-item>
-        <nz-form-item><nz-form-label [nzSpan]="24" nzRequired>Nome</nz-form-label><nz-form-control [nzSpan]="24"><input nz-input [(ngModel)]="novo.razao" /></nz-form-control></nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" nzRequired>CNPJ</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <input nz-input [(ngModel)]="novo.cnpj" placeholder="00.000.000/0000-00" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24">Celular</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <input nz-input [(ngModel)]="novo.celular" placeholder="(00) 00000-0000" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" nzRequired>E-mail</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <input nz-input [(ngModel)]="novo.email" placeholder="email@empresa.com.br" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" nzRequired>Razão Social</nz-form-label>
+          <nz-form-control [nzSpan]="24">
+            <input nz-input [(ngModel)]="novo.razao" placeholder="Razão Social da empresa" />
+          </nz-form-control>
+        </nz-form-item>
       </ng-container>
       <ng-template #ftAdd>
         <button nz-button (click)="adicionarVisible=false" [disabled]="salvando">Fechar</button>
@@ -222,8 +250,8 @@ export class ClientesFisicaComponent implements OnInit {
 
   readonly exportColumns: ExcelExportColumn<Pessoa>[] = [
     { key: 'codigo', title: 'Código' },
-    { key: 'documento', title: 'CPF' },
-    { key: 'razao', title: 'Nome', format: (_v, row) => row.razao || row.nome || '' },
+    { key: 'documento', title: 'CNPJ' },
+    { key: 'razao', title: 'Razão Social', format: (_v, row) => row.razao || row.nome || '' },
     { key: 'prefeitura', title: 'Prefeitura', format: (_v, row) => row.prefeitura?.trim() || 'Sem Prefeitura' },
     { key: 'dataInclusao', title: 'Data Cadastro', format: fmtDate }
   ];
@@ -382,12 +410,37 @@ export class ClientesFisicaComponent implements OnInit {
   }
   abrirModalAdicionar() { this.novo = { cnpj: '', celular: '', email: '', razao: '' }; this.adicionarVisible = true; this.cdr.markForCheck(); }
   salvarNovo() {
-    if (!this.novo.cnpj.trim() || !this.novo.email.trim() || !this.novo.razao.trim()) { this.message.warning('Preencha CPF, e-mail e nome.'); return; }
+    const cnpj = this.novo.cnpj.replace(/\D/g, '');
+    if (!cnpj || cnpj.length !== 14 || !this.novo.email.trim() || !this.novo.razao.trim()) {
+      this.message.warning('Preencha CNPJ (14 dígitos), e-mail e razão social.');
+      return;
+    }
     this.salvando = true; this.cdr.markForCheck();
-    const params = new URLSearchParams({ cnpj: this.novo.cnpj.trim(), nome: this.novo.razao.trim(), email: this.novo.email.trim(), celular: this.novo.celular.trim() });
-    this.http.get(`${this.api}/Contratacao/MudarDeContadorFisica?${params}`, { headers: this.h }).subscribe({
-      next: () => { this.message.success('Cliente adicionado!'); this.salvando = false; this.adicionarVisible = false; this.carregar(); this.cdr.markForCheck(); },
-      error: (e) => { this.message.error(`Erro (${e.status})`); this.salvando = false; this.cdr.markForCheck(); }
+    const params = new URLSearchParams({
+      cnpj,
+      nome: this.novo.razao.trim(),
+      email: this.novo.email.trim(),
+      celular: this.novo.celular.trim()
+    });
+    this.http.get<ResultadoMudarDeContador>(`${this.api}/Contratacao/MudarDeContadorFisica?${params}`, { headers: this.h }).subscribe({
+      next: (res) => {
+        this.message.success(res.mensagem || 'Cliente adicionado com sucesso!');
+        this.salvando = false;
+        this.adicionarVisible = false;
+        this.carregar();
+        this.cdr.markForCheck();
+      },
+      error: (e) => {
+        const body = e.error as ResultadoMudarDeContador | null;
+        const msg = body?.mensagem || `Erro ao adicionar cliente (${e.status ?? 'sem resposta'}).`;
+        if (e.status === 409) {
+          this.message.warning(msg);
+        } else {
+          this.message.error(msg);
+        }
+        this.salvando = false;
+        this.cdr.markForCheck();
+      }
     });
   }
 }

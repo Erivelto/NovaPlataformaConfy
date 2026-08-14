@@ -47,6 +47,14 @@ interface DadosEmissaoNota {
   [key: string]: any;
 }
 
+interface ResultadoMudarDeContador {
+  sucesso: boolean;
+  status: string;
+  mensagem: string;
+  codigoPessoa: number;
+  fisica: boolean;
+}
+
 interface PessoaCobranca {
   codigoPessoa?: number;
   [key: string]: any;
@@ -572,31 +580,37 @@ export class ClientesOnlineComponent implements OnInit {
   }
 
   salvarNovoCliente(): void {
-    if (!this.novoCliente.cnpj.trim() || !this.novoCliente.email.trim() || !this.novoCliente.razao.trim()) {
-      this.message.warning('Preencha CNPJ, e-mail e razão social.');
+    const cnpj = this.novoCliente.cnpj.replace(/\D/g, '');
+    if (!cnpj || cnpj.length !== 14 || !this.novoCliente.email.trim() || !this.novoCliente.razao.trim()) {
+      this.message.warning('Preencha CNPJ (14 dígitos), e-mail e razão social.');
       return;
     }
     this.salvando = true;
     this.cdr.markForCheck();
 
-    // Igual ao legado: GET /api/Contratacao/MudarDeContador?cnpj=&nome=&email=&celular=
     const params = new URLSearchParams({
-      cnpj:    this.novoCliente.cnpj.trim(),
-      nome:    this.novoCliente.razao.trim(),
-      email:   this.novoCliente.email.trim(),
+      cnpj,
+      nome:  this.novoCliente.razao.trim(),
+      email: this.novoCliente.email.trim(),
       celular: this.novoCliente.celular.trim()
     });
 
-    this.http.get(`${this.api}/Contratacao/MudarDeContador?${params}`, { headers: this.headers }).subscribe({
-      next: () => {
-        this.message.success('Cliente adicionado com sucesso!');
+    this.http.get<ResultadoMudarDeContador>(`${this.api}/Contratacao/MudarDeContador?${params}`, { headers: this.headers }).subscribe({
+      next: (res) => {
+        this.message.success(res.mensagem || 'Cliente adicionado com sucesso!');
         this.salvando = false;
         this.adicionarVisible = false;
         this.carregar();
         this.cdr.markForCheck();
       },
       error: (err) => {
-        this.message.error(`Erro ao adicionar cliente (${err.status}).`);
+        const body = err.error as ResultadoMudarDeContador | null;
+        const msg = body?.mensagem || `Erro ao adicionar cliente (${err.status ?? 'sem resposta'}).`;
+        if (err.status === 409) {
+          this.message.warning(msg);
+        } else {
+          this.message.error(msg);
+        }
         this.salvando = false;
         this.cdr.markForCheck();
       }
