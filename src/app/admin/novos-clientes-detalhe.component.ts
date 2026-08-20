@@ -158,6 +158,46 @@ const LABEL_TIPO: Record<string, string> = {
             </div>
           </nz-card>
 
+          <!-- Etapas do processo (primeiro item em evidência) -->
+          <nz-card class="etapas-card" style="margin-bottom:16px">
+            <div class="etapas-card-header">
+              <span class="etapas-card-title"><i nz-icon nzType="dollar" style="margin-right:8px"></i>Etapas do Processo</span>
+              <nz-tag *ngIf="!pagamentoConcluido" nzColor="orange">Aguardando pagamento</nz-tag>
+              <nz-tag *ngIf="pagamentoConcluido" nzColor="success">Pagamento concluído</nz-tag>
+            </div>
+            <div *ngIf="!pagamentoConcluido" class="etapas-aviso">
+              Conclua a etapa de pagamento para liberar a alteração das demais etapas.
+            </div>
+            <div *ngFor="let etapa of etapasOrdenadas"
+              class="etapa-admin-row"
+              [class.etapa-destaque]="isEtapaPagamento(etapa.chave)"
+              [class.etapa-bloqueada]="etapaBloqueada(etapa)">
+              <div class="etapa-admin-info">
+                <div class="etapa-admin-label">
+                  <nz-tag *ngIf="isEtapaPagamento(etapa.chave)" nzColor="gold" style="margin-right:6px">1º</nz-tag>
+                  {{ etapaLabel(etapa.chave) }}
+                </div>
+                <div *ngIf="etapa.observacao" style="font-size:12px;color:#888;margin-top:2px">{{ etapa.observacao }}</div>
+                <div *ngIf="etapa.linkPagamento" style="font-size:12px;margin-top:2px">
+                  <a [href]="etapa.linkPagamento" target="_blank">{{ etapa.linkPagamento }}</a>
+                </div>
+                <div *ngIf="etapa.dataAtualizacao" style="font-size:11px;color:#bbb;margin-top:2px">
+                  Atualizado em {{ etapa.dataAtualizacao }} por {{ etapa.analistaResponsavel }}
+                </div>
+              </div>
+              <div class="etapa-admin-acoes">
+                <nz-tag [nzColor]="etapaTagColor(etapa.status)">{{ etapaStatusLabel(etapa.status) }}</nz-tag>
+                <button *ngIf="!etapaBloqueada(etapa)" nz-button nzType="link" nzSize="small" (click)="abrirEtapaModal(etapa)">
+                  <i nz-icon nzType="edit"></i> {{ isEtapaPagamento(etapa.chave) ? 'Validar pagamento' : 'Alterar' }}
+                </button>
+                <span *ngIf="etapaBloqueada(etapa)" nz-tooltip nzTooltipTitle="Conclua o pagamento para liberar esta etapa" style="color:#bbb;font-size:12px">
+                  <i nz-icon nzType="lock"></i> Bloqueada
+                </span>
+              </div>
+            </div>
+            <div *ngIf="!etapasOrdenadas.length" style="color:#999;font-size:13px">Nenhuma etapa encontrada.</div>
+          </nz-card>
+
           <!-- Documentos -->
           <nz-card [nzTitle]="'Documentos (' + lead.documentos.length + ')'" style="margin-bottom:16px">
             <div *ngIf="lead.documentos.length === 0" style="color:#888;padding:16px 0">
@@ -165,7 +205,9 @@ const LABEL_TIPO: Record<string, string> = {
             </div>
             <div *ngFor="let doc of lead.documentos" class="doc-row">
               <div class="doc-info">
-                <i nz-icon nzType="file-pdf" style="color:#ff4d4f;font-size:20px;margin-right:10px"></i>
+                <i nz-icon [nzType]="isImagemNome(doc.nomeArquivo) ? 'file' : 'file-text'"
+                  [style.color]="isImagemNome(doc.nomeArquivo) ? '#1890ff' : '#ff4d4f'"
+                  style="font-size:20px;margin-right:10px"></i>
                 <div>
                   <div class="doc-nome">{{ labelTipo(doc.tipo) }}</div>
                   <div class="doc-arquivo">{{ doc.nomeArquivo }} &middot; {{ doc.dataUpload }}</div>
@@ -174,7 +216,10 @@ const LABEL_TIPO: Record<string, string> = {
               </div>
               <div class="doc-acoes">
                 <nz-tag [nzColor]="docStatusColor(doc.status)">{{ docStatusLabel(doc.status) }}</nz-tag>
-                <button nz-button nzType="default" nzSize="small" (click)="baixar(doc.id)" nz-tooltip nzTooltipTitle="Abrir documento">
+                <button nz-button nzType="default" nzSize="small" (click)="visualizar(doc)" nz-tooltip nzTooltipTitle="Visualizar">
+                  <i nz-icon nzType="eye"></i>
+                </button>
+                <button nz-button nzType="default" nzSize="small" (click)="baixar(doc.id)" nz-tooltip nzTooltipTitle="Abrir em nova aba">
                   <i nz-icon nzType="download"></i>
                 </button>
                 <button nz-button nzType="primary" nzSize="small" *ngIf="doc.status !== 'aprovado'"
@@ -187,29 +232,6 @@ const LABEL_TIPO: Record<string, string> = {
                 </button>
               </div>
             </div>
-          </nz-card>
-
-          <!-- Etapas do processo -->
-          <nz-card nzTitle="Etapas do Processo" style="margin-bottom:16px">
-            <div *ngFor="let etapa of etapasOrdenadas" class="etapa-admin-row">
-              <div class="etapa-admin-info">
-                <div class="etapa-admin-label">{{ etapaLabel(etapa.chave) }}</div>
-                <div *ngIf="etapa.observacao" style="font-size:12px;color:#888;margin-top:2px">{{ etapa.observacao }}</div>
-                <div *ngIf="etapa.linkPagamento" style="font-size:12px;margin-top:2px">
-                  <a [href]="etapa.linkPagamento" target="_blank">{{ etapa.linkPagamento }}</a>
-                </div>
-                <div *ngIf="etapa.dataAtualizacao" style="font-size:11px;color:#bbb;margin-top:2px">
-                  Atualizado em {{ etapa.dataAtualizacao }} por {{ etapa.analistaResponsavel }}
-                </div>
-              </div>
-              <div class="etapa-admin-acoes">
-                <nz-tag [nzColor]="etapaTagColor(etapa.status)">{{ etapaStatusLabel(etapa.status) }}</nz-tag>
-                <button nz-button nzType="link" nzSize="small" (click)="abrirEtapaModal(etapa)">
-                  <i nz-icon nzType="edit"></i> Alterar
-                </button>
-              </div>
-            </div>
-            <div *ngIf="!etapasOrdenadas.length" style="color:#999;font-size:13px">Nenhuma etapa encontrada.</div>
           </nz-card>
 
           <!-- Ações do lead -->
@@ -239,6 +261,22 @@ const LABEL_TIPO: Record<string, string> = {
         </ng-container>
       </nz-skeleton>
     </div>
+
+    <!-- Modal: Visualizar documento -->
+    <nz-modal
+      [(nzVisible)]="modalPreview"
+      [nzTitle]="previewTitulo"
+      [nzFooter]="null"
+      nzWidth="860px"
+      (nzOnCancel)="fecharPreview()">
+      <ng-container *nzModalContent>
+        <div *ngIf="previewCarregando" style="text-align:center;padding:40px;color:#888">Carregando...</div>
+        <img *ngIf="!previewCarregando && previewUrl"
+          [src]="previewUrl"
+          [alt]="previewTitulo"
+          style="max-width:100%;max-height:70vh;display:block;margin:0 auto;border-radius:8px" />
+      </ng-container>
+    </nz-modal>
 
     <!-- Modal: Recusar Documento -->
     <nz-modal
@@ -330,6 +368,12 @@ const LABEL_TIPO: Record<string, string> = {
     .etapa-admin-info { flex:1 }
     .etapa-admin-label { font-weight:600; font-size:14px }
     .etapa-admin-acoes { display:flex; align-items:center; gap:6px }
+    .etapas-card { border:1px solid #ffe58f !important; box-shadow:0 4px 14px rgba(250,173,20,.18) }
+    .etapas-card-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap }
+    .etapas-card-title { font-size:16px; font-weight:700; color:#d48806 }
+    .etapas-aviso { background:#fffbe6; border:1px solid #ffe58f; color:#ad6800; padding:8px 12px; border-radius:8px; font-size:13px; margin-bottom:12px }
+    .etapa-destaque { background:#fffbe6; border-radius:8px; padding:12px 10px !important; border:1px solid #ffe58f !important; margin-bottom:8px }
+    .etapa-bloqueada { opacity:.55 }
   `],
 })
 export class NovosClientesDetalheComponent implements OnInit {
@@ -347,6 +391,11 @@ export class NovosClientesDetalheComponent implements OnInit {
   modalRecusarLead = false;
   motivoRecusaLead = '';
 
+  modalPreview = false;
+  previewUrl = '';
+  previewTitulo = '';
+  previewCarregando = false;
+
   modalEtapa = false;
   etapaSelecionada: EtapaDto | null = null;
   etapaNovoStatus = 'pendente';
@@ -355,6 +404,19 @@ export class NovosClientesDetalheComponent implements OnInit {
 
   get etapasOrdenadas(): EtapaDto[] {
     return (this.lead?.etapas ?? []).slice().sort((a, b) => a.ordem - b.ordem);
+  }
+
+  get pagamentoConcluido(): boolean {
+    const pag = this.etapasOrdenadas.find(e => this.isEtapaPagamento(e.chave));
+    return pag?.status === 'concluido';
+  }
+
+  isEtapaPagamento(chave: string): boolean {
+    return chave === 'pagamentos_taxas' || chave === 'pagamento_mensalidade';
+  }
+
+  etapaBloqueada(etapa: EtapaDto): boolean {
+    return !this.isEtapaPagamento(etapa.chave) && !this.pagamentoConcluido;
   }
 
   etapaLabel(chave: string): string  { return ETAPAS_CONFIG[chave] ?? chave; }
@@ -366,6 +428,10 @@ export class NovosClientesDetalheComponent implements OnInit {
   }
 
   abrirEtapaModal(etapa: EtapaDto): void {
+    if (this.etapaBloqueada(etapa)) {
+      this.msg.warning('Conclua a etapa de pagamento antes de alterar as demais.');
+      return;
+    }
     this.etapaSelecionada = etapa;
     this.etapaNovoStatus = etapa.status;
     this.etapaNovaObs = etapa.observacao ?? '';
@@ -376,6 +442,10 @@ export class NovosClientesDetalheComponent implements OnInit {
 
   confirmarEtapa(): void {
     if (!this.etapaSelecionada) return;
+    if (this.etapaBloqueada(this.etapaSelecionada)) {
+      this.msg.warning('Conclua a etapa de pagamento antes de alterar as demais.');
+      return;
+    }
     this.salvando = true;
     const body = { status: this.etapaNovoStatus, observacao: this.etapaNovaObs, linkPagamento: this.etapaNovoLink };
     this.http.put(`${this.api}/Integracao/Admin/Lead/${this.lead!.id}/Etapa/${this.etapaSelecionada.chave}`, body, { headers: this.headers() })
@@ -416,6 +486,43 @@ export class NovosClientesDetalheComponent implements OnInit {
   }
 
   voltar(): void { this.router.navigate(['/administrativo/novos-clientes']); }
+
+  isImagemNome(nome: string | undefined): boolean {
+    return /\.(jpe?g|png|gif|webp)$/i.test(nome ?? '');
+  }
+
+  visualizar(doc: DocumentoDto): void {
+    this.previewCarregando = true;
+    this.previewUrl = '';
+    this.previewTitulo = this.labelTipo(doc.tipo) + ' — ' + (doc.nomeArquivo ?? '');
+    this.http.get<{ url: string; nomeArquivo: string; isImagem?: boolean }>(
+      `${this.api}/Integracao/Admin/Documento/${doc.id}/Download`,
+      { headers: this.headers() }
+    ).pipe(catchError(() => of(null)))
+      .subscribe(res => {
+        if (!res?.url) {
+          this.previewCarregando = false;
+          this.msg.error('Não foi possível abrir o documento.');
+          this.cd.markForCheck();
+          return;
+        }
+        const imagem = res.isImagem || this.isImagemNome(res.nomeArquivo || doc.nomeArquivo);
+        if (imagem) {
+          this.previewUrl = res.url;
+          this.previewCarregando = false;
+          this.modalPreview = true;
+        } else {
+          this.previewCarregando = false;
+          window.open(res.url, '_blank');
+        }
+        this.cd.markForCheck();
+      });
+  }
+
+  fecharPreview(): void {
+    this.modalPreview = false;
+    this.previewUrl = '';
+  }
 
   baixar(docId: number): void {
     this.http.get<{ url: string; nomeArquivo: string }>(`${this.api}/Integracao/Admin/Documento/${docId}/Download`, { headers: this.headers() })

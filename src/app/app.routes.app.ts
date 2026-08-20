@@ -2,11 +2,12 @@ import { Routes } from '@angular/router';
 import { authGuard } from './services/auth.guard';
 import { adminGuard } from './services/admin.guard';
 import { integracaoGuard } from './services/integracao.guard';
+import { atendimentoRedirectGuard } from './services/atendimento-redirect.guard';
 
 /** Rotas da plataforma autenticada (deploy: contabilcontfy.com.br) */
 export const appRoutes: Routes = [
-	{ path: '', redirectTo: 'entrar', pathMatch: 'full' },
-	{ path: 'entrar', loadComponent: () => import('./login.component').then(m => m.LoginComponent) },
+	{ path: '', pathMatch: 'full', canActivate: [atendimentoRedirectGuard], loadComponent: () => import('./login.component').then(m => m.LoginComponent) },
+	{ path: 'entrar', canActivate: [atendimentoRedirectGuard], loadComponent: () => import('./login.component').then(m => m.LoginComponent) },
 	{ path: 'login', redirectTo: 'entrar', pathMatch: 'full' },
 
 	// Portal de Integração

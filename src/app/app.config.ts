@@ -60,7 +60,16 @@ import {
   StarOutline,
   StarFill,
   FolderOutline,
-  NumberOutline
+  NumberOutline,
+  FileOutline,
+  CheckOutline,
+  SafetyCertificateOutline,
+  LinkOutline,
+  UploadOutline,
+  ClockCircleOutline,
+  MailOutline,
+  SwapOutline,
+  FileDoneOutline
 } from '@ant-design/icons-angular/icons';
 import { ClienteExcluidoOutline } from './icons/cliente-excluido.icon';
 
@@ -84,7 +93,9 @@ export const appConfig: ApplicationConfig = {
       SaveOutline, DeleteOutline, InboxOutline, PaperClipOutline, ArrowLeftOutline,
       CheckCircleOutline, CloseCircleOutline, ExclamationCircleOutline, InfoCircleOutline,
       LoadingOutline, ReloadOutline, SearchOutline, DownloadOutline, StarOutline, StarFill,
-      FolderOutline, NumberOutline, ClienteExcluidoOutline
+      FolderOutline, NumberOutline, ClienteExcluidoOutline,
+      FileOutline, CheckOutline, SafetyCertificateOutline, LinkOutline,
+      UploadOutline, ClockCircleOutline, MailOutline, SwapOutline, FileDoneOutline
     ] }
   ]
 };

@@ -80,16 +80,16 @@ const TIPOS_DOCS_MUDANCA: TipoDoc[] = [
 
 const ETAPAS_CONFIG: Record<string, { label: string; descricao: string; icone: string }> = {
   // Abertura de Empresa
-  pagamentos_taxas:            { label: 'Pagamentos / Taxas',               icone: 'dollar',             descricao: 'Pagamento das taxas necessárias para abertura da empresa.' },
-  envio_documentos:            { label: 'Envio de Documentos',              icone: 'file-done',          descricao: 'Envio e aprovação de todos os documentos obrigatórios.' },
-  contrato_social:             { label: 'Criação de Contrato Social',       icone: 'file-protect',       descricao: 'Elaboração e registro do contrato social da empresa.' },
-  receita_federal:             { label: 'Processo Receita Federal / Jucesp',icone: 'bank',               descricao: 'Registro junto à Receita Federal e Junta Comercial.' },
-  certificado_digital:         { label: 'Criar Certificado Digital',        icone: 'safety-certificate', descricao: 'Emissão do certificado digital da empresa.' },
-  prefeitura_ecac:             { label: 'Cadastro Prefeitura / ECAC',       icone: 'home',               descricao: 'Cadastro junto à Prefeitura e portal e-CAC.' },
+  pagamentos_taxas:            { label: 'Pagamentos / Taxas',               icone: 'dollar',               descricao: 'Pagamento das taxas necessárias para abertura da empresa.' },
+  envio_documentos:            { label: 'Envio de Documentos',              icone: 'file',                 descricao: 'Envio e aprovação de todos os documentos obrigatórios.' },
+  contrato_social:             { label: 'Criação de Contrato Social',       icone: 'file-text',            descricao: 'Elaboração e registro do contrato social da empresa.' },
+  receita_federal:             { label: 'Processo Receita Federal / Jucesp',icone: 'bank',                 descricao: 'Registro junto à Receita Federal e Junta Comercial.' },
+  certificado_digital:         { label: 'Criar Certificado Digital',        icone: 'safety-certificate',   descricao: 'Emissão do certificado digital da empresa.' },
+  prefeitura_ecac:             { label: 'Cadastro Prefeitura / ECAC',       icone: 'home',                 descricao: 'Cadastro junto à Prefeitura e portal e-CAC.' },
   // Mudança de Contabilidade
-  pagamento_mensalidade:       { label: 'Pagamento Mensalidade',            icone: 'dollar',             descricao: 'Pagamento da primeira mensalidade do serviço de contabilidade.' },
-  certificado_digital_cliente: { label: 'Envio do Certificado Digital',     icone: 'safety-certificate', descricao: 'Envio do certificado digital da empresa ao analista por e-mail.' },
-  validar_prefeitura_ecac:     { label: 'Validar acesso Prefeitura / ECAC', icone: 'home',               descricao: 'Validação e configuração dos acessos à Prefeitura e e-CAC.' },
+  pagamento_mensalidade:       { label: 'Pagamento Mensalidade',            icone: 'dollar',               descricao: 'Pagamento da primeira mensalidade do serviço de contabilidade.' },
+  certificado_digital_cliente: { label: 'Envio do Certificado Digital',     icone: 'safety-certificate',   descricao: 'Envio do certificado digital da empresa ao analista por e-mail.' },
+  validar_prefeitura_ecac:     { label: 'Validar acesso Prefeitura / ECAC', icone: 'home',                 descricao: 'Validação e configuração dos acessos à Prefeitura e e-CAC.' },
 };
 
 @Component({
@@ -177,7 +177,10 @@ const ETAPAS_CONFIG: Record<string, { label: string; descricao: string; icone: s
               <!-- Conteúdo -->
               <div class="etapa-body">
                 <div class="etapa-header-row">
-                  <span class="etapa-label">{{ etapaLabel(etapa.chave) }}</span>
+                  <span class="etapa-label">
+                    <i nz-icon [nzType]="etapaIcone(etapa.chave)" class="etapa-title-icon"></i>
+                    {{ etapaLabel(etapa.chave) }}
+                  </span>
                   <nz-tag [nzColor]="etapaTagColor(etapa.status)" class="etapa-tag">
                     {{ etapaStatusLabel(etapa.status) }}
                   </nz-tag>
@@ -238,7 +241,7 @@ const ETAPAS_CONFIG: Record<string, { label: string; descricao: string; icone: s
   (nzOnCancel)="modalDocsVisivel = false">
   <ng-container *nzModalContent>
     <p style="color:#666;margin-bottom:20px">
-      Envie seus documentos em formato <strong>PDF</strong> (máx. 10 MB cada).
+      Envie seus documentos em <strong>PDF ou imagem</strong> (JPG, PNG, GIF, WEBP — máx. 10 MB cada).
       Documentos opcionais só precisam ser enviados se aplicável.
     </p>
 
@@ -263,7 +266,7 @@ const ETAPAS_CONFIG: Record<string, { label: string; descricao: string; icone: s
           <i nz-icon nzType="exclamation-circle"></i> {{ getDocRecusa(tipo.key) }}
         </div>
         <div *ngIf="getDocNome(tipo.key)" class="doc-nome-atual">
-          <i nz-icon nzType="file-pdf" style="color:#ff4d4f"></i> {{ getDocNome(tipo.key) }}
+          <i nz-icon nzType="file" style="color:#ff4d4f"></i> {{ getDocNome(tipo.key) }}
         </div>
       </div>
 
@@ -271,10 +274,10 @@ const ETAPAS_CONFIG: Record<string, { label: string; descricao: string; icone: s
         *ngIf="getDocStatus(tipo.key) !== 'aprovado'"
         [nzBeforeUpload]="gerarBeforeUpload(tipo.key)"
         [nzShowUploadList]="false"
-        nzAccept=".pdf">
+        nzAccept=".pdf,.jpg,.jpeg,.png,.gif,.webp">
         <button nz-button [nzLoading]="uploading[tipo.key]" nzType="default" nzSize="small">
           <i nz-icon nzType="upload"></i>
-          {{ getDocNome(tipo.key) ? 'Reenviar' : 'Enviar PDF' }}
+          {{ getDocNome(tipo.key) ? 'Reenviar' : 'Enviar arquivo' }}
         </button>
       </nz-upload>
       <nz-tag *ngIf="getDocStatus(tipo.key) === 'aprovado'" nzColor="success" style="margin-left:auto">
@@ -326,7 +329,8 @@ const ETAPAS_CONFIG: Record<string, { label: string; descricao: string; icone: s
 
     .etapa-body { flex:1; padding-top:8px; }
     .etapa-header-row { display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap; }
-    .etapa-label { font-weight:600; font-size:15px; color:#1a1a1a; }
+    .etapa-label { font-weight:600; font-size:15px; color:#1a1a1a; display:flex; align-items:center; gap:8px; }
+    .etapa-title-icon { color:var(--primary-color,#0a66c2); font-size:16px; }
     .etapa-tag  { font-size:12px; }
     .etapa-desc { color:#888; font-size:13px; margin:0 0 4px; }
     .etapa-obs  { font-size:13px; color:#555; background:#f5f5f5; padding:6px 10px; border-radius:6px; margin-top:6px; }
@@ -436,7 +440,10 @@ export class IntegracaoPainelComponent implements OnInit {
 
   gerarBeforeUpload(tipo: string) {
     return (file: NzUploadFile): boolean => {
-      if (file.type !== 'application/pdf') { this.msg.warning('Apenas arquivos PDF são aceitos.'); return false; }
+      const tiposAceitos = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      const tipoOk = (file.type && tiposAceitos.includes(file.type))
+        || /\.(pdf|jpe?g|png|gif|webp)$/i.test(file.name ?? '');
+      if (!tipoOk) { this.msg.warning('Envie PDF ou imagem (JPG, PNG, GIF, WEBP).'); return false; }
       if ((file.size ?? 0) > 10 * 1024 * 1024) { this.msg.warning('O arquivo excede 10 MB.'); return false; }
 
       this.uploading[tipo] = true; this.cdr.markForCheck();
