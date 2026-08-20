@@ -68,6 +68,9 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
             <li nz-menu-item (click)="go('/administrativo/agendamento-nfe')" [nzSelected]="isActive('/administrativo/agendamento-nfe')">
               <span nz-icon nzType="calendar"></span> Agendamento NFE
             </li>
+            <li nz-menu-item (click)="go('/administrativo/novos-clientes')" [nzSelected]="isActive('/administrativo/novos-clientes')">
+              <span nz-icon nzType="user"></span> Novos Clientes
+            </li>
           </ul>
         </li>
 

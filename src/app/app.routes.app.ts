@@ -1,12 +1,19 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './services/auth.guard';
 import { adminGuard } from './services/admin.guard';
+import { integracaoGuard } from './services/integracao.guard';
 
 /** Rotas da plataforma autenticada (deploy: contabilcontfy.com.br) */
 export const appRoutes: Routes = [
 	{ path: '', redirectTo: 'entrar', pathMatch: 'full' },
 	{ path: 'entrar', loadComponent: () => import('./login.component').then(m => m.LoginComponent) },
 	{ path: 'login', redirectTo: 'entrar', pathMatch: 'full' },
+
+	// Portal de Integração
+	{ path: 'integracao', redirectTo: 'integracao/entrar', pathMatch: 'full' },
+	{ path: 'integracao/cadastro', loadComponent: () => import('./integracao/integracao-cadastro.component').then(m => m.IntegracaoCadastroComponent) },
+	{ path: 'integracao/entrar', loadComponent: () => import('./integracao/integracao-login.component').then(m => m.IntegracaoLoginComponent) },
+	{ path: 'integracao/painel', loadComponent: () => import('./integracao/integracao-painel.component').then(m => m.IntegracaoPainelComponent), canActivate: [integracaoGuard] },
 	{
 		path: 'arquivo',
 		loadComponent: () => import('./arquivo-download.component').then(m => m.ArquivoDownloadComponent)
@@ -66,6 +73,8 @@ export const appRoutes: Routes = [
 			{ path: 'usuarios', loadComponent: () => import('./users-table.component').then(m => m.UsersTableComponent) },
 			{ path: 'mensalidades', loadComponent: () => import('./mensalidade/mensalidade.component').then(m => m.MensalidadeComponent) },
 			{ path: 'notas-fiscais', loadComponent: () => import('./notas-fiscais/notas-fiscais.component').then(m => m.NotasFiscaisComponent) },
+			{ path: 'novos-clientes', loadComponent: () => import('./admin/novos-clientes-lista.component').then(m => m.NovosClientesListaComponent) },
+			{ path: 'novos-clientes/:id', loadComponent: () => import('./admin/novos-clientes-detalhe.component').then(m => m.NovosClientesDetalheComponent) },
 			{ path: 'impostos', loadComponent: () => import('./receita-imposto/receita-imposto.component').then(m => m.ReceitaImpostoComponent) }
 		]
 	},
