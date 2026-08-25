@@ -89,10 +89,11 @@ export class MensagemClienteLoteComponent implements OnChanges {
   @Output() envioConcluido = new EventEmitter<void>();
 
   enviando = false;
-  form = { tipoMensagem: 'Email' as 'Email' | 'Whatsapp', mensagem: '' };
+  form = { tipoMensagem: 'Email' as 'Email' | 'Whatsapp' | 'Alerta', mensagem: '' };
   readonly tiposMensagem = [
     { value: 'Email' as const, label: 'Email' },
-    { value: 'Whatsapp' as const, label: 'Whatsapp' }
+    { value: 'Whatsapp' as const, label: 'Whatsapp' },
+    { value: 'Alerta' as const, label: 'Alerta (Push)' }
   ];
 
   constructor(

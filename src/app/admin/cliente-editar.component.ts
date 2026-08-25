@@ -1097,10 +1097,11 @@ export class ClienteEditarComponent implements OnInit {
   cobrancaAdicForm: CobrancaAdicionalForm = { valor: null, descricao: '', quantidadeRepeticao: 1 };
   mensagemClienteVisible = false;
   enviandoMensagemCliente = false;
-  mensagemClienteForm = { tipoMensagem: 'Email' as 'Email' | 'Whatsapp', mensagem: '' };
+  mensagemClienteForm = { tipoMensagem: 'Email' as 'Email' | 'Whatsapp' | 'Alerta', mensagem: '' };
   readonly tiposMensagemCliente = [
     { value: 'Email' as const, label: 'Email' },
-    { value: 'Whatsapp' as const, label: 'Whatsapp' }
+    { value: 'Whatsapp' as const, label: 'Whatsapp' },
+    { value: 'Alerta' as const, label: 'Alerta (Push)' }
   ];
   statusLogin = false;
   excluindoDoc = new Set<number>();

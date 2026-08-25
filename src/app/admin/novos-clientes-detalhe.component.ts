@@ -627,7 +627,7 @@ export class NovosClientesDetalheComponent implements OnInit {
 
   statusLabel(s: string): string {
     const map: Record<string, string> = {
-      aguardando_documentos: 'Aguardando Documentos',
+      pendente_docs: 'Aguardando Documentos',
       em_analise: 'Em Análise',
       aprovado: 'Aprovado',
       recusado: 'Recusado',
@@ -637,7 +637,7 @@ export class NovosClientesDetalheComponent implements OnInit {
 
   statusColor(s: string): string {
     const map: Record<string, string> = {
-      aguardando_documentos: 'orange',
+      pendente_docs: 'orange',
       em_analise: 'processing',
       aprovado: 'success',
       recusado: 'error',

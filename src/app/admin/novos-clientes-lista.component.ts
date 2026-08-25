@@ -34,7 +34,7 @@ interface LeadResumo {
 
 const STATUS_TABS = [
   { key: '',                    label: 'Todos'            },
-  { key: 'aguardando_documentos', label: 'Aguardando Docs' },
+  { key: 'pendente_docs', label: 'Aguardando Docs' },
   { key: 'em_analise',          label: 'Em Análise'       },
   { key: 'aprovado',            label: 'Aprovado'         },
   { key: 'recusado',            label: 'Recusado'         },
@@ -154,7 +154,7 @@ export class NovosClientesListaComponent implements OnInit {
 
   statusLabel(s: string): string {
     const map: Record<string, string> = {
-      aguardando_documentos: 'Aguardando Docs',
+      pendente_docs: 'Aguardando Docs',
       em_analise: 'Em Análise',
       aprovado: 'Aprovado',
       recusado: 'Recusado',
@@ -164,7 +164,7 @@ export class NovosClientesListaComponent implements OnInit {
 
   statusColor(s: string): string {
     const map: Record<string, string> = {
-      aguardando_documentos: 'orange',
+      pendente_docs: 'orange',
       em_analise: 'processing',
       aprovado: 'success',
       recusado: 'error',
