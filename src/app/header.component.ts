@@ -14,6 +14,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { LoginService } from './services/login.service';
 import { NotificacaoService, NotificacaoTela } from './services/notificacao.service';
+import { FaviconBadgeService } from './services/favicon-badge.service';
 
 @Component({
   selector: 'app-header',
@@ -121,6 +122,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private loginService: LoginService,
     private router: Router,
     private notificacaoService: NotificacaoService,
+    private faviconBadge: FaviconBadgeService,
   ) {}
 
   ngOnInit(): void {
@@ -136,9 +138,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
     if (this.loginService.estaAutenticado()) {
       this.pollSub = this.notificacaoService.pollingContagem(60000).subscribe(n => {
-        this.naoLidas = n;
+        this.atualizarContagem(n);
       });
     }
+  }
+
+  private atualizarContagem(count: number): void {
+    this.naoLidas = count;
+    this.faviconBadge.setCount(count);
   }
 
   ngOnDestroy(): void {
@@ -159,7 +166,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.notificacaoService.listar().subscribe({
       next: lista => {
         this.notificacoes = lista ?? [];
-        this.naoLidas = this.notificacoes.filter(n => !n.lida).length;
+        this.atualizarContagem(this.notificacoes.filter(n => !n.lida).length);
         this.carregandoNotif = false;
       },
       error: () => {
@@ -177,7 +184,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.notificacaoService.marcarLida(n.id).subscribe({
         next: () => {
           n.lida = true;
-          this.naoLidas = Math.max(0, this.naoLidas - 1);
+          this.atualizarContagem(Math.max(0, this.naoLidas - 1));
         }
       });
     }
@@ -191,12 +198,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.notificacaoService.marcarTodasLidas().subscribe({
       next: () => {
         this.notificacoes.forEach(n => n.lida = true);
-        this.naoLidas = 0;
+        this.atualizarContagem(0);
       }
     });
   }
 
   logout(): void {
+    this.faviconBadge.clear();
     this.loginService.logout();
     this.router.navigate(['/entrar']);
   }
