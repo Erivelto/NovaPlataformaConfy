@@ -6,7 +6,6 @@ import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzGridModule } from 'ng-zorro-antd/grid';
@@ -85,11 +84,11 @@ const ETAPAS_CONFIG: Record<string, { label: string; descricao: string; icone: s
   contrato_social:             { label: 'Criação de Contrato Social',       icone: 'file-text',            descricao: 'Elaboração e registro do contrato social da empresa.' },
   receita_federal:             { label: 'Processo Receita Federal / Jucesp',icone: 'bank',                 descricao: 'Registro junto à Receita Federal e Junta Comercial.' },
   certificado_digital:         { label: 'Criar Certificado Digital',        icone: 'safety-certificate',   descricao: 'Emissão do certificado digital da empresa.' },
-  prefeitura_ecac:             { label: 'Cadastro Prefeitura / ECAC',       icone: 'home',                 descricao: 'Cadastro junto à Prefeitura e portal e-CAC.' },
+  prefeitura_ecac:             { label: 'Cadastro Prefeitura/Simples Nacional',       icone: 'home',                 descricao: 'Cadastro junto à Prefeitura e portal e-CAC.' },
   // Mudança de Contabilidade
   pagamento_mensalidade:       { label: 'Pagamento Mensalidade',            icone: 'dollar',               descricao: 'Pagamento da primeira mensalidade do serviço de contabilidade.' },
   certificado_digital_cliente: { label: 'Envio do Certificado Digital',     icone: 'safety-certificate',   descricao: 'Envio do certificado digital da empresa ao analista por e-mail.' },
-  validar_prefeitura_ecac:     { label: 'Validar acesso Prefeitura / ECAC', icone: 'home',                 descricao: 'Validação e configuração dos acessos à Prefeitura e e-CAC.' },
+  validar_prefeitura_ecac:     { label: 'Validar acesso Prefeitura/Simples Nacional', icone: 'home',                 descricao: 'Validação e configuração dos acessos à Prefeitura e e-CAC.' },
 };
 
 @Component({
@@ -98,7 +97,7 @@ const ETAPAS_CONFIG: Record<string, { label: string; descricao: string; icone: s
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, HttpClientModule, FormsModule,
-    NzButtonModule, NzTagModule, NzUploadModule,
+    NzButtonModule, NzTagModule,
     NzSpinModule, NzCardModule, NzGridModule, NzDividerModule,
     NzIconModule, NzModalModule, NzResultModule, NzStepsModule,
     NzBadgeModule, NzToolTipModule, NzAlertModule,
@@ -270,16 +269,26 @@ const ETAPAS_CONFIG: Record<string, { label: string; descricao: string; icone: s
         </div>
       </div>
 
-      <nz-upload
-        *ngIf="getDocStatus(tipo.key) !== 'aprovado'"
-        [nzBeforeUpload]="gerarBeforeUpload(tipo.key)"
-        [nzShowUploadList]="false"
-        nzAccept=".pdf,.jpg,.jpeg,.png,.gif,.webp">
-        <button nz-button [nzLoading]="uploading[tipo.key]" nzType="default" nzSize="small">
+      <ng-container *ngIf="getDocStatus(tipo.key) !== 'aprovado'">
+        <input
+          #fileInp
+          type="file"
+          hidden
+          accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,application/pdf,image/jpeg,image/png,image/gif,image/webp"
+          (change)="onArquivoSelecionado($event, tipo.key)"
+        />
+        <button
+          nz-button
+          [nzLoading]="uploading[tipo.key]"
+          nzType="default"
+          nzSize="small"
+          type="button"
+          (click)="fileInp.click()"
+        >
           <i nz-icon nzType="upload"></i>
           {{ getDocNome(tipo.key) ? 'Reenviar' : 'Enviar arquivo' }}
         </button>
-      </nz-upload>
+      </ng-container>
       <nz-tag *ngIf="getDocStatus(tipo.key) === 'aprovado'" nzColor="success" style="margin-left:auto">
         <i nz-icon nzType="check-circle"></i> Aprovado
       </nz-tag>
@@ -438,31 +447,53 @@ export class IntegracaoPainelComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  gerarBeforeUpload(tipo: string) {
-    return (file: NzUploadFile): boolean => {
-      const tiposAceitos = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      const tipoOk = (file.type && tiposAceitos.includes(file.type))
-        || /\.(pdf|jpe?g|png|gif|webp)$/i.test(file.name ?? '');
-      if (!tipoOk) { this.msg.warning('Envie PDF ou imagem (JPG, PNG, GIF, WEBP).'); return false; }
-      if ((file.size ?? 0) > 10 * 1024 * 1024) { this.msg.warning('O arquivo excede 10 MB.'); return false; }
+  onArquivoSelecionado(event: Event, tipo: string): void {
+    const input = event.target as HTMLInputElement;
+    const arquivo = input.files?.[0];
+    input.value = '';
+    if (!arquivo) return;
 
-      this.uploading[tipo] = true; this.cdr.markForCheck();
-      const fd = new FormData();
-      fd.append('arquivo', file as any);
+    if (!this.arquivoPermitido(arquivo)) {
+      this.msg.warning('Envie PDF ou imagem (JPG, PNG, GIF, WEBP).');
+      return;
+    }
+    if (arquivo.size > 10 * 1024 * 1024) {
+      this.msg.warning('O arquivo excede 10 MB.');
+      return;
+    }
 
-      this.http.post(`${this.api}/Integracao/UploadDocumento?tipo=${tipo}`, fd, { headers: this.headers(true) }).subscribe({
-        next: () => {
-          this.msg.success('Documento enviado!');
-          this.uploading[tipo] = false;
-          this.carregar();
-        },
-        error: (e) => {
-          this.msg.error(e.error?.mensagem || 'Erro ao enviar documento.');
-          this.uploading[tipo] = false; this.cdr.markForCheck();
-        }
-      });
-      return false;
-    };
+    this.enviarDocumento(tipo, arquivo);
+  }
+
+  private arquivoPermitido(arquivo: File): boolean {
+    const tiposAceitos = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (arquivo.type && tiposAceitos.includes(arquivo.type)) return true;
+    return /\.(pdf|jpe?g|png|gif|webp)$/i.test(arquivo.name);
+  }
+
+  private enviarDocumento(tipo: string, arquivo: File): void {
+    this.uploading[tipo] = true;
+    this.cdr.markForCheck();
+
+    const fd = new FormData();
+    fd.append('arquivo', arquivo, arquivo.name);
+
+    this.http.post(`${this.api}/Integracao/UploadDocumento?tipo=${tipo}`, fd, { headers: this.headers(true) }).subscribe({
+      next: () => {
+        this.msg.success('Documento enviado!');
+        this.uploading[tipo] = false;
+        this.carregar();
+      },
+      error: (e) => {
+        this.msg.error(this.extrairErroApi(e));
+        this.uploading[tipo] = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private extrairErroApi(err: any): string {
+    return err?.error?.mensagem || err?.error?.Mensagem || err?.message || 'Erro ao enviar documento.';
   }
 
   /* ── Helpers documentos ── */

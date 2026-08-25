@@ -45,6 +45,7 @@ interface LeadDetalhe {
   cnpj: string;
   razaoSocial: string;
   nomeFantasia: string;
+  descricaoAtividade: string;
   nomeResponsavel: string;
   email: string;
   telefone: string;
@@ -73,11 +74,11 @@ const ETAPAS_CONFIG: Record<string, string> = {
   contrato_social:             'Criação de Contrato Social',
   receita_federal:             'Processo Receita Federal / Jucesp',
   certificado_digital:         'Criar Certificado Digital',
-  prefeitura_ecac:             'Cadastro Prefeitura / ECAC',
+  prefeitura_ecac:             'Cadastro Prefeitura/Simples Nacional',
   // Mudança de Contabilidade
   pagamento_mensalidade:       'Pagamento Mensalidade',
   certificado_digital_cliente: 'Envio do Certificado Digital',
-  validar_prefeitura_ecac:     'Validar acesso Prefeitura / ECAC',
+  validar_prefeitura_ecac:     'Validar acesso Prefeitura/Simples Nacional',
 };
 
 const LABEL_TIPO: Record<string, string> = {
@@ -116,46 +117,48 @@ const LABEL_TIPO: Record<string, string> = {
       <nz-skeleton [nzLoading]="loading" [nzActive]="true" [nzParagraph]="{rows:8}">
         <ng-container *ngIf="lead">
 
-          <!-- Cabeçalho do lead -->
-          <nz-card style="margin-bottom:16px">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+          <!-- Dados do cadastro -->
+          <nz-card class="lead-dados-card" style="margin-bottom:16px">
+            <div class="lead-dados-topo">
               <div>
-                <h2 style="margin:0">{{ lead.razaoSocial }}
-                  <nz-tag [nzColor]="lead.tipo === 'abertura' ? 'blue' : 'purple'" style="margin-left:8px">
+                <div class="lead-dados-kicker">Dados informados no cadastro</div>
+                <h2 class="lead-dados-titulo">{{ lead.razaoSocial || '—' }}</h2>
+                <div class="lead-dados-tags">
+                  <nz-tag [nzColor]="lead.tipo === 'abertura' ? 'blue' : 'purple'">
                     {{ lead.tipo === 'abertura' ? 'Abertura de Empresa' : 'Mudança de Contabilidade' }}
                   </nz-tag>
-                </h2>
-                <div *ngIf="lead.nomeFantasia" style="color:#888;margin-top:2px">{{ lead.nomeFantasia }}</div>
-              </div>
-              <nz-tag [nzColor]="statusColor(lead.status)" style="font-size:14px;padding:4px 12px">
-                {{ statusLabel(lead.status) }}
-              </nz-tag>
-            </div>
-
-            <nz-divider style="margin:12px 0"></nz-divider>
-
-            <div nz-row [nzGutter]="16">
-              <div nz-col [nzSpan]="8">
-                <div class="info-label">Responsável</div>
-                <div class="info-value">{{ lead.nomeResponsavel }}</div>
-              </div>
-              <div nz-col [nzSpan]="8">
-                <div class="info-label">E-mail</div>
-                <div class="info-value">{{ lead.email }}</div>
-              </div>
-              <div nz-col [nzSpan]="8">
-                <div class="info-label">Telefone</div>
-                <div class="info-value">{{ lead.telefone }}</div>
-              </div>
-              <div nz-col [nzSpan]="8" *ngIf="lead.cnpj" style="margin-top:12px">
-                <div class="info-label">CNPJ</div>
-                <div class="info-value">{{ lead.cnpj }}</div>
-              </div>
-              <div nz-col [nzSpan]="16" *ngIf="lead.observacaoAnalista" style="margin-top:12px">
-                <div class="info-label">Observação do Analista</div>
-                <div class="info-value" style="color:#d48806">{{ lead.observacaoAnalista }}</div>
+                  <nz-tag [nzColor]="statusColor(lead.status)">{{ statusLabel(lead.status) }}</nz-tag>
+                  <span class="lead-id">Lead #{{ lead.id }}</span>
+                </div>
               </div>
             </div>
+
+            <nz-descriptions nzBordered [nzColumn]="descricoesColunas" nzSize="middle" class="lead-descriptions">
+              <nz-descriptions-item nzTitle="Razão Social" [nzSpan]="lead.tipo === 'abertura' ? 2 : 1">
+                {{ exibir(lead.razaoSocial) }}
+              </nz-descriptions-item>
+              <nz-descriptions-item *ngIf="lead.tipo === 'abertura'" nzTitle="Nome Fantasia">
+                {{ exibir(lead.nomeFantasia) }}
+              </nz-descriptions-item>
+              <nz-descriptions-item *ngIf="lead.tipo === 'mudanca'" nzTitle="CNPJ">
+                {{ formatCnpj(lead.cnpj) }}
+              </nz-descriptions-item>
+              <nz-descriptions-item *ngIf="lead.tipo === 'abertura'" nzTitle="Descrição da Atividade" [nzSpan]="3">
+                <span class="desc-atividade">{{ exibir(lead.descricaoAtividade) }}</span>
+              </nz-descriptions-item>
+              <nz-descriptions-item nzTitle="Responsável">
+                {{ exibir(lead.nomeResponsavel) }}
+              </nz-descriptions-item>
+              <nz-descriptions-item nzTitle="E-mail">
+                <a [href]="'mailto:' + lead.email">{{ exibir(lead.email) }}</a>
+              </nz-descriptions-item>
+              <nz-descriptions-item nzTitle="Telefone / WhatsApp">
+                {{ exibir(lead.telefone) }}
+              </nz-descriptions-item>
+              <nz-descriptions-item *ngIf="lead.observacaoAnalista" nzTitle="Observação do Analista" [nzSpan]="3">
+                <span class="obs-analista">{{ lead.observacaoAnalista }}</span>
+              </nz-descriptions-item>
+            </nz-descriptions>
           </nz-card>
 
           <!-- Etapas do processo (primeiro item em evidência) -->
@@ -354,6 +357,15 @@ const LABEL_TIPO: Record<string, string> = {
     </nz-modal>
   `,
   styles: [`
+    .lead-dados-card { border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.06) }
+    .lead-dados-topo { margin-bottom:16px }
+    .lead-dados-kicker { font-size:12px; color:#888; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px }
+    .lead-dados-titulo { margin:0 0 8px; font-size:22px; font-weight:700; color:#1a1a1a }
+    .lead-dados-tags { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+    .lead-id { font-size:12px; color:#999 }
+    .lead-descriptions { margin-top:4px }
+    .desc-atividade { white-space:pre-wrap; line-height:1.5 }
+    .obs-analista { color:#d48806; white-space:pre-wrap }
     .info-label { font-size:12px; color:#888; margin-bottom:2px }
     .info-value  { font-weight:500 }
     .doc-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:12px 0; border-bottom:1px solid #f0f0f0 }
@@ -404,6 +416,18 @@ export class NovosClientesDetalheComponent implements OnInit {
 
   get etapasOrdenadas(): EtapaDto[] {
     return (this.lead?.etapas ?? []).slice().sort((a, b) => a.ordem - b.ordem);
+  }
+
+  readonly descricoesColunas = { xxl: 3, xl: 3, lg: 3, md: 2, sm: 1, xs: 1 };
+
+  exibir(valor: string | null | undefined): string {
+    return valor?.trim() ? valor.trim() : '—';
+  }
+
+  formatCnpj(cnpj: string | null | undefined): string {
+    const d = (cnpj ?? '').replace(/\D/g, '');
+    if (d.length !== 14) return this.exibir(cnpj);
+    return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
   }
 
   get pagamentoConcluido(): boolean {

@@ -155,6 +155,15 @@ import { environment } from '../../environments/environment';
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
+        <nz-form-label nzRequired>Descrição da Atividade</nz-form-label>
+        <nz-form-control [nzValidateStatus]="erroDescricaoAtividade ? 'error' : ''" nzErrorTip="Informe a descrição da atividade.">
+          <textarea nz-input name="descricaoAtividade" required [(ngModel)]="form.descricaoAtividade"
+            [nzAutosize]="{ minRows: 3, maxRows: 6 }"
+            placeholder="Descreva a atividade principal da empresa"
+            (ngModelChange)="erroDescricaoAtividade = false"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
         <nz-form-label>Nome do Responsável</nz-form-label>
         <nz-form-control>
           <input nz-input [(ngModel)]="form.nomeResponsavel" placeholder="Seu nome completo">
@@ -179,7 +188,8 @@ import { environment } from '../../environments/environment';
       </nz-form-item>
       <div class="actions">
         <button nz-button nzType="default" (click)="step = 2">← Voltar</button>
-        <button nz-button nzType="primary" class="primary-btn" [nzLoading]="carregando" (click)="cadastrar()">Cadastrar</button>
+        <button nz-button nzType="primary" class="primary-btn" [nzLoading]="carregando"
+          [disabled]="!formAberturaValido()" (click)="cadastrar()">Cadastrar</button>
       </div>
     </div>
 
@@ -221,7 +231,8 @@ export class IntegracaoCadastroComponent {
   email = '';
   codigo = '';
   erro = '';
-  form = { cnpj: '', razaoSocial: '', nomeFantasia: '', nomeResponsavel: '', telefone: '', senha: '' };
+  erroDescricaoAtividade = false;
+  form = { cnpj: '', razaoSocial: '', nomeFantasia: '', descricaoAtividade: '', nomeResponsavel: '', telefone: '', senha: '' };
 
   private readonly api = environment.apiUrl;
 
@@ -249,6 +260,13 @@ export class IntegracaoCadastroComponent {
     });
   }
 
+  formAberturaValido(): boolean {
+    return !!this.form.razaoSocial.trim()
+      && !!this.form.descricaoAtividade.trim()
+      && !!this.form.nomeResponsavel.trim()
+      && this.form.senha.length >= 6;
+  }
+
   cadastrar(): void {
     this.erro = '';
     const { razaoSocial, nomeResponsavel, senha } = this.form;
@@ -259,6 +277,12 @@ export class IntegracaoCadastroComponent {
       if (!razaoSocial.trim()) { this.erro = 'Razão social é obrigatória.'; return; }
     } else {
       if (!razaoSocial.trim()) { this.erro = 'Informe a razão social desejada.'; return; }
+      if (!this.form.descricaoAtividade.trim()) {
+        this.erro = 'Descrição da atividade é obrigatória.';
+        this.erroDescricaoAtividade = true;
+        this.cdr.markForCheck();
+        return;
+      }
     }
 
     this.carregando = true; this.cdr.markForCheck();
@@ -267,6 +291,7 @@ export class IntegracaoCadastroComponent {
       cnpj: this.tipo === 'mudanca' ? this.form.cnpj.replace(/\D/g, '') : null,
       razaoSocial: this.form.razaoSocial.trim(),
       nomeFantasia: this.form.nomeFantasia?.trim() || null,
+      descricaoAtividade: this.tipo === 'abertura' ? this.form.descricaoAtividade.trim() : null,
       nomeResponsavel: nomeResponsavel.trim(),
       telefone: this.form.telefone.trim(),
       senha, codigoVerificacao: this.codigo
