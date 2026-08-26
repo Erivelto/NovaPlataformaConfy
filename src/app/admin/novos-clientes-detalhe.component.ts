@@ -744,7 +744,7 @@ export class NovosClientesDetalheComponent implements OnInit {
     if (this.isAbertura || !this.leadTemCnpjValido)
       body.cnpj = cnpjDigits;
 
-    this.http.post<{ mensagem?: string; Mensagem?: string }>(
+    this.http.post<{ mensagem?: string; dados?: { usuarioAtualizado?: boolean } }>(
       `${this.api}/Integracao/Admin/Lead/${this.lead!.id}/Aprovar`,
       body,
       { headers: this.headers() }
@@ -755,7 +755,11 @@ export class NovosClientesDetalheComponent implements OnInit {
       this.salvando = false;
       if (res) {
         this.modalAprovarLead = false;
-        this.msg.success('Lead aprovado e cliente cadastrado na plataforma!');
+        if (res.dados?.usuarioAtualizado === false) {
+          this.msg.warning('Lead aprovado, mas o usuário de login não foi atualizado. Verifique AspNetUsers.');
+        } else {
+          this.msg.success('Lead aprovado, cliente cadastrado e usuário liberado!');
+        }
         this.recarregar();
       }
       this.cd.markForCheck();
