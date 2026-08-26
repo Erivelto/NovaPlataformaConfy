@@ -19,6 +19,7 @@ import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { PageTitleComponent } from '../page-title.component';
 import { LoginService } from '../services/login.service';
 import { environment } from '../../environments/environment';
@@ -119,7 +120,7 @@ const LABEL_TIPO: Record<string, string> = {
     CommonModule, FormsModule,
     NzCardModule, NzTagModule, NzIconModule, NzButtonModule, NzSkeletonModule,
     NzModalModule, NzMessageModule, NzGridModule, NzDividerModule,
-    NzTimelineModule, NzInputModule, NzDescriptionsModule, NzPopconfirmModule, NzToolTipModule, NzSelectModule,
+    NzTimelineModule, NzInputModule, NzDescriptionsModule, NzPopconfirmModule, NzToolTipModule, NzSelectModule, NzRadioModule,
     PageTitleComponent,
   ],
   template: `
@@ -348,10 +349,31 @@ const LABEL_TIPO: Record<string, string> = {
       (nzOnOk)="confirmarAprovarLead()"
       (nzOnCancel)="modalAprovarLead=false"
       [nzOkLoading]="salvando"
-      nzOkText="Aprovar">
+      nzOkText="Aprovar e cadastrar">
       <ng-container *nzModalContent>
-        <p>Confirma a aprovação deste lead? O acesso à plataforma será liberado.</p>
-        <textarea nz-input [(ngModel)]="obsAprovacao" rows="2" placeholder="Observação (opcional)"></textarea>
+        <p>Confirma a aprovação deste lead? O cliente será cadastrado automaticamente na plataforma.</p>
+
+        <div style="margin:16px 0">
+          <div style="margin-bottom:8px;font-size:13px;color:#555;font-weight:600">Tipo de cliente</div>
+          <nz-radio-group [(ngModel)]="tipoClienteFisica">
+            <label nz-radio [nzValue]="0" style="display:block;margin-bottom:8px">Online</label>
+            <label nz-radio [nzValue]="1">Física</label>
+          </nz-radio-group>
+        </div>
+
+        <div *ngIf="isAbertura || !leadTemCnpjValido" style="margin-bottom:16px">
+          <div style="margin-bottom:4px;font-size:13px;color:#555;font-weight:600">CNPJ da empresa</div>
+          <input nz-input [(ngModel)]="cnpjAprovacao" placeholder="00.000.000/0000-00" maxlength="18" />
+          <div style="font-size:12px;color:#888;margin-top:4px">
+            Em abertura de empresa o CNPJ é informado pelo analista no momento da aprovação.
+          </div>
+        </div>
+        <div *ngIf="!isAbertura && leadTemCnpjValido" style="margin-bottom:16px;font-size:13px;color:#555">
+          CNPJ: <strong>{{ formatCnpj(lead!.cnpj) }}</strong>
+        </div>
+
+        <div style="margin-bottom:4px;font-size:13px;color:#555">Observação (opcional)</div>
+        <textarea nz-input [(ngModel)]="obsAprovacao" rows="2" placeholder="Observação para o cliente..."></textarea>
       </ng-container>
     </nz-modal>
 
@@ -448,6 +470,8 @@ export class NovosClientesDetalheComponent implements OnInit {
 
   modalAprovarLead = false;
   obsAprovacao = '';
+  tipoClienteFisica: 0 | 1 = 0;
+  cnpjAprovacao = '';
 
   modalRecusarLead = false;
   motivoRecusaLead = '';
@@ -686,22 +710,63 @@ export class NovosClientesDetalheComponent implements OnInit {
       });
   }
 
+  get leadTemCnpjValido(): boolean {
+    const d = (this.lead?.cnpj ?? '').replace(/\D/g, '');
+    return d.length === 14;
+  }
+
   abrirAprovarLead(): void {
     this.obsAprovacao = '';
+    this.tipoClienteFisica = 0;
+    this.cnpjAprovacao = this.lead?.cnpj?.trim() ? this.formatCnpj(this.lead.cnpj) : '';
     this.modalAprovarLead = true;
     this.cd.markForCheck();
   }
 
   confirmarAprovarLead(): void {
+    const cnpjDigits = this.cnpjParaCadastro();
+    if (cnpjDigits.length !== 14) {
+      this.msg.warning(this.isAbertura
+        ? 'Informe o CNPJ da empresa (14 dígitos) para aprovar.'
+        : 'CNPJ inválido. Verifique os dados do lead.');
+      return;
+    }
+    if (this.tipoClienteFisica !== 0 && this.tipoClienteFisica !== 1) {
+      this.msg.warning('Selecione o tipo de cliente: Online ou Física.');
+      return;
+    }
+
     this.salvando = true;
-    this.http.post(`${this.api}/Integracao/Admin/Lead/${this.lead!.id}/Aprovar`, { observacao: this.obsAprovacao }, { headers: this.headers() })
-      .pipe(catchError(() => of(null)))
-      .subscribe(() => {
-        this.salvando = false;
+    const body: { observacao: string; fisica: number; cnpj?: string } = {
+      observacao: this.obsAprovacao,
+      fisica: this.tipoClienteFisica,
+    };
+    if (this.isAbertura || !this.leadTemCnpjValido)
+      body.cnpj = cnpjDigits;
+
+    this.http.post<{ mensagem?: string; Mensagem?: string }>(
+      `${this.api}/Integracao/Admin/Lead/${this.lead!.id}/Aprovar`,
+      body,
+      { headers: this.headers() }
+    ).pipe(catchError(err => {
+      const msg = err?.error?.mensagem || err?.error?.Mensagem || 'Erro ao aprovar lead.';
+      this.msg.error(msg);
+      return of(null);
+    })).subscribe(res => {
+      this.salvando = false;
+      if (res) {
         this.modalAprovarLead = false;
-        this.msg.success('Lead aprovado! Acesso liberado.');
+        this.msg.success('Lead aprovado e cliente cadastrado na plataforma!');
         this.recarregar();
-      });
+      }
+      this.cd.markForCheck();
+    });
+  }
+
+  private cnpjParaCadastro(): string {
+    if (this.isAbertura || !this.leadTemCnpjValido)
+      return this.cnpjAprovacao.replace(/\D/g, '');
+    return (this.lead?.cnpj ?? '').replace(/\D/g, '');
   }
 
   abrirRecusarLead(): void {

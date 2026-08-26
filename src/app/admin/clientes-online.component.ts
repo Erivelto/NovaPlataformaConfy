@@ -588,14 +588,13 @@ export class ClientesOnlineComponent implements OnInit {
     this.salvando = true;
     this.cdr.markForCheck();
 
-    const params = new URLSearchParams({
+    this.http.post<ResultadoMudarDeContador>(`${this.api}/Contratacao/MudarDeContador`, {
       cnpj,
-      nome:  this.novoCliente.razao.trim(),
+      nome: this.novoCliente.razao.trim(),
       email: this.novoCliente.email.trim(),
-      celular: this.novoCliente.celular.trim()
-    });
-
-    this.http.get<ResultadoMudarDeContador>(`${this.api}/Contratacao/MudarDeContador?${params}`, { headers: this.headers }).subscribe({
+      celular: this.novoCliente.celular.trim(),
+      fisica: 0
+    }, { headers: this.headers }).subscribe({
       next: (res) => {
         this.message.success(res.mensagem || 'Cliente adicionado com sucesso!');
         this.salvando = false;

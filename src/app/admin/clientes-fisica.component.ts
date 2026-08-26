@@ -416,13 +416,13 @@ export class ClientesFisicaComponent implements OnInit {
       return;
     }
     this.salvando = true; this.cdr.markForCheck();
-    const params = new URLSearchParams({
+    this.http.post<ResultadoMudarDeContador>(`${this.api}/Contratacao/MudarDeContador`, {
       cnpj,
       nome: this.novo.razao.trim(),
       email: this.novo.email.trim(),
-      celular: this.novo.celular.trim()
-    });
-    this.http.get<ResultadoMudarDeContador>(`${this.api}/Contratacao/MudarDeContadorFisica?${params}`, { headers: this.h }).subscribe({
+      celular: this.novo.celular.trim(),
+      fisica: 1
+    }, { headers: this.h }).subscribe({
       next: (res) => {
         this.message.success(res.mensagem || 'Cliente adicionado com sucesso!');
         this.salvando = false;
