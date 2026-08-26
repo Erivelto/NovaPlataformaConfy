@@ -81,6 +81,22 @@ const ETAPAS_CONFIG: Record<string, string> = {
   validar_prefeitura_ecac:     'Validar acesso Prefeitura/Simples Nacional',
 };
 
+const ORDEM_ETAPAS_MUDANCA: Record<string, number> = {
+  envio_documentos: 1,
+  certificado_digital_cliente: 2,
+  validar_prefeitura_ecac: 3,
+  pagamento_mensalidade: 4,
+};
+
+function ordenarEtapas(etapas: EtapaDto[], tipo?: string): EtapaDto[] {
+  const isMudanca = (tipo ?? 'mudanca').toLowerCase() !== 'abertura';
+  if (!isMudanca) {
+    return etapas.slice().sort((a, b) => a.ordem - b.ordem);
+  }
+  return etapas.slice().sort((a, b) =>
+    (ORDEM_ETAPAS_MUDANCA[a.chave] ?? a.ordem) - (ORDEM_ETAPAS_MUDANCA[b.chave] ?? b.ordem));
+}
+
 const LABEL_TIPO: Record<string, string> = {
   cartao_cnpj:           'Cartão CNPJ',
   contrato_social:       'Contrato Social',
@@ -161,23 +177,26 @@ const LABEL_TIPO: Record<string, string> = {
             </nz-descriptions>
           </nz-card>
 
-          <!-- Etapas do processo (primeiro item em evidência) -->
-          <nz-card class="etapas-card" style="margin-bottom:16px">
+          <!-- Etapas do processo -->
+          <nz-card class="etapas-card" [class.etapas-card-abertura]="isAbertura" style="margin-bottom:16px">
             <div class="etapas-card-header">
               <span class="etapas-card-title"><i nz-icon nzType="dollar" style="margin-right:8px"></i>Etapas do Processo</span>
-              <nz-tag *ngIf="!pagamentoConcluido" nzColor="orange">Aguardando pagamento</nz-tag>
-              <nz-tag *ngIf="pagamentoConcluido" nzColor="success">Pagamento concluído</nz-tag>
+              <nz-tag *ngIf="isAbertura && !pagamentoConcluido" nzColor="orange">Aguardando pagamento</nz-tag>
+              <nz-tag *ngIf="isAbertura && pagamentoConcluido" nzColor="success">Pagamento concluído</nz-tag>
+              <nz-tag *ngIf="isMudanca && !pagamentoConcluido" nzColor="default">Mensalidade pendente</nz-tag>
+              <nz-tag *ngIf="isMudanca && pagamentoConcluido" nzColor="success">Mensalidade concluída</nz-tag>
             </div>
-            <div *ngIf="!pagamentoConcluido" class="etapas-aviso">
+            <div *ngIf="isAbertura && !pagamentoConcluido" class="etapas-aviso">
               Conclua a etapa de pagamento para liberar a alteração das demais etapas.
             </div>
             <div *ngFor="let etapa of etapasOrdenadas"
               class="etapa-admin-row"
-              [class.etapa-destaque]="isEtapaPagamento(etapa.chave)"
+              [class.etapa-destaque]="isEtapaPagamento(etapa.chave) && isAbertura"
               [class.etapa-bloqueada]="etapaBloqueada(etapa)">
               <div class="etapa-admin-info">
                 <div class="etapa-admin-label">
-                  <nz-tag *ngIf="isEtapaPagamento(etapa.chave)" nzColor="gold" style="margin-right:6px">1º</nz-tag>
+                  <nz-tag *ngIf="isEtapaPagamento(etapa.chave) && isAbertura" nzColor="gold" style="margin-right:6px">1º</nz-tag>
+                  <nz-tag *ngIf="isEtapaPagamento(etapa.chave) && isMudanca" nzColor="blue" style="margin-right:6px">Último</nz-tag>
                   {{ etapaLabel(etapa.chave) }}
                 </div>
                 <div *ngIf="etapa.observacao" style="font-size:12px;color:#888;margin-top:2px">{{ etapa.observacao }}</div>
@@ -380,7 +399,8 @@ const LABEL_TIPO: Record<string, string> = {
     .etapa-admin-info { flex:1 }
     .etapa-admin-label { font-weight:600; font-size:14px }
     .etapa-admin-acoes { display:flex; align-items:center; gap:6px }
-    .etapas-card { border:1px solid #ffe58f !important; box-shadow:0 4px 14px rgba(250,173,20,.18) }
+    .etapas-card { border:1px solid #f0f0f0 !important; box-shadow:none }
+    .etapas-card.etapas-card-abertura { border:1px solid #ffe58f !important; box-shadow:0 4px 14px rgba(250,173,20,.18) }
     .etapas-card-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap }
     .etapas-card-title { font-size:16px; font-weight:700; color:#d48806 }
     .etapas-aviso { background:#fffbe6; border:1px solid #ffe58f; color:#ad6800; padding:8px 12px; border-radius:8px; font-size:13px; margin-bottom:12px }
@@ -415,7 +435,15 @@ export class NovosClientesDetalheComponent implements OnInit {
   etapaNovoLink = '';
 
   get etapasOrdenadas(): EtapaDto[] {
-    return (this.lead?.etapas ?? []).slice().sort((a, b) => a.ordem - b.ordem);
+    return ordenarEtapas(this.lead?.etapas ?? [], this.lead?.tipo);
+  }
+
+  get isMudanca(): boolean {
+    return (this.lead?.tipo ?? 'mudanca').toLowerCase() !== 'abertura';
+  }
+
+  get isAbertura(): boolean {
+    return !this.isMudanca;
   }
 
   readonly descricoesColunas = { xxl: 3, xl: 3, lg: 3, md: 2, sm: 1, xs: 1 };
@@ -440,6 +468,7 @@ export class NovosClientesDetalheComponent implements OnInit {
   }
 
   etapaBloqueada(etapa: EtapaDto): boolean {
+    if (this.isMudanca) return false;
     return !this.isEtapaPagamento(etapa.chave) && !this.pagamentoConcluido;
   }
 

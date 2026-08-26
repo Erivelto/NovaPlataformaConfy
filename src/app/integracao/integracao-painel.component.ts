@@ -91,6 +91,22 @@ const ETAPAS_CONFIG: Record<string, { label: string; descricao: string; icone: s
   validar_prefeitura_ecac:     { label: 'Validar acesso Prefeitura/Simples Nacional', icone: 'home',                 descricao: 'Validação e configuração dos acessos à Prefeitura e e-CAC.' },
 };
 
+const ORDEM_ETAPAS_MUDANCA: Record<string, number> = {
+  envio_documentos: 1,
+  certificado_digital_cliente: 2,
+  validar_prefeitura_ecac: 3,
+  pagamento_mensalidade: 4,
+};
+
+function ordenarEtapas(etapas: EtapaDto[], tipo?: string): EtapaDto[] {
+  const isMudanca = (tipo ?? 'mudanca').toLowerCase() !== 'abertura';
+  if (!isMudanca) {
+    return etapas.slice().sort((a, b) => a.ordem - b.ordem);
+  }
+  return etapas.slice().sort((a, b) =>
+    (ORDEM_ETAPAS_MUDANCA[a.chave] ?? a.ordem) - (ORDEM_ETAPAS_MUDANCA[b.chave] ?? b.ordem));
+}
+
 @Component({
   selector: 'app-integracao-painel',
   standalone: true,
@@ -396,7 +412,7 @@ export class IntegracaoPainelComponent implements OnInit {
   }
 
   get etapasOrdenadas(): EtapaDto[] {
-    return (this.painel?.etapas ?? []).slice().sort((a, b) => a.ordem - b.ordem);
+    return ordenarEtapas(this.painel?.etapas ?? [], this.painel?.tipo);
   }
   get docsObrigatorios(): TipoDoc[] { return this.tiposDocs.filter(t => !t.opcional); }
   get docsEnviados(): number {
