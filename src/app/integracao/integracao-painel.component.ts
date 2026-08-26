@@ -225,6 +225,44 @@ function ordenarEtapas(etapas: EtapaDto[], tipo?: string): EtapaDto[] {
                 <div *ngIf="etapa.dataAtualizacao" class="etapa-data">
                   Atualizado em {{ etapa.dataAtualizacao }}
                 </div>
+
+                <!-- Contrato Social (abertura): baixar minuta e enviar assinado -->
+                <div *ngIf="etapa.chave === 'contrato_social' && isAbertura" class="contrato-social-box">
+                  <div *ngIf="minutaContrato" class="contrato-minuta-info">
+                    <i nz-icon nzType="file-pdf" style="color:#ff4d4f;margin-right:6px"></i>
+                    Minuta disponível: <strong>{{ minutaContrato.nomeArquivo }}</strong>
+                    <button nz-button nzType="primary" nzSize="small" style="margin-left:8px"
+                      (click)="baixarDocumento(minutaContrato.id)">
+                      <i nz-icon nzType="download"></i> Baixar minuta
+                    </button>
+                  </div>
+                  <div *ngIf="!minutaContrato" class="contrato-minuta-vazio">
+                    Aguardando envio da minuta pela Contfy.
+                  </div>
+
+                  <div *ngIf="minutaContrato" class="contrato-upload-row">
+                    <div *ngIf="contratoAssinado" class="contrato-assinado-status">
+                      <i nz-icon nzType="file-done" style="margin-right:6px"></i>
+                      Enviado: {{ contratoAssinado.nomeArquivo }}
+                      <nz-tag [nzColor]="getDocColor('contrato_social_assinado')" style="margin-left:6px">
+                        {{ getDocStatusLabel('contrato_social_assinado') }}
+                      </nz-tag>
+                      <div *ngIf="getDocRecusa('contrato_social_assinado')" class="doc-recusa-msg" style="margin-top:6px">
+                        <i nz-icon nzType="exclamation-circle"></i> {{ getDocRecusa('contrato_social_assinado') }}
+                      </div>
+                    </div>
+                    <ng-container *ngIf="getDocStatus('contrato_social_assinado') !== 'aprovado'">
+                      <input #assinadoInp type="file" hidden accept=".pdf,application/pdf"
+                        (change)="onContratoAssinadoSelecionado($event)" />
+                      <button nz-button nzType="default" nzSize="small" [nzLoading]="uploadingContratoAssinado"
+                        (click)="assinadoInp.click()">
+                        <i nz-icon nzType="upload"></i>
+                        {{ contratoAssinado ? 'Reenviar contrato assinado (PDF)' : 'Enviar contrato assinado (PDF)' }}
+                      </button>
+                    </ng-container>
+                    <span class="contrato-upload-hint">Baixe a minuta, assine manualmente e envie o PDF assinado.</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -387,6 +425,13 @@ function ordenarEtapas(etapas: EtapaDto[], tipo?: string): EtapaDto[] {
     .doc-modal-desc { font-size:12px; color:#999; }
     .doc-recusa-msg { font-size:12px; color:#cf1322; background:#fff2f0; padding:4px 8px; border-radius:4px; margin-top:4px; }
     .doc-nome-atual { font-size:12px; color:#555; margin-top:4px; }
+
+    .contrato-social-box { margin-top:12px; padding:12px; background:#f9fbff; border:1px solid #d6e4ff; border-radius:8px; }
+    .contrato-minuta-info { font-size:13px; color:#333; margin-bottom:8px; display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
+    .contrato-minuta-vazio { font-size:13px; color:#888; margin-bottom:8px; }
+    .contrato-upload-row { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+    .contrato-upload-hint { font-size:12px; color:#888; }
+    .contrato-assinado-status { font-size:13px; color:#333; margin-bottom:4px; }
   `]
 })
 export class IntegracaoPainelComponent implements OnInit {
@@ -395,7 +440,20 @@ export class IntegracaoPainelComponent implements OnInit {
   erroCarregar = '';
   tiposDocs: TipoDoc[] = [];
   uploading: Record<string, boolean> = {};
+  uploadingContratoAssinado = false;
   modalDocsVisivel = false;
+
+  get isAbertura(): boolean {
+    return (this.painel?.tipo ?? 'mudanca').toLowerCase() === 'abertura';
+  }
+
+  get minutaContrato(): DocumentoDto | undefined {
+    return this.painel?.documentos.find(d => d.tipo === 'contrato_social_minuta');
+  }
+
+  get contratoAssinado(): DocumentoDto | undefined {
+    return this.painel?.documentos.find(d => d.tipo === 'contrato_social_assinado');
+  }
 
   get statusLabel(): string {
     const map: Record<string, string> = {
@@ -498,14 +556,47 @@ export class IntegracaoPainelComponent implements OnInit {
       next: () => {
         this.msg.success('Documento enviado!');
         this.uploading[tipo] = false;
+        this.uploadingContratoAssinado = false;
         this.carregar();
       },
       error: (e) => {
         this.msg.error(this.extrairErroApi(e));
         this.uploading[tipo] = false;
+        this.uploadingContratoAssinado = false;
         this.cdr.markForCheck();
       }
     });
+  }
+
+  onContratoAssinadoSelecionado(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const arquivo = input.files?.[0];
+    input.value = '';
+    if (!arquivo) return;
+
+    if (!/\.pdf$/i.test(arquivo.name) && arquivo.type !== 'application/pdf') {
+      this.msg.warning('Envie o contrato assinado em PDF.');
+      return;
+    }
+    if (arquivo.size > 10 * 1024 * 1024) {
+      this.msg.warning('O arquivo excede 10 MB.');
+      return;
+    }
+
+    this.uploadingContratoAssinado = true;
+    this.cdr.markForCheck();
+    this.enviarDocumento('contrato_social_assinado', arquivo);
+  }
+
+  baixarDocumento(docId: number): void {
+    this.http.get<{ url: string }>(`${this.api}/Integracao/Documento/${docId}/Download`, { headers: this.headers() })
+      .subscribe({
+        next: (res) => {
+          if (res?.url) window.open(res.url, '_blank');
+          else this.msg.error('Não foi possível gerar o link de download.');
+        },
+        error: (e) => this.msg.error(this.extrairErroApi(e)),
+      });
   }
 
   private extrairErroApi(err: any): string {

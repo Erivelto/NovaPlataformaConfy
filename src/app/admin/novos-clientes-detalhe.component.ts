@@ -98,14 +98,17 @@ function ordenarEtapas(etapas: EtapaDto[], tipo?: string): EtapaDto[] {
 }
 
 const LABEL_TIPO: Record<string, string> = {
-  cartao_cnpj:           'Cartão CNPJ',
-  contrato_social:       'Contrato Social',
-  cpf_socio:             'CPF do Sócio',
-  rg_socio:              'RG do Sócio',
-  comprovante_endereco:  'Comprovante de Endereço',
-  certidao_casamento:    'Certidão de Casamento',
-  representante_cnh:     'Representante Legal (CNH)',
-  cartao_simples:        'Cartão do Simples Nacional',
+  cartao_cnpj:              'Cartão CNPJ',
+  contrato_social:          'Contrato Social',
+  contrato_social_minuta:   'Minuta do Contrato Social',
+  contrato_social_assinado: 'Contrato Social Assinado',
+  cpf_socio:                'CPF do Sócio',
+  rg_socio:                 'RG do Sócio',
+  comprovante_endereco:     'Comprovante de Endereço',
+  certidao_casamento:       'Certidão de Casamento',
+  representante_cnh:        'Representante Legal (CNH)',
+  cartao_simples:           'Cartão do Simples Nacional',
+  espelho_iptu:             'Espelho do IPTU',
 };
 
 @Component({
@@ -205,6 +208,29 @@ const LABEL_TIPO: Record<string, string> = {
                 </div>
                 <div *ngIf="etapa.dataAtualizacao" style="font-size:11px;color:#bbb;margin-top:2px">
                   Atualizado em {{ etapa.dataAtualizacao }} por {{ etapa.analistaResponsavel }}
+                </div>
+
+                <!-- Upload minuta (abertura) -->
+                <div *ngIf="etapa.chave === 'contrato_social' && isAbertura" class="contrato-admin-box">
+                  <div *ngIf="minutaContrato" class="contrato-admin-info">
+                    Minuta: <strong>{{ minutaContrato.nomeArquivo }}</strong>
+                    <button nz-button nzType="link" nzSize="small" (click)="baixar(minutaContrato.id)">
+                      <i nz-icon nzType="download"></i>
+                    </button>
+                  </div>
+                  <div class="contrato-admin-upload">
+                    <input #minutaInp type="file" hidden accept=".pdf,application/pdf"
+                      (change)="onMinutaSelecionada($event)" />
+                    <button nz-button nzType="default" nzSize="small" [nzLoading]="enviandoMinuta"
+                      (click)="minutaInp.click()">
+                      <i nz-icon nzType="upload"></i>
+                      {{ minutaContrato ? 'Substituir minuta (PDF)' : 'Enviar minuta (PDF)' }}
+                    </button>
+                  </div>
+                  <div *ngIf="contratoAssinado" class="contrato-admin-info">
+                    Assinado: {{ contratoAssinado.nomeArquivo }}
+                    <nz-tag [nzColor]="docStatusColor(contratoAssinado.status)">{{ docStatusLabel(contratoAssinado.status) }}</nz-tag>
+                  </div>
                 </div>
               </div>
               <div class="etapa-admin-acoes">
@@ -406,6 +432,9 @@ const LABEL_TIPO: Record<string, string> = {
     .etapas-aviso { background:#fffbe6; border:1px solid #ffe58f; color:#ad6800; padding:8px 12px; border-radius:8px; font-size:13px; margin-bottom:12px }
     .etapa-destaque { background:#fffbe6; border-radius:8px; padding:12px 10px !important; border:1px solid #ffe58f !important; margin-bottom:8px }
     .etapa-bloqueada { opacity:.55 }
+    .contrato-admin-box { margin-top:8px; padding:8px 10px; background:#f6ffed; border:1px solid #b7eb8f; border-radius:6px; font-size:12px; }
+    .contrato-admin-info { margin-bottom:4px; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+    .contrato-admin-upload { margin-top:4px; }
   `],
 })
 export class NovosClientesDetalheComponent implements OnInit {
@@ -433,6 +462,15 @@ export class NovosClientesDetalheComponent implements OnInit {
   etapaNovoStatus = 'pendente';
   etapaNovaObs = '';
   etapaNovoLink = '';
+  enviandoMinuta = false;
+
+  get minutaContrato(): DocumentoDto | undefined {
+    return this.lead?.documentos.find(d => d.tipo === 'contrato_social_minuta');
+  }
+
+  get contratoAssinado(): DocumentoDto | undefined {
+    return this.lead?.documentos.find(d => d.tipo === 'contrato_social_assinado');
+  }
 
   get etapasOrdenadas(): EtapaDto[] {
     return ordenarEtapas(this.lead?.etapas ?? [], this.lead?.tipo);
@@ -586,6 +624,39 @@ export class NovosClientesDetalheComponent implements OnInit {
       });
   }
 
+  onMinutaSelecionada(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const arquivo = input.files?.[0];
+    input.value = '';
+    if (!arquivo || !this.lead) return;
+
+    if (!/\.pdf$/i.test(arquivo.name) && arquivo.type !== 'application/pdf') {
+      this.msg.warning('A minuta deve ser um arquivo PDF.');
+      return;
+    }
+    if (arquivo.size > 10 * 1024 * 1024) {
+      this.msg.warning('O arquivo excede 10 MB.');
+      return;
+    }
+
+    this.enviandoMinuta = true;
+    const fd = new FormData();
+    fd.append('arquivo', arquivo, arquivo.name);
+
+    this.http.post(`${this.api}/Integracao/Admin/Lead/${this.lead.id}/ContratoMinuta`, fd, { headers: this.headers(true) })
+      .pipe(catchError(() => of(null)))
+      .subscribe(res => {
+        this.enviandoMinuta = false;
+        if (res) {
+          this.msg.success('Minuta enviada. Etapa marcada como em processo.');
+          this.recarregar();
+        } else {
+          this.msg.error('Erro ao enviar minuta.');
+        }
+        this.cd.markForCheck();
+      });
+  }
+
   aprovarDoc(docId: number): void {
     this.http.post(`${this.api}/Integracao/Admin/Documento/${docId}/Aprovar`, {}, { headers: this.headers() })
       .pipe(catchError(() => of(null)))
@@ -686,8 +757,10 @@ export class NovosClientesDetalheComponent implements OnInit {
 
   private recarregar(): void { this.carregar(this.lead!.id); }
 
-  private headers(): HttpHeaders {
+  private headers(multipart = false): HttpHeaders {
     const token = this.loginService.obterToken() ?? '';
-    return new HttpHeaders({ Authorization: `Bearer ${token}` });
+    return multipart
+      ? new HttpHeaders({ Authorization: `Bearer ${token}` })
+      : new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
 }
