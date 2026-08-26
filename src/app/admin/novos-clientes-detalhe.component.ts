@@ -749,8 +749,7 @@ export class NovosClientesDetalheComponent implements OnInit {
       body,
       { headers: this.headers() }
     ).pipe(catchError(err => {
-      const msg = err?.error?.mensagem || err?.error?.Mensagem || 'Erro ao aprovar lead.';
-      this.msg.error(msg);
+      this.msg.error(this.extrairErroApi(err));
       return of(null);
     })).subscribe(res => {
       this.salvando = false;
@@ -818,6 +817,11 @@ export class NovosClientesDetalheComponent implements OnInit {
   docStatusColor(s: string): string {
     const map: Record<string, string> = { aguardando: 'orange', aprovado: 'success', recusado: 'error' };
     return map[s] ?? 'default';
+  }
+
+  private extrairErroApi(err: unknown): string {
+    const e = err as { error?: { mensagem?: string; Mensagem?: string }; message?: string };
+    return e?.error?.mensagem || e?.error?.Mensagem || e?.message || 'Erro ao aprovar lead.';
   }
 
   private recarregar(): void { this.carregar(this.lead!.id); }
