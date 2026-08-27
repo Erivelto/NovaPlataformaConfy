@@ -10,6 +10,8 @@
     "build:app": "ng build --configuration production",
     "build:site": "ng build --configuration site",
     "build:prod": "ng build --configuration production",
+    "build:deploy-amplify": "node scripts/amplify-build-app-zip.cjs",
+    "build:deploy-amplify:site": "node scripts/amplify-build-site-zip.cjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
