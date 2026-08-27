@@ -20,6 +20,7 @@ import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
+import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { PageTitleComponent } from '../page-title.component';
 import { LoginService } from '../services/login.service';
 import { environment } from '../../environments/environment';
@@ -120,7 +121,7 @@ const LABEL_TIPO: Record<string, string> = {
     CommonModule, FormsModule,
     NzCardModule, NzTagModule, NzIconModule, NzButtonModule, NzSkeletonModule,
     NzModalModule, NzMessageModule, NzGridModule, NzDividerModule,
-    NzTimelineModule, NzInputModule, NzDescriptionsModule, NzPopconfirmModule, NzToolTipModule, NzSelectModule, NzRadioModule,
+    NzTimelineModule, NzInputModule, NzDescriptionsModule, NzPopconfirmModule, NzToolTipModule, NzSelectModule, NzRadioModule, NzAlertModule,
     PageTitleComponent,
   ],
   template: `
@@ -283,9 +284,15 @@ const LABEL_TIPO: Record<string, string> = {
             </div>
           </nz-card>
 
+          <nz-alert *ngIf="lead.status === 'processando_aprovacao'" nzType="info" nzShowIcon
+            nzMessage="Cadastro em processamento"
+            nzDescription="A consulta à Receita e o cadastro do cliente estão em andamento. Você receberá uma notificação ao concluir."
+            style="margin-bottom:16px">
+          </nz-alert>
+
           <!-- Ações do lead -->
           <nz-card [nzTitle]="'Ação sobre o Lead'" style="margin-bottom:16px"
-            *ngIf="lead.status !== 'aprovado' && lead.status !== 'recusado'">
+            *ngIf="lead.status !== 'aprovado' && lead.status !== 'recusado' && lead.status !== 'processando_aprovacao'">
             <div style="display:flex;gap:12px;flex-wrap:wrap">
               <button nz-button nzType="primary" (click)="abrirAprovarLead()">
                 <i nz-icon nzType="check-circle"></i> Aprovar Lead
@@ -744,7 +751,7 @@ export class NovosClientesDetalheComponent implements OnInit {
     if (this.isAbertura || !this.leadTemCnpjValido)
       body.cnpj = cnpjDigits;
 
-    this.http.post<{ mensagem?: string; dados?: { usuarioAtualizado?: boolean } }>(
+    this.http.post<{ mensagem?: string; dados?: { processando?: boolean; usuarioAtualizado?: boolean } }>(
       `${this.api}/Integracao/Admin/Lead/${this.lead!.id}/Aprovar`,
       body,
       { headers: this.headers() }
@@ -755,7 +762,9 @@ export class NovosClientesDetalheComponent implements OnInit {
       this.salvando = false;
       if (res) {
         this.modalAprovarLead = false;
-        if (res.dados?.usuarioAtualizado === false) {
+        if (res.dados?.processando) {
+          this.msg.info('Aprovação iniciada. Aguarde a notificação de conclusão.');
+        } else if (res.dados?.usuarioAtualizado === false) {
           this.msg.warning('Lead aprovado, mas o usuário de login não foi atualizado. Verifique AspNetUsers.');
         } else {
           this.msg.success('Lead aprovado, cliente cadastrado e usuário liberado!');
@@ -797,6 +806,7 @@ export class NovosClientesDetalheComponent implements OnInit {
     const map: Record<string, string> = {
       pendente_docs: 'Aguardando Documentos',
       em_analise: 'Em Análise',
+      processando_aprovacao: 'Processando cadastro',
       aprovado: 'Aprovado',
       recusado: 'Recusado',
     };
@@ -807,6 +817,7 @@ export class NovosClientesDetalheComponent implements OnInit {
     const map: Record<string, string> = {
       pendente_docs: 'orange',
       em_analise: 'processing',
+      processando_aprovacao: 'processing',
       aprovado: 'success',
       recusado: 'error',
     };

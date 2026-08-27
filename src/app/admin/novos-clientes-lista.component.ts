@@ -156,6 +156,7 @@ export class NovosClientesListaComponent implements OnInit {
     const map: Record<string, string> = {
       pendente_docs: 'Aguardando Docs',
       em_analise: 'Em Análise',
+      processando_aprovacao: 'Processando cadastro',
       aprovado: 'Aprovado',
       recusado: 'Recusado',
     };
@@ -166,6 +167,7 @@ export class NovosClientesListaComponent implements OnInit {
     const map: Record<string, string> = {
       pendente_docs: 'orange',
       em_analise: 'processing',
+      processando_aprovacao: 'processing',
       aprovado: 'success',
       recusado: 'error',
     };
