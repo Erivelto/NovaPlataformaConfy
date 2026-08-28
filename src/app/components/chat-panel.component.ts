@@ -115,6 +115,7 @@ export class ChatPanelComponent implements OnInit, OnDestroy, AfterViewChecked {
   private pollSub?: Subscription;
   private heartbeatSub?: Subscription;
   private ultimoId = 0;
+  private loadGen = 0;
 
   constructor(private chat: ChatService) {}
 
@@ -139,10 +140,11 @@ export class ChatPanelComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   iniciar(): void {
+    this.parar();
     this.ultimoId = 0;
+    this.mensagens = [];
     this.carregar(true);
-    this.pollSub?.unsubscribe();
-    this.pollSub = interval(5000).pipe(startWith(0)).subscribe(() => this.carregar(false));
+    this.pollSub = interval(5000).subscribe(() => this.carregar(false));
   }
 
   parar(): void {
@@ -172,9 +174,8 @@ export class ChatPanelComponent implements OnInit, OnDestroy, AfterViewChecked {
         this.texto = '';
         this.enviando = false;
         if (msg.id > this.ultimoId) {
-          this.mensagens = [...this.mensagens, msg];
-          this.ultimoId = msg.id;
-          this.scrollPending = true;
+          this.anexarNovas([msg]);
+          this.atualizarUltimoId();
         }
       },
       error: () => { this.enviando = false; }
@@ -185,29 +186,44 @@ export class ChatPanelComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (this.modo === 'admin' && !this.codigoPessoa) return;
     if (inicial) this.carregando = true;
 
+    const gen = ++this.loadGen;
     const req = this.modo === 'admin' && this.codigoPessoa
       ? this.chat.mensagensAdmin(this.codigoPessoa, inicial ? undefined : this.ultimoId)
       : this.chat.mensagensCliente(inicial ? undefined : this.ultimoId);
 
     req.subscribe({
       next: res => {
+        if (gen !== this.loadGen) return;
         this.status = res.status;
         const novas = res.mensagens ?? [];
         if (inicial) {
           this.mensagens = novas;
           this.scrollPending = true;
-        } else if (novas.length) {
-          this.mensagens = [...this.mensagens, ...novas];
-          this.scrollPending = true;
+        } else {
+          this.anexarNovas(novas);
         }
-        if (this.mensagens.length) {
-          this.ultimoId = Math.max(...this.mensagens.map(m => m.id));
-        }
+        this.atualizarUltimoId();
         this.carregando = false;
         if (this.ativo) this.marcarLidas();
       },
-      error: () => { this.carregando = false; }
+      error: () => {
+        if (gen === this.loadGen) this.carregando = false;
+      }
     });
+  }
+
+  private anexarNovas(novas: ChatMensagem[]): void {
+    if (!novas.length) return;
+    const ids = new Set(this.mensagens.map(m => m.id));
+    const unicas = novas.filter(m => !ids.has(m.id));
+    if (!unicas.length) return;
+    this.mensagens = [...this.mensagens, ...unicas];
+    this.scrollPending = true;
+  }
+
+  private atualizarUltimoId(): void {
+    if (!this.mensagens.length) return;
+    this.ultimoId = Math.max(...this.mensagens.map(m => m.id));
   }
 
   private marcarLidas(): void {

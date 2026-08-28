@@ -68,7 +68,7 @@ export class ChatService {
   }
 
   mensagensCliente(aposId?: number): Observable<ChatMensagensResposta> {
-    const q = aposId ? `?aposId=${aposId}` : '';
+    const q = aposId != null && aposId > 0 ? `?aposId=${aposId}` : '';
     return new Observable(sub => {
       this.http.get<unknown>(`${this.base}/Mensagens${q}`, this.opts()).subscribe({
         next: raw => sub.next(this.norm<ChatMensagensResposta>(raw)),
@@ -79,7 +79,7 @@ export class ChatService {
   }
 
   mensagensAdmin(codigoPessoa: number, aposId?: number): Observable<ChatMensagensResposta> {
-    const q = aposId ? `?aposId=${aposId}` : '';
+    const q = aposId != null && aposId > 0 ? `?aposId=${aposId}` : '';
     return new Observable(sub => {
       this.http.get<unknown>(`${this.base}/Mensagens/${codigoPessoa}${q}`, this.opts()).subscribe({
         next: raw => sub.next(this.norm<ChatMensagensResposta>(raw)),
