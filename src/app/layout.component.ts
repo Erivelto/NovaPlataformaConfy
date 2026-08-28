@@ -7,11 +7,12 @@ import { FooterComponent } from './footer.component';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { MensalidadeStatusService } from './services/mensalidade-status.service';
+import { ChatFabComponent } from './components/chat-fab.component';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, HeaderComponent, SidebarComponent, MainComponent, FooterComponent, NzLayoutModule, NzDrawerModule],
+  imports: [CommonModule, HeaderComponent, SidebarComponent, MainComponent, FooterComponent, NzLayoutModule, NzDrawerModule, ChatFabComponent],
   template: `
     <div class="layout">
       <app-header [isMobile]="isMobile" (toggleMenu)="onToggleMenu()"></app-header>
@@ -36,6 +37,7 @@ import { MensalidadeStatusService } from './services/mensalidade-status.service'
         <main class="main"><app-main></app-main></main>
       </div>
       <app-footer></app-footer>
+      <app-chat-fab></app-chat-fab>
     </div>
   `,
   styles: [

@@ -14,6 +14,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { LoginService } from './services/login.service';
 import { NotificacaoService, NotificacaoTela } from './services/notificacao.service';
+import { ChatUiService } from './services/chat-ui.service';
 import { FaviconBadgeService } from './services/favicon-badge.service';
 
 @Component({
@@ -122,6 +123,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private loginService: LoginService,
     private router: Router,
     private notificacaoService: NotificacaoService,
+    private chatUi: ChatUiService,
     private faviconBadge: FaviconBadgeService,
   ) {}
 
@@ -188,10 +190,30 @@ export class HeaderComponent implements OnInit, OnDestroy {
         }
       });
     }
+    if (n.tipo === 'CHAT_ANALISTA') {
+      this.drawerVisible = false;
+      this.chatUi.abrirCliente();
+      return;
+    }
+    if (n.tipo === 'CHAT_CLIENTE') {
+      this.drawerVisible = false;
+      const codigo = this.extrairCodigoChat(n.linkAcao);
+      const destino = n.linkAcao || '/administrativo/dashboard';
+      this.router.navigateByUrl(destino).then(() => {
+        this.chatUi.abrirAdmin(codigo ?? undefined);
+      });
+      return;
+    }
     if (n.linkAcao) {
       this.drawerVisible = false;
       this.router.navigateByUrl(n.linkAcao);
     }
+  }
+
+  private extrairCodigoChat(link?: string): number | null {
+    if (!link) return null;
+    const m = link.match(/[?&]chat=(\d+)/);
+    return m ? Number(m[1]) : null;
   }
 
   marcarTodasLidas(): void {

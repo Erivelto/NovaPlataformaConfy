@@ -1,7 +1,9 @@
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import {
+  Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, ViewChild
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -9,6 +11,7 @@ import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { PageTitleComponent } from './page-title.component';
+import { AdminChatWidgetComponent } from './components/admin-chat-widget.component';
 import { LoginService } from './services/login.service';
 import { environment } from '../environments/environment';
 
@@ -59,7 +62,7 @@ interface DashboardKpi {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, RouterModule, NzCardModule, NzGridModule, NzIconModule,
-    NzSkeletonModule, PageTitleComponent
+    NzSkeletonModule, PageTitleComponent, AdminChatWidgetComponent
   ],
   template: `
     <div class="admin-dashboard">
@@ -89,6 +92,8 @@ interface DashboardKpi {
           <div class="kpi-sub" *ngIf="k.sub && !loading">{{ k.sub }}</div>
         </nz-card>
       </div>
+
+      <app-admin-chat-widget #chatWidget></app-admin-chat-widget>
     </div>
   `,
   styles: [
@@ -114,6 +119,8 @@ export class DashboardAdminComponent implements OnInit {
   loading = true;
   kpis: DashboardKpi[] = [];
 
+  @ViewChild('chatWidget') chatWidget?: AdminChatWidgetComponent;
+
   private get headers(): HttpHeaders {
     const token = localStorage.getItem('auth_token');
     return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : new HttpHeaders();
@@ -123,6 +130,7 @@ export class DashboardAdminComponent implements OnInit {
     private loginService: LoginService,
     private http: HttpClient,
     private router: Router,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -135,6 +143,16 @@ export class DashboardAdminComponent implements OnInit {
     this.adminName = usuario.email?.split('@')[0] || usuario.nome || 'Admin';
     this.inicializarKpis();
     this.carregar();
+
+    this.route.queryParamMap.subscribe(q => {
+      const chat = q.get('chat');
+      if (chat) {
+        const codigo = Number(chat);
+        if (codigo > 0) {
+          setTimeout(() => this.chatWidget?.abrirConversa(codigo), 300);
+        }
+      }
+    });
   }
 
   trackByKpi = (_: number, k: DashboardKpi) => k.label;
