@@ -845,6 +845,26 @@ interface CobrancaAdicionalForm {
         </nz-form-control>
       </nz-form-item>
     </div>
+    <div class="form-row" *ngIf="mensagemClienteForm.tipoMensagem === 'Email'">
+      <nz-form-item class="flex1">
+        <nz-form-label>Anexo (PDF)</nz-form-label>
+        <nz-form-control>
+          <input #anexoMensagemInp type="file" hidden accept=".pdf,application/pdf"
+            (change)="onAnexoMensagemSelecionado($event)" />
+          <div class="anexo-row">
+            <button nz-button nzType="default" [disabled]="enviandoMensagemCliente" (click)="anexoMensagemInp.click()">
+              <i nz-icon nzType="paper-clip"></i>
+              {{ anexoMensagemPdf ? 'Substituir PDF' : 'Selecionar PDF' }}
+            </button>
+            <button *ngIf="anexoMensagemPdf" nz-button nzType="link" [disabled]="enviandoMensagemCliente" (click)="removerAnexoMensagem()">
+              Remover
+            </button>
+          </div>
+          <p *ngIf="anexoMensagemPdf" class="anexo-nome">{{ anexoMensagemPdf.nome }}</p>
+          <p class="anexo-hint">Opcional. Apenas arquivos PDF, até 5 MB.</p>
+        </nz-form-control>
+      </nz-form-item>
+    </div>
   </ng-container>
   <ng-template #ftMensagemCliente>
     <button nz-button (click)="mensagemClienteVisible = false">Cancelar</button>
@@ -1059,6 +1079,9 @@ interface CobrancaAdicionalForm {
     .form-row ::ng-deep .ant-form-item { flex-direction: column; }
     .form-row ::ng-deep .ant-form-item-label { padding-bottom: 4px; }
     .form-row ::ng-deep .ant-col { max-width: 100%; flex: 0 0 100%; }
+    .anexo-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .anexo-nome { margin: 6px 0 0; font-size: .9rem; color: rgba(0,0,0,.65); }
+    .anexo-hint { margin: 4px 0 0; font-size: .85rem; color: rgba(0,0,0,.45); }
     .flags-row { display: flex; gap: 24px; flex-wrap: wrap; margin: 8px 0 16px; }
     .flag-item { display: flex; flex-direction: column; gap: 6px; align-items: center; }
     .flag-item label { font-size: .82rem; color: rgba(0,0,0,.55); font-weight: 600; text-align: center; }
@@ -1098,6 +1121,8 @@ export class ClienteEditarComponent implements OnInit {
   mensagemClienteVisible = false;
   enviandoMensagemCliente = false;
   mensagemClienteForm = { tipoMensagem: 'Email' as 'Email' | 'Whatsapp' | 'Alerta', mensagem: '' };
+  anexoMensagemPdf: { nome: string; base64: string } | null = null;
+  private readonly anexoMensagemPdfMaxBytes = 5 * 1024 * 1024;
   readonly tiposMensagemCliente = [
     { value: 'Email' as const, label: 'Email' },
     { value: 'Whatsapp' as const, label: 'Whatsapp' },
@@ -1491,7 +1516,43 @@ export class ClienteEditarComponent implements OnInit {
 
   abrirModalMensagemCliente(): void {
     this.mensagemClienteForm = { tipoMensagem: 'Email', mensagem: '' };
+    this.anexoMensagemPdf = null;
     this.mensagemClienteVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  onAnexoMensagemSelecionado(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const arquivo = input.files?.[0];
+    input.value = '';
+    if (!arquivo) return;
+
+    const nome = arquivo.name || '';
+    if (!nome.toLowerCase().endsWith('.pdf')) {
+      this.message.warning('Selecione apenas arquivos PDF.');
+      return;
+    }
+    if (arquivo.size > this.anexoMensagemPdfMaxBytes) {
+      this.message.warning('O anexo PDF não pode exceder 5 MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      if (!base64) {
+        this.message.error('Não foi possível ler o arquivo PDF.');
+        return;
+      }
+      this.anexoMensagemPdf = { nome, base64 };
+      this.cdr.markForCheck();
+    };
+    reader.onerror = () => this.message.error('Não foi possível ler o arquivo PDF.');
+    reader.readAsDataURL(arquivo);
+  }
+
+  removerAnexoMensagem(): void {
+    this.anexoMensagemPdf = null;
     this.cdr.markForCheck();
   }
 
@@ -1502,14 +1563,20 @@ export class ClienteEditarComponent implements OnInit {
     }
     this.enviandoMensagemCliente = true;
     this.cdr.markForCheck();
-    this.http.post(`${this.api}/Pessoa/MensagemCliente`, {
+    const body: Record<string, unknown> = {
       codigoPessoa: this.codigoPessoa,
       tipoMensagem: this.mensagemClienteForm.tipoMensagem,
       mensagem: this.mensagemClienteForm.mensagem.trim()
-    }, { headers: this.h }).subscribe({
+    };
+    if (this.mensagemClienteForm.tipoMensagem === 'Email' && this.anexoMensagemPdf) {
+      body['anexoBase64'] = this.anexoMensagemPdf.base64;
+      body['nomeAnexo'] = this.anexoMensagemPdf.nome;
+    }
+    this.http.post(`${this.api}/Pessoa/MensagemCliente`, body, { headers: this.h }).subscribe({
       next: () => {
         this.message.success('Mensagem enviada com sucesso.');
         this.mensagemClienteVisible = false;
+        this.anexoMensagemPdf = null;
         this.enviandoMensagemCliente = false;
         this.cdr.markForCheck();
       },

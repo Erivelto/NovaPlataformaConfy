@@ -61,6 +61,26 @@ export interface ClienteMensagemRef {
             </nz-form-control>
           </nz-form-item>
         </div>
+        <div class="form-row" *ngIf="form.tipoMensagem === 'Email'">
+          <nz-form-item class="flex1">
+            <nz-form-label>Anexo (PDF)</nz-form-label>
+            <nz-form-control>
+              <input #anexoInp type="file" hidden accept=".pdf,application/pdf"
+                (change)="onAnexoSelecionado($event)" />
+              <div class="anexo-row">
+                <button nz-button nzType="default" [disabled]="enviando" (click)="anexoInp.click()">
+                  <i nz-icon nzType="paper-clip"></i>
+                  {{ anexoPdf ? 'Substituir PDF' : 'Selecionar PDF' }}
+                </button>
+                <button *ngIf="anexoPdf" nz-button nzType="link" [disabled]="enviando" (click)="removerAnexo()">
+                  Remover
+                </button>
+              </div>
+              <p *ngIf="anexoPdf" class="anexo-nome">{{ anexoPdf.nome }}</p>
+              <p class="anexo-hint">Opcional. Apenas arquivos PDF, até 5 MB.</p>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
         <p *ngIf="clientes.length > 1" class="hint-lote">
           Para WhatsApp é necessário número cadastrado; para E-mail, usuário da plataforma. Clientes sem dados serão ignorados com aviso.
         </p>
@@ -78,6 +98,9 @@ export interface ClienteMensagemRef {
     .flex1 { flex: 1; }
     .destinatarios { display: block; margin-top: 4px; font-size: .9rem; }
     .hint-lote { font-size: .85rem; color: rgba(0,0,0,.45); margin: 0; }
+    .anexo-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .anexo-nome { margin: 6px 0 0; font-size: .9rem; color: rgba(0,0,0,.65); }
+    .anexo-hint { margin: 4px 0 0; font-size: .85rem; color: rgba(0,0,0,.45); }
   `]
 })
 export class MensagemClienteLoteComponent implements OnChanges {
@@ -90,6 +113,8 @@ export class MensagemClienteLoteComponent implements OnChanges {
 
   enviando = false;
   form = { tipoMensagem: 'Email' as 'Email' | 'Whatsapp' | 'Alerta', mensagem: '' };
+  anexoPdf: { nome: string; base64: string } | null = null;
+  private readonly anexoPdfMaxBytes = 5 * 1024 * 1024;
   readonly tiposMensagem = [
     { value: 'Email' as const, label: 'Email' },
     { value: 'Whatsapp' as const, label: 'Whatsapp' },
@@ -117,7 +142,43 @@ export class MensagemClienteLoteComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['visible']?.currentValue === true) {
       this.form = { tipoMensagem: 'Email', mensagem: '' };
+      this.anexoPdf = null;
     }
+  }
+
+  onAnexoSelecionado(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const arquivo = input.files?.[0];
+    input.value = '';
+    if (!arquivo) return;
+
+    const nome = arquivo.name || '';
+    if (!nome.toLowerCase().endsWith('.pdf')) {
+      this.message.warning('Selecione apenas arquivos PDF.');
+      return;
+    }
+    if (arquivo.size > this.anexoPdfMaxBytes) {
+      this.message.warning('O anexo PDF não pode exceder 5 MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      if (!base64) {
+        this.message.error('Não foi possível ler o arquivo PDF.');
+        return;
+      }
+      this.anexoPdf = { nome, base64 };
+      this.cdr.markForCheck();
+    };
+    reader.onerror = () => this.message.error('Não foi possível ler o arquivo PDF.');
+    reader.readAsDataURL(arquivo);
+  }
+
+  removerAnexo(): void {
+    this.anexoPdf = null;
+    this.cdr.markForCheck();
   }
 
   fechar(): void {
@@ -148,11 +209,16 @@ export class MensagemClienteLoteComponent implements OnChanges {
     }
 
     const cliente = this.clientes[index];
-    this.http.post(`${this.api}/Pessoa/MensagemCliente`, {
+    const body: Record<string, unknown> = {
       codigoPessoa: cliente.codigo,
       tipoMensagem: this.form.tipoMensagem,
       mensagem: this.form.mensagem.trim()
-    }, { headers: this.headers }).subscribe({
+    };
+    if (this.form.tipoMensagem === 'Email' && this.anexoPdf) {
+      body['anexoBase64'] = this.anexoPdf.base64;
+      body['nomeAnexo'] = this.anexoPdf.nome;
+    }
+    this.http.post(`${this.api}/Pessoa/MensagemCliente`, body, { headers: this.headers }).subscribe({
       next: () => this.enviarSequencial(index + 1, sucesso + 1, falhas),
       error: (err) => {
         const msg = err.error?.message || `erro ${err.status ?? 'sem resposta'}`;
@@ -179,6 +245,7 @@ export class MensagemClienteLoteComponent implements OnChanges {
 
     if (sucesso > 0) {
       this.form.mensagem = '';
+      this.anexoPdf = null;
       this.fechar();
       this.envioConcluido.emit();
     }
