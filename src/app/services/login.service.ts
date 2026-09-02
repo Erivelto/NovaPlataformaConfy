@@ -57,6 +57,7 @@ export interface UsuarioLogado {
 @Injectable({ providedIn: 'root' })
 export class LoginService {
   private authUrl = `${environment.apiUrl}/Autenticacao/Login`;
+  private readonly tokenTtlMs = 24 * 60 * 60 * 1000;
 
   constructor(private http: HttpClient) {}
 
@@ -145,12 +146,11 @@ export class LoginService {
       if (Date.now() >= expiresAt) return false;
     }
 
-    // Fallback: check 1 hour since login
+    // Fallback: check session TTL since login
     const loginTime = localStorage.getItem('auth_login_time');
     if (loginTime) {
       const elapsed = Date.now() - Number(loginTime);
-      const ONE_HOUR = 60 * 60 * 1000;
-      if (elapsed >= ONE_HOUR) return false;
+      if (elapsed >= this.tokenTtlMs) return false;
     }
 
     return true;
