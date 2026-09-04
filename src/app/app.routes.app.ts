@@ -57,6 +57,7 @@ export const appRoutes: Routes = [
 			{ path: 'gestao-faturamento/detalhe/:id', loadComponent: () => import('./admin/gestao-faturamento-detalhe.component').then(m => m.GestaoFaturamentoDetalheComponent) },
 			{ path: 'gestao-faturamento', loadComponent: () => import('./admin/gestao-faturamento.component').then(m => m.GestaoFaturamentoComponent) },
 			{ path: 'cliente/:id/editar', loadComponent: () => import('./admin/cliente-editar.component').then(m => m.ClienteEditarComponent) },
+			{ path: 'cliente/:id/detalhes', loadComponent: () => import('./admin/cliente-editar.component').then(m => m.ClienteEditarComponent) },
 			{ path: 'cliente/:id/faturamento', loadComponent: () => import('./admin/cliente-faturamento.component').then(m => m.ClienteFaturamentoComponent) },
 			{ path: 'cliente/:id/editar-debitos', loadComponent: () => import('./admin/editar-debitos.component').then(m => m.EditarDebitosComponent) },
 			{ path: 'receita-anual/:pessoaCodigo', loadComponent: () => import('./admin/dashboard-fiscal-admin.component').then(m => m.DashboardFiscalAdminComponent) },

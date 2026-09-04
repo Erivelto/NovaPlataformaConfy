@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -18,6 +19,7 @@ import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
 import { fmtDate } from '../utils/excel-export.helpers';
+import { rotaDetalhesClienteExcluido } from '../utils/pessoa.helpers';
 import { environment } from '../../environments/environment';
 
 interface PessoaExcluida {
@@ -40,7 +42,7 @@ interface PessoaExcluida {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule, FormsModule,
+    CommonModule, FormsModule, RouterLink,
     NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzToolTipModule,
     NzModalModule, NzMessageModule,
@@ -107,6 +109,7 @@ interface PessoaExcluida {
               <th>Nome / Razão Social</th>
               <th nzWidth="130px">Data Cancelamento</th>
               <th nzWidth="200px">Motivo</th>
+              <th nzWidth="110px" nzAlign="center">Detalhes</th>
               <th nzWidth="110px" nzAlign="center">Reativar</th>
             </tr>
           </thead>
@@ -123,13 +126,24 @@ interface PessoaExcluida {
                 <nz-tag [nzColor]="corMotivo(c.motivoExcluido)">{{ c.motivoExcluido || '—' }}</nz-tag>
               </td>
               <td nzAlign="center">
+                <a
+                  nz-button
+                  nzType="default"
+                  nzSize="small"
+                  nz-tooltip
+                  nzTooltipTitle="Ver detalhes"
+                  [routerLink]="rotaDetalhes(c.codigo)">
+                  <i nz-icon nzType="eye"></i>
+                </a>
+              </td>
+              <td nzAlign="center">
                 <button nz-button nzType="primary" nzSize="small" nz-tooltip nzTooltipTitle="Reativar cliente" (click)="abrirReativacao(c)">
                   <i nz-icon nzType="redo"></i>
                 </button>
               </td>
             </tr>
             <tr *ngIf="clientesFiltrados.length === 0">
-              <td colspan="7" style="text-align:center;padding:32px;color:rgba(0,0,0,.45)">Nenhum cliente excluído encontrado.</td>
+              <td colspan="8" style="text-align:center;padding:32px;color:rgba(0,0,0,.45)">Nenhum cliente excluído encontrado.</td>
             </tr>
           </tbody>
         </nz-table>
@@ -206,6 +220,10 @@ export class ClientesExcluidosComponent implements OnInit {
     private message: NzMessageService,
     private cdr: ChangeDetectorRef
   ) {}
+
+  rotaDetalhes(codigo: number): (string | number)[] {
+    return rotaDetalhesClienteExcluido(codigo);
+  }
 
   ngOnInit(): void {
     this.carregar();

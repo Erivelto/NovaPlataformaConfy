@@ -28,3 +28,7 @@ export function resolveCodigoPessoa(item: { codigo?: number; Codigo?: number } |
 export function rotaEditarCliente(codigo: number): (string | number)[] {
   return ['/administrativo/cliente', codigo, 'editar'];
 }
+
+export function rotaDetalhesClienteExcluido(codigo: number): (string | number)[] {
+  return ['/administrativo/cliente', codigo, 'detalhes'];
+}

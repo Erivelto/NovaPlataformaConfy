@@ -40,7 +40,7 @@ import { EnvioArquivoClienteComponent, ArquivoEnvioRef } from '../components/env
 import { environment } from '../../environments/environment';
 
 
-interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; ccm?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; status?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; observacao?: string; dataInclusao?: string; dataAtulizacao?: string; dataAbertura?: string; contabilidade?: number; excluido?: boolean; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
+interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; ccm?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; status?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; observacao?: string; dataInclusao?: string; dataAtulizacao?: string; dataAbertura?: string; dataCancelamento?: string | null; contabilidade?: number; excluido?: boolean; motivoExcluido?: string | null; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
 interface PessoaCertificadoData { codigo: number; codigoPessoa: number; validade: string; diretorio: string; codigoAcesso: string; }
 interface EnderecoData { codigo?: number; codigoPessoa?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; excluido?: boolean; }
 interface ValidacaoPessoa { usuario: boolean; celular: boolean; prefeitura: boolean; dadosDAS: boolean; cobranca: boolean; documentos: boolean; }
@@ -88,24 +88,35 @@ interface CobrancaAdicionalForm {
     EnvioArquivoClienteComponent
   ],
   template: `
-<div class="page">
+<div class="page" [class.somente-leitura]="somenteLeitura">
   <!-- Header -->
   <div class="page-header">
-    <button nz-button nzType="default" (click)="voltar()"><i nz-icon nzType="arrow-left"></i> Voltar</button>
+    <button nz-button nzType="default" class="btn-voltar" (click)="voltar()"><i nz-icon nzType="arrow-left"></i> Voltar</button>
     <app-page-title
       [title]="loading ? 'Carregando...' : (pessoa.razao || pessoa.nome || 'Cliente')"
       [subtitle]="pessoa.documento ? 'CNPJ/CPF: ' + pessoa.documento : ''">
     </app-page-title>
+    <nz-tag *ngIf="somenteLeitura" nzColor="default">Somente visualização</nz-tag>
     <nz-tag *ngIf="pessoa.fisica" nzColor="purple">Pessoa Física</nz-tag>
     <nz-tag *ngIf="!pessoa.fisica && !loading" nzColor="blue">Pessoa Jurídica</nz-tag>
+    <nz-tag *ngIf="somenteLeitura && pessoa.excluido" nzColor="red">Excluído</nz-tag>
   </div>
+
+  <nz-alert
+    *ngIf="!loading && somenteLeitura && (pessoa.motivoExcluido || pessoa.dataCancelamento)"
+    nzType="warning"
+    nzShowIcon
+    style="margin-top:12px"
+    [nzMessage]="'Cliente excluído' + (pessoa.dataCancelamento ? ' em ' + (pessoa.dataCancelamento | date:'dd/MM/yyyy') : '')"
+    [nzDescription]="pessoa.motivoExcluido ? ('Motivo: ' + pessoa.motivoExcluido) : null">
+  </nz-alert>
 
   <ng-container *ngIf="loading">
     <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{rows:6}"></nz-skeleton>
   </ng-container>
 
   <!-- Painel de pendências — só exibe se houver algo pendente -->
-  <div *ngIf="!loading && totalPendencias > 0" class="pendencias-card">
+  <div *ngIf="!loading && !somenteLeitura && totalPendencias > 0" class="pendencias-card">
     <div class="pendencias-header">
       <i nz-icon nzType="solution" style="font-size:18px"></i>
       <span>Status do Cadastro</span>
@@ -200,7 +211,7 @@ interface CobrancaAdicionalForm {
             <nz-form-item class="flex1"><nz-form-label>Data Cadastro</nz-form-label>
               <nz-form-control><input nz-input [value]="dataCadastroLabel" disabled /></nz-form-control></nz-form-item>
           </div>
-          <div class="form-row mensagem-cliente-row">
+          <div class="form-row mensagem-cliente-row" *ngIf="!somenteLeitura">
             <button
               nz-button
               nzType="primary"
@@ -319,13 +330,13 @@ interface CobrancaAdicionalForm {
         <div class="form-section">
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap">
             <app-export-excel-button [data]="$any(representantes)" [columns]="exportColumnsRepresentantes" fileName="cliente-representantes" />
-            <button nz-button nzType="primary" (click)="abrirNovoRep()"><i nz-icon nzType="plus"></i> Novo Representante</button>
+            <button nz-button nzType="primary" class="toolbar-edit" (click)="abrirNovoRep()"><i nz-icon nzType="plus"></i> Novo Representante</button>
           </div>
           <nz-table [nzData]="representantes" nzBordered nzSize="middle" [nzShowPagination]="false">
             <thead><tr>
               <th>Nome</th><th nzWidth="140px">CPF</th>
               <th nzWidth="130px">Data Cadastro</th><th nzWidth="130px">Cidade/UF</th>
-              <th nzWidth="110px" nzAlign="center">Ação</th>
+              <th nzWidth="110px" nzAlign="center" class="col-acoes">Ação</th>
             </tr></thead>
             <tbody>
               <tr *ngFor="let r of representantes">
@@ -333,7 +344,7 @@ interface CobrancaAdicionalForm {
                 <td>{{ r.cpf }}</td>
                 <td>{{ r.dataContfy ? (r.dataContfy | date:'dd/MM/yyyy') : '—' }}</td>
                 <td>{{ r.cidade ? r.cidade + '/' + r.uf : '—' }}</td>
-                <td nzAlign="center">
+                <td nzAlign="center" class="col-acoes">
                   <button nz-button nzSize="small" nzType="primary" (click)="editarRep(r)" style="margin-right:6px"><i nz-icon nzType="edit"></i></button>
                   <button nz-button nzDanger nzSize="small" nz-popconfirm nzPopconfirmTitle="Excluir este representante legal?"
                     [nzLoading]="excluindoRep.has(r.codigo)" (nzOnConfirm)="excluirRep(r)">
@@ -366,13 +377,13 @@ interface CobrancaAdicionalForm {
             <nz-alert nzType="warning" nzMessage="Nenhum usuário de plataforma cadastrado para este cliente." nzShowIcon style="margin-bottom:20px"></nz-alert>
           </ng-template>
 
-          <nz-divider [nzText]="pessoa.usuario ? 'Alterar Acesso' : 'Cadastrar Acesso'" nzOrientation="left" style="margin-top:24px"></nz-divider>
-          <p style="color:rgba(0,0,0,.45);font-size:.85rem;margin-bottom:16px">
+          <nz-divider [nzText]="pessoa.usuario ? 'Alterar Acesso' : 'Cadastrar Acesso'" nzOrientation="left" style="margin-top:24px" class="user-plat-edit"></nz-divider>
+          <p class="user-plat-edit" style="color:rgba(0,0,0,.45);font-size:.85rem;margin-bottom:16px">
             {{ pessoa.usuario ? 'Para alterar o e-mail de acesso, informe o e-mail atual e o novo.' : 'Informe o e-mail que será usado como login do cliente na plataforma.' }}
             A senha inicial será <strong>Q1w2e3r4&#64;</strong> e o cliente deverá alterá-la no primeiro acesso.
           </p>
 
-          <div class="form-row">
+          <div class="form-row user-plat-edit">
             <nz-form-item class="flex1" *ngIf="pessoa.usuario">
               <nz-form-label nzRequired>E-mail Atual</nz-form-label>
               <nz-form-control>
@@ -392,7 +403,7 @@ interface CobrancaAdicionalForm {
             <ng-template #pfxMail><i nz-icon nzType="mail"></i></ng-template>
           </div>
 
-          <div class="form-actions">
+          <div class="form-actions user-plat-edit">
             <button nz-button nzType="primary" [nzLoading]="salvandoUser" (click)="salvarUser()">
               <i nz-icon [nzType]="pessoa.usuario ? 'edit' : 'user-add'"></i>
               {{ pessoa.usuario ? 'Alterar Acesso' : 'Cadastrar Acesso' }}
@@ -413,7 +424,7 @@ interface CobrancaAdicionalForm {
           <nz-divider nzText="Emissão de Nota Fiscal" nzOrientation="left"></nz-divider>
 
           <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-            <button nz-button nzType="primary" (click)="abrirNovaEmissao()">
+            <button nz-button nzType="primary" class="toolbar-edit" (click)="abrirNovaEmissao()">
               <i nz-icon nzType="plus"></i> Nova Credencial NF
             </button>
           </div>
@@ -426,7 +437,7 @@ interface CobrancaAdicionalForm {
               <th>Prefeitura</th>
               <th nzWidth="130px">Cód. Prefeitura</th>
               <th nzWidth="110px" nzAlign="center">Status</th>
-              <th nzWidth="110px" nzAlign="center">Ação</th>
+              <th nzWidth="110px" nzAlign="center" class="col-acoes">Ação</th>
             </tr></thead>
             <tbody>
               <tr *ngFor="let e of emissoes" [class.emissao-excluida]="e.excluido">
@@ -438,7 +449,7 @@ interface CobrancaAdicionalForm {
                 <td nzAlign="center">
                   <nz-tag [nzColor]="e.excluido ? 'default' : 'success'">{{ e.excluido ? 'Desativado' : 'Ativo' }}</nz-tag>
                 </td>
-                <td nzAlign="center">
+                <td nzAlign="center" class="col-acoes">
                   <button *ngIf="!e.excluido" nz-button nzSize="small" nzType="primary" (click)="editarEmissao(e)" style="margin-right:6px">
                     <i nz-icon nzType="edit"></i>
                   </button>
@@ -475,13 +486,13 @@ interface CobrancaAdicionalForm {
                   <span class="das-info-label">CNPJ</span>
                   <span class="das-info-val">{{ pessoa.documento || '—' }}</span>
                 </div>
-                <button nz-button nzSize="small" nzType="primary" nzGhost (click)="editandoDAS = true" style="align-self:flex-end">
+                <button nz-button nzSize="small" nzType="primary" nzGhost class="toolbar-edit" (click)="editandoDAS = true" style="align-self:flex-end">
                   <i nz-icon nzType="edit"></i> Editar
                 </button>
               </div>
             </div>
 
-            <ng-container *ngIf="editandoDAS">
+            <ng-container *ngIf="editandoDAS && !somenteLeitura">
               <div class="form-row">
                 <nz-form-item class="flex2">
                   <nz-form-label>Código Contribuinte</nz-form-label>
@@ -507,6 +518,7 @@ interface CobrancaAdicionalForm {
 
           <!-- Sem registro: mostra formulário de cadastro -->
           <ng-template #semDAS>
+            <ng-container *ngIf="!somenteLeitura">
             <div class="form-row">
               <nz-form-item class="flex2">
                 <nz-form-label>Código Contribuinte</nz-form-label>
@@ -526,6 +538,8 @@ interface CobrancaAdicionalForm {
                 <i nz-icon nzType="save"></i> Cadastrar DAS
               </button>
             </div>
+            </ng-container>
+            <nz-alert *ngIf="somenteLeitura" nzType="info" nzMessage="Nenhum registro DAS cadastrado." nzShowIcon></nz-alert>
           </ng-template>
           <!-- ANEXO CONTRIBUINTE -->
           <nz-divider nzText="Anexo" nzOrientation="left" style="margin-top:24px"></nz-divider>
@@ -553,6 +567,7 @@ interface CobrancaAdicionalForm {
                     </span>
                   </div>
                   <button nz-button nzType="default" nzDanger nzSize="small"
+                    class="toolbar-edit"
                     [nzLoading]="excluindoAnexo"
                     nz-popconfirm nzPopconfirmTitle="Excluir este anexo permanentemente?"
                     nzOkText="Excluir" nzCancelText="Cancelar"
@@ -570,7 +585,7 @@ interface CobrancaAdicionalForm {
                 <div class="sem-anexo-box">
                   <i nz-icon nzType="inbox" style="font-size:32px;color:rgba(0,0,0,.25)"></i>
                   <span style="color:rgba(0,0,0,.45);margin:8px 0">Nenhum anexo cadastrado para este DAS.</span>
-                  <button nz-button nzType="primary" nzGhost (click)="abrirModalAnexo()">
+                  <button nz-button nzType="primary" nzGhost class="toolbar-edit" (click)="abrirModalAnexo()">
                     <i nz-icon nzType="plus"></i> Cadastrar Anexo
                   </button>
                 </div>
@@ -619,7 +634,7 @@ interface CobrancaAdicionalForm {
             <button nz-button nzType="primary" [nzLoading]="salvandoCobranca" (click)="salvarCobranca()">
               <i nz-icon nzType="save"></i> Salvar Cobrança
             </button>
-            <button nz-button nzType="default" style="margin-left:8px" (click)="abrirModalCobrancaAdicional()">
+            <button nz-button nzType="default" style="margin-left:8px" class="toolbar-edit" (click)="abrirModalCobrancaAdicional()">
               <i nz-icon nzType="plus"></i> Cobrança Adicional
             </button>
           </div>
@@ -708,15 +723,15 @@ interface CobrancaAdicionalForm {
                 <span class="das-info-label">Código de Acesso</span>
                 <span class="das-info-val">{{ certificado!.codigoAcesso || '—' }}</span>
               </div>
-              <button nz-button nzType="default" (click)="editarCertificado()"><i nz-icon nzType="edit"></i> Editar</button>
-              <button nz-button nzDanger nz-popconfirm nzPopconfirmTitle="Excluir certificado digital?" (nzOnConfirm)="excluirCertificado()">
+            <button nz-button nzType="default" class="toolbar-edit" (click)="editarCertificado()"><i nz-icon nzType="edit"></i> Editar</button>
+              <button nz-button nzDanger class="toolbar-edit" nz-popconfirm nzPopconfirmTitle="Excluir certificado digital?" (nzOnConfirm)="excluirCertificado()">
                 <i nz-icon nzType="delete"></i> Excluir
               </button>
             </div>
           </div>
 
           <!-- Cadastro / Edição -->
-          <div *ngIf="!temCertificado || editandoCert" class="cert-form-box">
+          <div *ngIf="(!temCertificado || editandoCert) && !somenteLeitura" class="cert-form-box">
             <nz-divider [nzText]="temCertificado ? 'Editar Certificado' : 'Cadastrar Certificado'" nzOrientation="left"></nz-divider>
             <div class="form-row">
               <nz-form-item class="flex1">
@@ -753,7 +768,7 @@ interface CobrancaAdicionalForm {
         <div class="form-section">
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap">
             <app-export-excel-button [data]="$any(documentos)" [columns]="exportColumnsDocumentos" fileName="cliente-documentos" />
-            <button nz-button nzType="primary" (click)="abrirUpload()"><i nz-icon nzType="upload"></i> Novo Documento</button>
+            <button nz-button nzType="primary" class="toolbar-edit" (click)="abrirUpload()"><i nz-icon nzType="upload"></i> Novo Documento</button>
           </div>
           <nz-table [nzData]="documentos" nzBordered nzSize="middle" [nzShowPagination]="false">
             <thead><tr>                <th nzWidth="80px">Código</th><th>Tipo</th><th nzWidth="220px" nzAlign="center">Ação</th></tr></thead>
@@ -763,8 +778,8 @@ interface CobrancaAdicionalForm {
                 <td><nz-tag>{{ d.tipo }}</nz-tag></td>
                 <td nzAlign="center">
                   <button nz-button nzType="link" nzSize="small" (click)="abrirDocumento(d)"><i nz-icon nzType="download"></i> Baixar</button>
-                  <button nz-button nzType="link" nzSize="small" (click)="enviarDocumento(d)"><i nz-icon nzType="send"></i> Enviar</button>
-                  <button nz-button nzDanger nzSize="small" [nzLoading]="excluindoDoc.has(d.codigo)" (click)="excluirDoc(d)"><i nz-icon nzType="delete"></i></button>
+                  <button nz-button nzType="link" nzSize="small" class="doc-acao-edit" (click)="enviarDocumento(d)"><i nz-icon nzType="send"></i> Enviar</button>
+                  <button nz-button nzDanger nzSize="small" class="doc-acao-edit" [nzLoading]="excluindoDoc.has(d.codigo)" (click)="excluirDoc(d)"><i nz-icon nzType="delete"></i></button>
                 </td>
               </tr>
               <tr *ngIf="documentos.length===0"><td colspan="3" style="text-align:center;padding:24px;color:rgba(0,0,0,.45)">Nenhum documento anexado.</td></tr>
@@ -1094,11 +1109,32 @@ interface CobrancaAdicionalForm {
     .btn-boleto { display:inline-block;padding:4px 14px;background:#1890ff;color:#fff;border-radius:20px;font-size:.85rem;font-weight:500;text-decoration:none; }
     .btn-boleto:hover { background:#40a9ff;color:#fff; }
     .emissao-excluida td { color: rgba(0,0,0,.45); background: #fafafa; }
+    .page.somente-leitura .form-actions,
+    .page.somente-leitura .col-acoes,
+    .page.somente-leitura .toolbar-edit,
+    .page.somente-leitura .user-plat-edit,
+    .page.somente-leitura .doc-acao-edit { display: none !important; }
+    .page.somente-leitura ::ng-deep input.ant-input:not([disabled]),
+    .page.somente-leitura ::ng-deep textarea.ant-input {
+      pointer-events: none;
+      background-color: #fafafa;
+      color: rgba(0,0,0,.85);
+      cursor: default;
+    }
+    .page.somente-leitura ::ng-deep .ant-select:not(.ant-select-disabled) .ant-select-selector {
+      pointer-events: none;
+      background: #fafafa !important;
+      color: rgba(0,0,0,.85) !important;
+    }
+    .page.somente-leitura ::ng-deep .ant-switch { pointer-events: none; opacity: 0.8; }
+    .page.somente-leitura ::ng-deep .ant-picker { pointer-events: none; background: #fafafa; }
+    .page.somente-leitura ::ng-deep .ant-input-affix-wrapper .ant-input-suffix { pointer-events: none; }
   `]
 })
 export class ClienteEditarComponent implements OnInit {
   private readonly api = environment.apiUrl;
   codigoPessoa = 0;
+  somenteLeitura = false;
   loading = true; salvando = false; salvandoCobranca = false;
   buscandoCep = false;
 
@@ -1270,6 +1306,7 @@ export class ClienteEditarComponent implements OnInit {
 
   ngOnInit() {
     this.codigoPessoa = +this.route.snapshot.paramMap.get('id')!;
+    this.somenteLeitura = this.route.snapshot.url.some(s => s.path === 'detalhes');
     this.inicializarTiposDocumento();
     this.carregar();
   }
@@ -1455,6 +1492,8 @@ export class ClienteEditarComponent implements OnInit {
       dataAbertura: raw.dataAbertura ?? raw.DataAbertura,
       status: raw.status ?? raw.Status ?? 0,
       excluido: raw.excluido ?? raw.Excluido,
+      motivoExcluido: raw.motivoExcluido ?? raw.MotivoExcluido ?? null,
+      dataCancelamento: raw.dataCancelamento ?? raw.DataCancelamento ?? null,
       endereco: raw.endereco ?? raw.Endereco,
       certificado: raw.certificado ?? raw.Certificado
     };
@@ -2318,5 +2357,11 @@ export class ClienteEditarComponent implements OnInit {
     });
   }
 
-  voltar() { this.router.navigate([this.pessoa.fisica ? '/administrativo/clientes-fisica' : '/administrativo/clientes']); }
+  voltar() {
+    if (this.somenteLeitura) {
+      void this.router.navigate(['/administrativo/clientes-excluidos']);
+      return;
+    }
+    void this.router.navigate([this.pessoa.fisica ? '/administrativo/clientes-fisica' : '/administrativo/clientes']);
+  }
 }
