@@ -47,6 +47,8 @@ interface DasItem {
   codigo: number; codigoPessoa: number; documento: string; razao: string;
   prefeitura: string; periodo: string; valorTributado: string; valorTributo: string;
   mensagem: string; status: string; nomeArquivo: string;
+  tributoAnterior?: string;
+  alertaTributo?: 'normal' | 'amarelo' | 'vermelho';
   erroConsultaRobo?: boolean; erroConsultaDetalhe?: string;
 }
 interface Relatorio {
@@ -214,14 +216,14 @@ interface Relatorio {
           <nz-collapse-panel [nzHeader]="hdr5" [nzActive]="false" [nzExtra]="cnt5">
             <ng-template #hdr5><span class="sec-hdr"><i nz-icon nzType="robot" style="color:darkgoldenrod;margin-right:6px"></i>Sem Faturamento — sem consulta do Robô</span></ng-template>
             <ng-template #cnt5><nz-badge [nzCount]="dados.semFaturamento.length" [nzStyle]="badgeStyle(dados.semFaturamento.length,'gold')"></nz-badge></ng-template>
-            <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semFaturamento, fileName: 'historico-das-sem-faturamento-robo', erro: false}"></ng-container>
+            <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semFaturamento, fileName: 'historico-das-sem-faturamento-robo', erro: false, comTributoAnterior: true}"></ng-container>
           </nz-collapse-panel>
 
           <!-- 6: Sem valor de Faturamento (prefeituras com robô) -->
           <nz-collapse-panel [nzHeader]="hdr6" [nzActive]="false" [nzExtra]="cnt6">
             <ng-template #hdr6><span class="sec-hdr"><i nz-icon nzType="dollar" style="color:darkgoldenrod;margin-right:6px"></i>Sem valor de Faturamento</span></ng-template>
             <ng-template #cnt6><nz-badge [nzCount]="dados.semValorFaturamento.length" [nzStyle]="badgeStyle(dados.semValorFaturamento.length,'gold')"></nz-badge></ng-template>
-            <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semValorFaturamento, fileName: 'historico-das-sem-valor-faturamento', erro: false, marcarErroRobo: true}"></ng-container>
+            <ng-container [ngTemplateOutlet]="tabelaDASFat" [ngTemplateOutletContext]="{rows: dados.semValorFaturamento, fileName: 'historico-das-sem-valor-faturamento', erro: false, marcarErroRobo: true, comTributoAnterior: true}"></ng-container>
           </nz-collapse-panel>
 
           <!-- 7: Aguardando -->
@@ -282,8 +284,8 @@ interface Relatorio {
       </ng-template>
 
       <!-- Template: tabela DAS com botão Baixar -->
-      <ng-template #tabelaDASFat let-rows="rows" let-fileName="fileName" let-erro="erro" let-marcarErroRobo="marcarErroRobo">
-        <div class="sec-export"><app-export-excel-button [data]="$any(rows)" [columns]="exportColumnsDasFat" [fileName]="fileName" /></div>
+      <ng-template #tabelaDASFat let-rows="rows" let-fileName="fileName" let-erro="erro" let-marcarErroRobo="marcarErroRobo" let-comTributoAnterior="comTributoAnterior">
+        <div class="sec-export"><app-export-excel-button [data]="$any(rows)" [columns]="comTributoAnterior ? exportColumnsDasFatComAnterior : exportColumnsDasFat" [fileName]="fileName" /></div>
         <nz-table [nzData]="rows" nzSize="small" nzBordered [nzPageSize]="15"
           [nzShowPagination]="rows.length > 15" class="sec-table" nzTableLayout="fixed">
           <thead><tr>
@@ -294,6 +296,7 @@ interface Relatorio {
             <th nzWidth="100px">Período</th>
             <th nzWidth="105px" nzAlign="right">Val. Tributado</th>
             <th nzWidth="95px" nzAlign="right">Val. Tributo</th>
+            <th *ngIf="comTributoAnterior" nzWidth="95px" nzAlign="right">Tributo Anterior</th>
             <th nzWidth="160px">Mensagem</th>
             <th nzWidth="105px" nzAlign="center">Status</th>
             <th nzWidth="80px" nzAlign="center">DAS</th>
@@ -309,7 +312,8 @@ interface Relatorio {
               <td>{{ r.prefeitura || '—' }}</td>
               <td class="mono">{{ r.periodo | dasValor }}</td>
               <td nzAlign="right" class="mono">{{ r.valorTributado | dasValor }}</td>
-              <td nzAlign="right" class="mono val-tributo">{{ r.valorTributo | dasValor }}</td>
+              <td nzAlign="right" class="mono val-tributo" [ngClass]="classeAlertaTributo(r)">{{ r.valorTributo | dasValor }}</td>
+              <td *ngIf="comTributoAnterior" nzAlign="right" class="mono">{{ r.tributoAnterior | dasValor }}</td>
               <td>
                 <ng-container *ngIf="marcarErroRobo && r.erroConsultaRobo; else msgPadrao">
                   <span class="erro-robo-msg">Erro consulta robô - acessar prefeitura manualmente</span>
@@ -328,7 +332,7 @@ interface Relatorio {
                 <span *ngIf="!r.nomeArquivo" class="muted">—</span>
               </td>
             </tr>
-            <tr *ngIf="!rows.length"><td colspan="10" class="empty-row">Nenhum registro.</td></tr>
+            <tr *ngIf="!rows.length"><td [attr.colspan]="comTributoAnterior ? 11 : 10" class="empty-row">Nenhum registro.</td></tr>
           </tbody>
         </nz-table>
       </ng-template>
@@ -359,6 +363,7 @@ interface Relatorio {
             <th nzWidth="100px">Período</th>
             <th nzWidth="105px" nzAlign="right">Val. Tributado</th>
             <th nzWidth="95px" nzAlign="right">Val. Tributo</th>
+            <th nzWidth="95px" nzAlign="right">Tributo Anterior</th>
             <th nzWidth="160px">Mensagem</th>
             <th nzWidth="150px" nzAlign="center">Ação</th>
           </tr></thead>
@@ -376,7 +381,8 @@ interface Relatorio {
               <td>{{ r.prefeitura || '—' }}</td>
               <td class="mono">{{ r.periodo | dasValor }}</td>
               <td nzAlign="right" class="mono">{{ r.valorTributado | dasValor }}</td>
-              <td nzAlign="right" class="mono val-tributo">{{ r.valorTributo | dasValor }}</td>
+              <td nzAlign="right" class="mono val-tributo" [ngClass]="classeAlertaTributo(r)">{{ r.valorTributo | dasValor }}</td>
+              <td nzAlign="right" class="mono">{{ r.tributoAnterior | dasValor }}</td>
               <td><span class="msg-cell" nz-tooltip [nzTooltipTitle]="r.mensagem">{{ r.mensagem || '—' }}</span></td>
               <td nzAlign="center" class="acoes-cell">
                 <button *ngIf="r.nomeArquivo" nz-button nzType="link" nzSize="small" (click)="abrirArquivo(r)">Baixar</button>
@@ -386,7 +392,7 @@ interface Relatorio {
                 <span *ngIf="!r.nomeArquivo" class="muted">—</span>
               </td>
             </tr>
-            <tr *ngIf="!rows.length"><td colspan="10" class="empty-row">Nenhum registro.</td></tr>
+            <tr *ngIf="!rows.length"><td colspan="11" class="empty-row">Nenhum registro.</td></tr>
           </tbody>
         </nz-table>
       </ng-template>
@@ -474,6 +480,8 @@ interface Relatorio {
     .mono  { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .8rem; }
     .muted { color: rgba(0,0,0,.35); }
     .val-tributo { font-weight: 600; }
+    .trib-alerta-amarelo { background-color: #fffbe6 !important; color: #ad6800 !important; }
+    .trib-alerta-vermelho { background-color: #fff1f0 !important; color: #cf1322 !important; font-weight: 700; }
     .cod-link { color: #1890ff; }
 
     .empty-row { text-align: center; padding: 28px; color: rgba(0,0,0,.3); font-style: italic; }
@@ -529,7 +537,21 @@ export class HistoricoDasComponent implements OnInit {
     { key: 'periodo', title: 'Período' },
     { key: 'valorTributado', title: 'Val. Tributado' },
     { key: 'valorTributo', title: 'Val. Tributo' },
+    { key: 'tributoAnterior', title: 'Tributo Anterior' },
     { key: 'mensagem', title: 'Mensagem' }
+  ];
+
+  readonly exportColumnsDasFatComAnterior: ExcelExportColumn<DasItem>[] = [
+    { key: 'codigoPessoa', title: 'Cód.' },
+    { key: 'documento', title: 'CNPJ' },
+    { key: 'razao', title: 'Razão Social' },
+    { key: 'prefeitura', title: 'Prefeitura' },
+    { key: 'periodo', title: 'Período' },
+    { key: 'valorTributado', title: 'Val. Tributado' },
+    { key: 'valorTributo', title: 'Val. Tributo' },
+    { key: 'tributoAnterior', title: 'Tributo Anterior' },
+    { key: 'mensagem', title: 'Mensagem' },
+    { key: 'status', title: 'Status' }
   ];
 
   private get h(): HttpHeaders {
@@ -565,6 +587,7 @@ export class HistoricoDasComponent implements OnInit {
           ano
         );
         this.aplicarErrosConsultaRobo(relatorio, consultasErro as Record<string, unknown>[]);
+        this.aplicarTributoAnterior(relatorio, das as Record<string, unknown>[]);
         this.dados = relatorio;
         this.loading = false;
         this.cdr.markForCheck();
@@ -694,6 +717,90 @@ export class HistoricoDasComponent implements OnInit {
       enviados,
       fatDesativado
     };
+  }
+
+  private aplicarTributoAnterior(relatorio: Relatorio, dasRaw: Record<string, unknown>[]): void {
+    const map = this.buildTributoAnteriorMap(dasRaw);
+    const listas = [relatorio.semFaturamento, relatorio.semValorFaturamento, relatorio.aguardando];
+    for (const lista of listas) {
+      for (const item of lista) {
+        const anterior = map.get(item.codigoPessoa) ?? '';
+        item.tributoAnterior = anterior;
+        item.alertaTributo = this.calcularAlertaTributo(item.valorTributo, anterior);
+      }
+    }
+  }
+
+  private buildTributoAnteriorMap(dasRaw: Record<string, unknown>[]): Map<number, string> {
+    const periodoAnterior = this.formatPeriodoMesAnterior(new Date());
+    const map = new Map<number, string>();
+
+    for (const raw of dasRaw) {
+      if (raw['excluido'] ?? raw['Excluido']) continue;
+
+      const status = String(raw['status'] ?? raw['Status'] ?? '').trim().toLowerCase();
+      if (status !== 'enviado' && status !== 'concluido' && status !== 'concluído') continue;
+
+      const periodo = String(raw['periodo'] ?? raw['Periodo'] ?? '').trim();
+      if (!this.periodoEquivalente(periodo, periodoAnterior)) continue;
+
+      const codigoPessoa = Number(raw['codigoPessoa'] ?? raw['CodigoPessoa'] ?? 0);
+      if (!codigoPessoa) continue;
+
+      map.set(codigoPessoa, String(raw['valorTributo'] ?? raw['ValorTributo'] ?? '').trim());
+    }
+
+    return map;
+  }
+
+  private formatPeriodoMesAnterior(ref: Date): string {
+    const mes = ref.getMonth();
+    const ano = mes === 0 ? ref.getFullYear() - 1 : ref.getFullYear();
+    const mesAnterior = mes === 0 ? 12 : mes;
+    return `${String(mesAnterior).padStart(2, '0')}/${ano}`;
+  }
+
+  private normalizarPeriodo(periodo: string): string | null {
+    const t = (periodo || '').trim();
+    const match = t.match(/^(\d{1,2})\s*[\/\-]\s*(\d{4})$/);
+    if (!match) return null;
+    return `${match[1].padStart(2, '0')}/${match[2]}`;
+  }
+
+  private periodoEquivalente(periodo: string, referencia: string): boolean {
+    const a = this.normalizarPeriodo(periodo);
+    const b = this.normalizarPeriodo(referencia);
+    return !!a && !!b && a === b;
+  }
+
+  private parseValorMonetario(valor: string | null | undefined): number | null {
+    if (valor === null || valor === undefined) return null;
+    const t = String(valor).trim();
+    if (!t || t === '—') return null;
+    const n = Number(t.replace(/\./g, '').replace(',', '.'));
+    return isNaN(n) ? null : n;
+  }
+
+  private calcularAlertaTributo(
+    valorAtual: string,
+    valorAnterior: string
+  ): 'normal' | 'amarelo' | 'vermelho' {
+    const atual = this.parseValorMonetario(valorAtual);
+    const anterior = this.parseValorMonetario(valorAnterior);
+    if (atual === null || anterior === null || anterior <= 0) return 'normal';
+
+    const aumentoPercentual = ((atual - anterior) / anterior) * 100;
+    if (aumentoPercentual >= 100) return 'vermelho';
+    if (aumentoPercentual >= 50) return 'amarelo';
+    return 'normal';
+  }
+
+  classeAlertaTributo(item: DasItem): string {
+    switch (item.alertaTributo) {
+      case 'amarelo': return 'trib-alerta-amarelo';
+      case 'vermelho': return 'trib-alerta-vermelho';
+      default: return '';
+    }
   }
 
   private aplicarErrosConsultaRobo(relatorio: Relatorio, consultas: Record<string, unknown>[]): void {
