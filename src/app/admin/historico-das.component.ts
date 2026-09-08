@@ -794,7 +794,7 @@ export class HistoricoDasComponent implements OnInit {
 
     const aumentoPercentual = ((atual - anterior) / anterior) * 100;
     if (aumentoPercentual >= 100) return 'vermelho';
-    if (aumentoPercentual >= 50) return 'amarelo';
+    if (aumentoPercentual >= 20) return 'amarelo';
     return 'normal';
   }
 
