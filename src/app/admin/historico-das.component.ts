@@ -587,7 +587,7 @@ export class HistoricoDasComponent implements OnInit {
           ano
         );
         this.aplicarErrosConsultaRobo(relatorio, consultasErro as Record<string, unknown>[]);
-        this.aplicarTributoAnterior(relatorio, das as Record<string, unknown>[]);
+        this.aplicarTributoAnterior(relatorio, das as Record<string, unknown>[], mes, ano);
         this.dados = relatorio;
         this.loading = false;
         this.cdr.markForCheck();
@@ -719,8 +719,13 @@ export class HistoricoDasComponent implements OnInit {
     };
   }
 
-  private aplicarTributoAnterior(relatorio: Relatorio, dasRaw: Record<string, unknown>[]): void {
-    const map = this.buildTributoAnteriorMap(dasRaw);
+  private aplicarTributoAnterior(
+    relatorio: Relatorio,
+    dasRaw: Record<string, unknown>[],
+    mesAtual: number,
+    anoAtual: number
+  ): void {
+    const map = this.buildTributoAnteriorMap(dasRaw, mesAtual, anoAtual);
     const listas = [relatorio.semFaturamento, relatorio.semValorFaturamento, relatorio.aguardando];
     for (const lista of listas) {
       for (const item of lista) {
@@ -731,9 +736,15 @@ export class HistoricoDasComponent implements OnInit {
     }
   }
 
-  private buildTributoAnteriorMap(dasRaw: Record<string, unknown>[]): Map<number, string> {
-    const periodoAnterior = this.formatPeriodoMesAnterior(new Date());
+  private buildTributoAnteriorMap(
+    dasRaw: Record<string, unknown>[],
+    mesAtual: number,
+    anoAtual: number
+  ): Map<number, string> {
+    const mesAnterior = mesAtual === 1 ? 12 : mesAtual - 1;
+    const anoAnterior = mesAtual === 1 ? anoAtual - 1 : anoAtual;
     const map = new Map<number, string>();
+    const candidatos = new Map<number, { valor: string; data: Date; enviado: boolean }>();
 
     for (const raw of dasRaw) {
       if (raw['excluido'] ?? raw['Excluido']) continue;
@@ -741,36 +752,28 @@ export class HistoricoDasComponent implements OnInit {
       const status = String(raw['status'] ?? raw['Status'] ?? '').trim().toLowerCase();
       if (status !== 'enviado' && status !== 'concluido' && status !== 'concluído') continue;
 
-      const periodo = String(raw['periodo'] ?? raw['Periodo'] ?? '').trim();
-      if (!this.periodoEquivalente(periodo, periodoAnterior)) continue;
+      const dataVal = raw['data'] ?? raw['Data'];
+      if (!dataVal) continue;
+      const dt = new Date(String(dataVal));
+      if (isNaN(dt.getTime())) continue;
+      if (dt.getMonth() + 1 !== mesAnterior || dt.getFullYear() !== anoAnterior) continue;
 
       const codigoPessoa = Number(raw['codigoPessoa'] ?? raw['CodigoPessoa'] ?? 0);
       if (!codigoPessoa) continue;
 
-      map.set(codigoPessoa, String(raw['valorTributo'] ?? raw['ValorTributo'] ?? '').trim());
+      const valor = String(raw['valorTributo'] ?? raw['ValorTributo'] ?? '').trim();
+      const enviado = status === 'enviado';
+      const atual = candidatos.get(codigoPessoa);
+
+      if (!atual
+        || (enviado && !atual.enviado)
+        || (enviado === atual.enviado && dt.getTime() > atual.data.getTime())) {
+        candidatos.set(codigoPessoa, { valor, data: dt, enviado });
+      }
     }
 
+    candidatos.forEach((item, codigoPessoa) => map.set(codigoPessoa, item.valor));
     return map;
-  }
-
-  private formatPeriodoMesAnterior(ref: Date): string {
-    const mes = ref.getMonth();
-    const ano = mes === 0 ? ref.getFullYear() - 1 : ref.getFullYear();
-    const mesAnterior = mes === 0 ? 12 : mes;
-    return `${String(mesAnterior).padStart(2, '0')}/${ano}`;
-  }
-
-  private normalizarPeriodo(periodo: string): string | null {
-    const t = (periodo || '').trim();
-    const match = t.match(/^(\d{1,2})\s*[\/\-]\s*(\d{4})$/);
-    if (!match) return null;
-    return `${match[1].padStart(2, '0')}/${match[2]}`;
-  }
-
-  private periodoEquivalente(periodo: string, referencia: string): boolean {
-    const a = this.normalizarPeriodo(periodo);
-    const b = this.normalizarPeriodo(referencia);
-    return !!a && !!b && a === b;
   }
 
   private parseValorMonetario(valor: string | null | undefined): number | null {
