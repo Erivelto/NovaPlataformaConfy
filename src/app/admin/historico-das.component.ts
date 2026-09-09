@@ -290,7 +290,7 @@ interface Relatorio {
           [nzShowPagination]="rows.length > 15" class="sec-table" nzTableLayout="fixed">
           <thead><tr>
             <th nzWidth="70px">Código</th>
-            <th nzWidth="145px">CNPJ</th>
+            <th *ngIf="!comTributoAnterior" nzWidth="145px">CNPJ</th>
             <th>Razão Social</th>
             <th nzWidth="115px">Prefeitura</th>
             <th nzWidth="100px">Período</th>
@@ -307,7 +307,7 @@ interface Relatorio {
               [class.row-erro-robo]="marcarErroRobo && r.erroConsultaRobo"
               [nz-tooltip]="marcarErroRobo && r.erroConsultaRobo ? tooltipErroRobo(r) : null">
               <td class="mono">{{ r.codigoPessoa }}</td>
-              <td class="mono">{{ r.documento | cnpj }}</td>
+              <td *ngIf="!comTributoAnterior" class="mono">{{ r.documento | cnpj }}</td>
               <td class="razao-cell">{{ r.razao }}</td>
               <td>{{ r.prefeitura || '—' }}</td>
               <td class="mono">{{ r.periodo | dasValor }}</td>
@@ -332,7 +332,7 @@ interface Relatorio {
                 <span *ngIf="!r.nomeArquivo" class="muted">—</span>
               </td>
             </tr>
-            <tr *ngIf="!rows.length"><td [attr.colspan]="comTributoAnterior ? 11 : 10" class="empty-row">Nenhum registro.</td></tr>
+            <tr *ngIf="!rows.length"><td [attr.colspan]="10" class="empty-row">Nenhum registro.</td></tr>
           </tbody>
         </nz-table>
       </ng-template>
@@ -357,7 +357,6 @@ interface Relatorio {
                 (nzCheckedChange)="alternarTodosAguardando(rows, $event)"></label>
             </th>
             <th nzWidth="70px">Código</th>
-            <th nzWidth="145px">CNPJ</th>
             <th>Razão Social</th>
             <th nzWidth="115px">Prefeitura</th>
             <th nzWidth="100px">Período</th>
@@ -376,7 +375,6 @@ interface Relatorio {
                   (nzCheckedChange)="alternarSelecaoAguardando(r.codigo, $event)"></label>
               </td>
               <td class="mono">{{ r.codigoPessoa }}</td>
-              <td class="mono">{{ r.documento | cnpj }}</td>
               <td class="razao-cell">{{ r.razao }}</td>
               <td>{{ r.prefeitura || '—' }}</td>
               <td class="mono">{{ r.periodo | dasValor }}</td>
@@ -392,7 +390,7 @@ interface Relatorio {
                 <span *ngIf="!r.nomeArquivo" class="muted">—</span>
               </td>
             </tr>
-            <tr *ngIf="!rows.length"><td colspan="11" class="empty-row">Nenhum registro.</td></tr>
+            <tr *ngIf="!rows.length"><td colspan="10" class="empty-row">Nenhum registro.</td></tr>
           </tbody>
         </nz-table>
       </ng-template>
@@ -531,7 +529,6 @@ export class HistoricoDasComponent implements OnInit {
 
   readonly exportColumnsDasAguardando: ExcelExportColumn<DasItem>[] = [
     { key: 'codigoPessoa', title: 'Cód.' },
-    { key: 'documento', title: 'CNPJ' },
     { key: 'razao', title: 'Razão Social' },
     { key: 'prefeitura', title: 'Prefeitura' },
     { key: 'periodo', title: 'Período' },
@@ -543,7 +540,6 @@ export class HistoricoDasComponent implements OnInit {
 
   readonly exportColumnsDasFatComAnterior: ExcelExportColumn<DasItem>[] = [
     { key: 'codigoPessoa', title: 'Cód.' },
-    { key: 'documento', title: 'CNPJ' },
     { key: 'razao', title: 'Razão Social' },
     { key: 'prefeitura', title: 'Prefeitura' },
     { key: 'periodo', title: 'Período' },
