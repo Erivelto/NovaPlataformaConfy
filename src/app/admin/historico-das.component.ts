@@ -398,6 +398,7 @@ interface Relatorio {
       <app-envio-arquivo-cliente
         [(visible)]="envioVisible"
         [itens]="envioItens"
+        canalPadrao="Todos"
         (envioConcluido)="onEnvioConcluido()" />
     </div>
   `,

@@ -50,6 +50,7 @@ export interface ArquivoEnvioRef {
             <nz-form-label nzRequired>Canal de envio</nz-form-label>
             <nz-form-control>
               <nz-select [(ngModel)]="tipoMensagem" style="width:100%">
+                <nz-option nzValue="Todos" nzLabel="Todos (E-mail + WhatsApp)"></nz-option>
                 <nz-option nzValue="Email" nzLabel="E-mail (com anexo PDF)"></nz-option>
                 <nz-option nzValue="Whatsapp" nzLabel="WhatsApp (link para download)"></nz-option>
               </nz-select>
@@ -57,7 +58,7 @@ export interface ArquivoEnvioRef {
           </nz-form-item>
         </div>
         <p class="hint">
-          O envio é enfileirado e processado em background. Para WhatsApp é necessário número cadastrado; para e-mail, usuário da plataforma.
+          O envio é enfileirado e processado em background. Em &quot;Todos&quot;, envia e-mail (PDF) e WhatsApp (link). É necessário número e usuário da plataforma cadastrados.
         </p>
       </ng-container>
       <ng-template #ftEnvio>
@@ -80,10 +81,12 @@ export class EnvioArquivoClienteComponent implements OnChanges {
   @Input() visible = false;
   @Output() visibleChange = new EventEmitter<boolean>();
   @Input() itens: ArquivoEnvioRef[] = [];
+  /** Canal selecionado ao abrir o modal (ex.: historico-das usa Todos). */
+  @Input() canalPadrao: 'Email' | 'Whatsapp' | 'Todos' = 'Whatsapp';
   @Output() envioConcluido = new EventEmitter<void>();
 
   enviando = false;
-  tipoMensagem: 'Email' | 'Whatsapp' = 'Whatsapp';
+  tipoMensagem: 'Email' | 'Whatsapp' | 'Todos' = 'Whatsapp';
 
   constructor(
     private http: HttpClient,
@@ -97,7 +100,7 @@ export class EnvioArquivoClienteComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['visible']?.currentValue === true) {
-      this.tipoMensagem = 'Whatsapp';
+      this.tipoMensagem = this.canalPadrao;
     }
   }
 
