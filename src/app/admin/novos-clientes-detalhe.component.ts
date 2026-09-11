@@ -74,7 +74,8 @@ const ETAPAS_CONFIG: Record<string, string> = {
   pagamentos_taxas:            'Pagamentos / Taxas',
   envio_documentos:            'Envio de Documentos',
   contrato_social:             'Criação de Contrato Social',
-  receita_federal:             'Processo Receita Federal / Jucesp',
+  receita_federal:             'Processo Receita Federal',
+  jucesp:                      'Jucesp',
   certificado_digital:         'Criar Certificado Digital',
   prefeitura_ecac:             'Cadastro Prefeitura/Simples Nacional',
   // Mudança de Contabilidade
@@ -104,6 +105,8 @@ const LABEL_TIPO: Record<string, string> = {
   contrato_social:          'Contrato Social',
   contrato_social_minuta:   'Minuta do Contrato Social',
   contrato_social_assinado: 'Contrato Social Assinado',
+  jucesp_minuta:            'Minuta Jucesp',
+  jucesp_assinado:          'Jucesp Assinado',
   cpf_socio:                'CPF do Sócio',
   rg_socio:                 'RG do Sócio',
   comprovante_endereco:     'Comprovante de Endereço',
@@ -232,6 +235,28 @@ const LABEL_TIPO: Record<string, string> = {
                   <div *ngIf="contratoAssinado" class="contrato-admin-info">
                     Assinado: {{ contratoAssinado.nomeArquivo }}
                     <nz-tag [nzColor]="docStatusColor(contratoAssinado.status)">{{ docStatusLabel(contratoAssinado.status) }}</nz-tag>
+                  </div>
+                </div>
+
+                <div *ngIf="etapa.chave === 'jucesp' && isAbertura" class="contrato-admin-box">
+                  <div *ngIf="minutaJucesp" class="contrato-admin-info">
+                    Minuta: <strong>{{ minutaJucesp.nomeArquivo }}</strong>
+                    <button nz-button nzType="link" nzSize="small" (click)="baixar(minutaJucesp.id)">
+                      <i nz-icon nzType="download"></i>
+                    </button>
+                  </div>
+                  <div class="contrato-admin-upload">
+                    <input #minutaJucespInp type="file" hidden accept=".pdf,application/pdf"
+                      (change)="onMinutaJucespSelecionada($event)" />
+                    <button nz-button nzType="default" nzSize="small" [nzLoading]="enviandoMinutaJucesp"
+                      (click)="minutaJucespInp.click()">
+                      <i nz-icon nzType="upload"></i>
+                      {{ minutaJucesp ? 'Substituir minuta (PDF)' : 'Enviar minuta (PDF)' }}
+                    </button>
+                  </div>
+                  <div *ngIf="jucespAssinado" class="contrato-admin-info">
+                    Assinado: {{ jucespAssinado.nomeArquivo }}
+                    <nz-tag [nzColor]="docStatusColor(jucespAssinado.status)">{{ docStatusLabel(jucespAssinado.status) }}</nz-tag>
                   </div>
                 </div>
               </div>
@@ -494,6 +519,7 @@ export class NovosClientesDetalheComponent implements OnInit {
   etapaNovaObs = '';
   etapaNovoLink = '';
   enviandoMinuta = false;
+  enviandoMinutaJucesp = false;
 
   get minutaContrato(): DocumentoDto | undefined {
     return this.lead?.documentos.find(d => d.tipo === 'contrato_social_minuta');
@@ -501,6 +527,14 @@ export class NovosClientesDetalheComponent implements OnInit {
 
   get contratoAssinado(): DocumentoDto | undefined {
     return this.lead?.documentos.find(d => d.tipo === 'contrato_social_assinado');
+  }
+
+  get minutaJucesp(): DocumentoDto | undefined {
+    return this.lead?.documentos.find(d => d.tipo === 'jucesp_minuta');
+  }
+
+  get jucespAssinado(): DocumentoDto | undefined {
+    return this.lead?.documentos.find(d => d.tipo === 'jucesp_assinado');
   }
 
   get etapasOrdenadas(): EtapaDto[] {
@@ -683,6 +717,39 @@ export class NovosClientesDetalheComponent implements OnInit {
           this.recarregar();
         } else {
           this.msg.error('Erro ao enviar minuta.');
+        }
+        this.cd.markForCheck();
+      });
+  }
+
+  onMinutaJucespSelecionada(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const arquivo = input.files?.[0];
+    input.value = '';
+    if (!arquivo || !this.lead) return;
+
+    if (!/\.pdf$/i.test(arquivo.name) && arquivo.type !== 'application/pdf') {
+      this.msg.warning('A minuta deve ser um arquivo PDF.');
+      return;
+    }
+    if (arquivo.size > 10 * 1024 * 1024) {
+      this.msg.warning('O arquivo excede 10 MB.');
+      return;
+    }
+
+    this.enviandoMinutaJucesp = true;
+    const fd = new FormData();
+    fd.append('arquivo', arquivo, arquivo.name);
+
+    this.http.post(`${this.api}/Integracao/Admin/Lead/${this.lead.id}/JucespMinuta`, fd, { headers: this.headers(true) })
+      .pipe(catchError(() => of(null)))
+      .subscribe(res => {
+        this.enviandoMinutaJucesp = false;
+        if (res) {
+          this.msg.success('Minuta Jucesp enviada. Etapa marcada como em processo.');
+          this.recarregar();
+        } else {
+          this.msg.error('Erro ao enviar minuta Jucesp.');
         }
         this.cd.markForCheck();
       });

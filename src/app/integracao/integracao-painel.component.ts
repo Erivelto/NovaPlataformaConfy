@@ -82,7 +82,8 @@ const ETAPAS_CONFIG: Record<string, { label: string; descricao: string; icone: s
   pagamentos_taxas:            { label: 'Pagamentos / Taxas',               icone: 'dollar',               descricao: 'Pagamento das taxas necessárias para abertura da empresa.' },
   envio_documentos:            { label: 'Envio de Documentos',              icone: 'file',                 descricao: 'Envio e aprovação de todos os documentos obrigatórios.' },
   contrato_social:             { label: 'Criação de Contrato Social',       icone: 'file-text',            descricao: 'Elaboração e registro do contrato social da empresa.' },
-  receita_federal:             { label: 'Processo Receita Federal / Jucesp',icone: 'bank',                 descricao: 'Registro junto à Receita Federal e Junta Comercial.' },
+  receita_federal:             { label: 'Processo Receita Federal',         icone: 'bank',                 descricao: 'Registro junto à Receita Federal.' },
+  jucesp:                      { label: 'Jucesp',                           icone: 'audit',                descricao: 'Assinatura e protocolo do documento junto à Jucesp.' },
   certificado_digital:         { label: 'Criar Certificado Digital',        icone: 'safety-certificate',   descricao: 'Emissão do certificado digital da empresa.' },
   prefeitura_ecac:             { label: 'Cadastro Prefeitura/Simples Nacional',       icone: 'home',                 descricao: 'Cadastro junto à Prefeitura e portal e-CAC.' },
   // Mudança de Contabilidade
@@ -258,6 +259,44 @@ function ordenarEtapas(etapas: EtapaDto[], tipo?: string): EtapaDto[] {
                         (click)="assinadoInp.click()">
                         <i nz-icon nzType="upload"></i>
                         {{ contratoAssinado ? 'Reenviar contrato assinado (PDF)' : 'Enviar contrato assinado (PDF)' }}
+                      </button>
+                    </ng-container>
+                    <span class="contrato-upload-hint">Baixe a minuta, assine manualmente e envie o PDF assinado.</span>
+                  </div>
+                </div>
+
+                <!-- Jucesp (abertura): baixar minuta e enviar assinado -->
+                <div *ngIf="etapa.chave === 'jucesp' && isAbertura" class="contrato-social-box">
+                  <div *ngIf="minutaJucesp" class="contrato-minuta-info">
+                    <i nz-icon nzType="file-pdf" style="color:#ff4d4f;margin-right:6px"></i>
+                    Minuta disponível: <strong>{{ minutaJucesp.nomeArquivo }}</strong>
+                    <button nz-button nzType="primary" nzSize="small" style="margin-left:8px"
+                      (click)="baixarDocumento(minutaJucesp.id)">
+                      <i nz-icon nzType="download"></i> Baixar minuta
+                    </button>
+                  </div>
+                  <div *ngIf="!minutaJucesp" class="contrato-minuta-vazio">
+                    Aguardando envio da minuta pela Contfy.
+                  </div>
+
+                  <div *ngIf="minutaJucesp" class="contrato-upload-row">
+                    <div *ngIf="jucespAssinado" class="contrato-assinado-status">
+                      <i nz-icon nzType="file-done" style="margin-right:6px"></i>
+                      Enviado: {{ jucespAssinado.nomeArquivo }}
+                      <nz-tag [nzColor]="getDocColor('jucesp_assinado')" style="margin-left:6px">
+                        {{ getDocStatusLabel('jucesp_assinado') }}
+                      </nz-tag>
+                      <div *ngIf="getDocRecusa('jucesp_assinado')" class="doc-recusa-msg" style="margin-top:6px">
+                        <i nz-icon nzType="exclamation-circle"></i> {{ getDocRecusa('jucesp_assinado') }}
+                      </div>
+                    </div>
+                    <ng-container *ngIf="getDocStatus('jucesp_assinado') !== 'aprovado'">
+                      <input #jucespAssinadoInp type="file" hidden accept=".pdf,application/pdf"
+                        (change)="onJucespAssinadoSelecionado($event)" />
+                      <button nz-button nzType="default" nzSize="small" [nzLoading]="uploadingJucespAssinado"
+                        (click)="jucespAssinadoInp.click()">
+                        <i nz-icon nzType="upload"></i>
+                        {{ jucespAssinado ? 'Reenviar documento assinado (PDF)' : 'Enviar documento assinado (PDF)' }}
                       </button>
                     </ng-container>
                     <span class="contrato-upload-hint">Baixe a minuta, assine manualmente e envie o PDF assinado.</span>
@@ -441,6 +480,7 @@ export class IntegracaoPainelComponent implements OnInit {
   tiposDocs: TipoDoc[] = [];
   uploading: Record<string, boolean> = {};
   uploadingContratoAssinado = false;
+  uploadingJucespAssinado = false;
   modalDocsVisivel = false;
 
   get isAbertura(): boolean {
@@ -453,6 +493,14 @@ export class IntegracaoPainelComponent implements OnInit {
 
   get contratoAssinado(): DocumentoDto | undefined {
     return this.painel?.documentos.find(d => d.tipo === 'contrato_social_assinado');
+  }
+
+  get minutaJucesp(): DocumentoDto | undefined {
+    return this.painel?.documentos.find(d => d.tipo === 'jucesp_minuta');
+  }
+
+  get jucespAssinado(): DocumentoDto | undefined {
+    return this.painel?.documentos.find(d => d.tipo === 'jucesp_assinado');
   }
 
   get statusLabel(): string {
@@ -557,12 +605,14 @@ export class IntegracaoPainelComponent implements OnInit {
         this.msg.success('Documento enviado!');
         this.uploading[tipo] = false;
         this.uploadingContratoAssinado = false;
+        this.uploadingJucespAssinado = false;
         this.carregar();
       },
       error: (e) => {
         this.msg.error(this.extrairErroApi(e));
         this.uploading[tipo] = false;
         this.uploadingContratoAssinado = false;
+        this.uploadingJucespAssinado = false;
         this.cdr.markForCheck();
       }
     });
@@ -586,6 +636,26 @@ export class IntegracaoPainelComponent implements OnInit {
     this.uploadingContratoAssinado = true;
     this.cdr.markForCheck();
     this.enviarDocumento('contrato_social_assinado', arquivo);
+  }
+
+  onJucespAssinadoSelecionado(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const arquivo = input.files?.[0];
+    input.value = '';
+    if (!arquivo) return;
+
+    if (!/\.pdf$/i.test(arquivo.name) && arquivo.type !== 'application/pdf') {
+      this.msg.warning('Envie o documento assinado em PDF.');
+      return;
+    }
+    if (arquivo.size > 10 * 1024 * 1024) {
+      this.msg.warning('O arquivo excede 10 MB.');
+      return;
+    }
+
+    this.uploadingJucespAssinado = true;
+    this.cdr.markForCheck();
+    this.enviarDocumento('jucesp_assinado', arquivo);
   }
 
   baixarDocumento(docId: number): void {
