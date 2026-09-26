@@ -41,7 +41,14 @@ import { environment } from '../../environments/environment';
 
 
 interface PessoaData { codigo: number; nome?: string; razao?: string; documento?: string; incricaoMunicipal?: string; ccm?: string; descricaoAtividade?: string; cnae?: string; tipoPessoa?: number; status?: number; fatAtivo?: boolean; prolaboreAtivo?: boolean; dASAtivo?: boolean; mei?: boolean; fisica?: boolean; numeroWhats?: string; observacao?: string; dataInclusao?: string; dataAtulizacao?: string; dataAbertura?: string; dataCancelamento?: string | null; contabilidade?: number; excluido?: boolean; motivoExcluido?: string | null; usuario?: string; endereco?: EnderecoData; certificado?: PessoaCertificadoData; }
-interface PessoaCertificadoData { codigo: number; codigoPessoa: number; validade: string; diretorio: string; codigoAcesso: string; }
+interface PessoaCertificadoData {
+  codigo: number;
+  codigoPessoa: number;
+  validade: string;
+  diretorio: string | null;
+  codigoAcesso: string | null;
+  arquivoFisico?: string | null;
+}
 interface EnderecoData { codigo?: number; codigoPessoa?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; excluido?: boolean; }
 interface ValidacaoPessoa { usuario: boolean; celular: boolean; prefeitura: boolean; dadosDAS: boolean; cobranca: boolean; documentos: boolean; }
 interface RepresentanteLegal { codigo: number; codigoPessoa: number; nome: string; cpf: string; dataContfy?: string; codigoEndereco?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; }
@@ -695,7 +702,7 @@ interface CobrancaAdicionalForm {
             nzType="warning"
             nzShowIcon
             nzMessage="Certificado digital não cadastrado"
-            nzDescription="Cadastre a validade, o diretório do arquivo e o código de acesso do certificado A1 deste cliente."
+            nzDescription="Cadastre a validade, o link de acesso (diretório) e/ou o arquivo físico .pfx do certificado A1."
             style="margin-bottom:16px">
           </nz-alert>
 
@@ -723,6 +730,18 @@ interface CobrancaAdicionalForm {
                 <span class="das-info-label">Código de Acesso</span>
                 <span class="das-info-val">{{ certificado!.codigoAcesso || '—' }}</span>
               </div>
+              <div class="das-info-item">
+                <span class="das-info-label">Arquivo Físico</span>
+                <span class="das-info-val">
+                  <ng-container *ngIf="temArquivoFisicoCert; else semArquivoFisico">
+                    Certificado .pfx anexado
+                    <button nz-button nzType="link" nzSize="small" (click)="baixarArquivoFisicoCert()">
+                      <i nz-icon nzType="download"></i> Baixar
+                    </button>
+                  </ng-container>
+                  <ng-template #semArquivoFisico>—</ng-template>
+                </span>
+              </div>
             <button nz-button nzType="default" class="toolbar-edit" (click)="editarCertificado()"><i nz-icon nzType="edit"></i> Editar</button>
               <button nz-button nzDanger class="toolbar-edit" nz-popconfirm nzPopconfirmTitle="Excluir certificado digital?" (nzOnConfirm)="excluirCertificado()">
                 <i nz-icon nzType="delete"></i> Excluir
@@ -741,15 +760,45 @@ interface CobrancaAdicionalForm {
                 </nz-form-control>
               </nz-form-item>
               <nz-form-item class="flex2">
-                <nz-form-label nzRequired>Diretório</nz-form-label>
+                <nz-form-label>Diretório</nz-form-label>
                 <nz-form-control>
-                  <input nz-input [(ngModel)]="certForm.diretorio" placeholder="Caminho ou nome do arquivo .pfx" />
+                  <input nz-input [(ngModel)]="certForm.diretorio" placeholder="Link ou caminho de acesso (opcional se houver .pfx)" />
                 </nz-form-control>
               </nz-form-item>
               <nz-form-item class="flex1">
-                <nz-form-label nzRequired>Código de Acesso</nz-form-label>
+                <nz-form-label [nzRequired]="exigeSenhaCertificado">Código de Acesso</nz-form-label>
                 <nz-form-control>
-                  <input nz-input [(ngModel)]="certForm.codigoAcesso" placeholder="Código de acesso do certificado" />
+                  <input nz-input [(ngModel)]="certForm.codigoAcesso" placeholder="Senha do certificado A1" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div class="form-row cert-arquivo-fisico-row">
+              <nz-form-item class="flex1">
+                <nz-form-label>Arquivo Físico</nz-form-label>
+                <nz-form-control>
+                  <div *ngIf="temArquivoFisicoCert && !certPfxFile && !certRemoverArquivoFisico" class="cert-arquivo-atual">
+                    <i nz-icon nzType="file-protect"></i> Certificado .pfx anexado
+                    <button nz-button nzType="link" nzSize="small" type="button" (click)="baixarArquivoFisicoCert()">
+                      <i nz-icon nzType="download"></i> Baixar
+                    </button>
+                    <button nz-button nzType="link" nzDanger nzSize="small" type="button" (click)="marcarRemoverArquivoFisico()">
+                      Remover arquivo
+                    </button>
+                  </div>
+                  <div *ngIf="certRemoverArquivoFisico" style="color:#ff4d4f;font-size:13px;margin-bottom:8px">
+                    O arquivo será removido ao salvar.
+                    <button nz-button nzType="link" nzSize="small" type="button" (click)="certRemoverArquivoFisico=false">Desfazer</button>
+                  </div>
+                  <input #certPfxInp type="file" hidden accept=".pfx,.p12,application/x-pkcs12"
+                    (change)="onCertPfxSelecionado($event)" />
+                  <button nz-button nzType="default" type="button" [nzLoading]="enviandoCertPfx"
+                    (click)="certPfxInp.click()">
+                    <i nz-icon nzType="upload"></i>
+                    {{ certPfxFile ? certPfxFile.name : (temArquivoFisicoCert ? 'Substituir .pfx / .p12' : 'Anexar .pfx / .p12') }}
+                  </button>
+                  <div *ngIf="certPfxFile" style="font-size:12px;color:#888;margin-top:6px">
+                    Será enviado ao salvar: {{ certPfxFile.name }}
+                  </div>
                 </nz-form-control>
               </nz-form-item>
             </div>
@@ -1213,6 +1262,12 @@ export class ClienteEditarComponent implements OnInit {
   get temDadosRobo(): boolean { return this.temEmissaoAtiva || this.dadosDasList.length > 0; }
   get temCobranca(): boolean { return this.cobranca.codigo > 0; }
   get temCertificado(): boolean { return !!(this.certificado?.codigo); }
+  get temArquivoFisicoCert(): boolean {
+    return !!(this.certificado?.arquivoFisico?.trim()) && !this.certRemoverArquivoFisico;
+  }
+  get exigeSenhaCertificado(): boolean {
+    return !!(this.certPfxFile || this.temArquivoFisicoCert);
+  }
   get certificadoVencido(): boolean {
     if (!this.certificado?.validade) return false;
     const v = new Date(this.certificado.validade);
@@ -1295,6 +1350,9 @@ export class ClienteEditarComponent implements OnInit {
   editandoCert = false;
   salvandoCert = false;
   certForm: Partial<PessoaCertificadoData> = { diretorio: '', codigoAcesso: '' };
+  certPfxFile: File | null = null;
+  enviandoCertPfx = false;
+  certRemoverArquivoFisico = false;
   certValidade: Date | null = null;
 
   readonly ufs = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
@@ -1332,7 +1390,7 @@ export class ClienteEditarComponent implements OnInit {
         this.pessoa = { ...this.mapPessoa(p), usuario: emailPlat };
         this.endereco = r.endereco ? this.mapEndereco(r.endereco) : (p.endereco ? this.mapEndereco(p.endereco) : {});
         this.statusLogin = String((r.userPlat as any)?.status ?? '').toLowerCase() === 'bloqueado';
-        this.aplicarCertificado(p.certificado);
+        this.aplicarCertificado(this.mapCertificado(p.certificado) ?? p.certificado);
       }
       this.validacao = r.validacao ? (r.validacao as ValidacaoPessoa) : null;
       this.prefeituras = Array.isArray(r.prefeituras) ? r.prefeituras : [];
@@ -2263,8 +2321,22 @@ export class ClienteEditarComponent implements OnInit {
   statusCobrancaLabel(s: string | undefined): string { const m: any = { paid:'Pago', settled:'Pago', waiting:'Aguardando', canceled:'Cancelado', unpaid:'Devedor', expired:'Expirado' }; return m[(s||'').toLowerCase()] || s || '—'; }
   statusCobrancaColor(s: string | undefined): string { const m: any = { paid:'green', settled:'green', waiting:'orange', canceled:'default', unpaid:'red', expired:'red' }; return m[(s||'').toLowerCase()] || 'default'; }
 
+  private mapCertificado(raw: any): PessoaCertificadoData | null {
+    if (!raw?.codigo && !raw?.Codigo) return null;
+    return {
+      codigo: raw.codigo ?? raw.Codigo,
+      codigoPessoa: raw.codigoPessoa ?? raw.CodigoPessoa,
+      validade: raw.validade ?? raw.Validade,
+      diretorio: raw.diretorio ?? raw.Diretorio ?? null,
+      codigoAcesso: raw.codigoAcesso ?? raw.CodigoAcesso ?? null,
+      arquivoFisico: raw.arquivoFisico ?? raw.ArquivoFisico ?? null,
+    };
+  }
+
   aplicarCertificado(c?: PessoaCertificadoData | null) {
     this.certificado = c?.codigo ? { ...c } : null;
+    this.certPfxFile = null;
+    this.certRemoverArquivoFisico = false;
     this.editandoCert = false;
     this.resetCertForm();
   }
@@ -2287,52 +2359,171 @@ export class ClienteEditarComponent implements OnInit {
 
   editarCertificado() {
     this.editandoCert = true;
+    this.certPfxFile = null;
+    this.certRemoverArquivoFisico = false;
     this.resetCertForm();
     this.cdr.markForCheck();
   }
 
   cancelarCertificado() {
     this.editandoCert = false;
+    this.certPfxFile = null;
+    this.certRemoverArquivoFisico = false;
     this.resetCertForm();
     this.cdr.markForCheck();
   }
 
   salvarCertificado() {
     if (!this.certValidade) { this.message.warning('Informe a validade do certificado.'); return; }
-    if (!this.certForm.diretorio?.trim()) { this.message.warning('Informe o diretório do certificado.'); return; }
-    if (!this.certForm.codigoAcesso?.trim()) { this.message.warning('Informe o código de acesso do certificado.'); return; }
 
+    const diretorio = this.certForm.diretorio?.trim() || '';
+    const senha = this.certForm.codigoAcesso?.trim() || '';
+    const teraArquivo = !!(this.certPfxFile || (this.temArquivoFisicoCert && !this.certRemoverArquivoFisico));
+
+    if (!diretorio && !teraArquivo) {
+      this.message.warning('Informe o diretório (link de acesso) ou anexe o arquivo .pfx.');
+      return;
+    }
+    if (teraArquivo && !senha) {
+      this.message.warning('Informe o código de acesso (senha) do certificado A1.');
+      return;
+    }
+
+    const codigoCertForm = this.certForm.codigo || 0;
     const payload: PessoaCertificadoData = {
-      codigo: this.certForm.codigo || 0,
+      codigo: codigoCertForm,
       codigoPessoa: this.codigoPessoa,
       validade: this.certValidade.toISOString(),
-      diretorio: this.certForm.diretorio.trim(),
-      codigoAcesso: this.certForm.codigoAcesso.trim()
+      diretorio: diretorio || null,
+      codigoAcesso: senha || null,
+      arquivoFisico: codigoCertForm > 0 ? (this.certificado?.arquivoFisico ?? null) : null,
     };
 
     this.salvandoCert = true;
     this.cdr.markForCheck();
-    const req = payload.codigo > 0
-      ? this.http.put<PessoaCertificadoData>(`${this.api}/Pessoa/Certificado`, payload, { headers: this.h })
-      : this.http.post<PessoaCertificadoData>(`${this.api}/Pessoa/Certificado`, payload, { headers: this.h });
+    const salvar$ = codigoCertForm > 0
+      ? this.http.put<any>(`${this.api}/Pessoa/Certificado`, payload, { headers: this.h })
+      : this.http.post<any>(`${this.api}/Pessoa/Certificado`, payload, { headers: this.h });
 
-    req.subscribe({
-      next: (res) => {
-        this.certificado = { ...(res || payload), codigo: (res as any)?.codigo || payload.codigo };
-        if (!this.certificado.codigo && (res as any)?.codigo) this.certificado.codigo = (res as any).codigo;
-        this.pessoa = { ...this.pessoa, certificado: this.certificado };
-        this.editandoCert = false;
-        this.resetCertForm();
+    salvar$.pipe(catchError(err => {
+      const msg = typeof err?.error === 'string' ? err.error : (err?.error?.message || err?.error);
+      this.message.error(msg || `Erro ao salvar certificado (${err.status})`);
+      this.salvandoCert = false;
+      this.cdr.markForCheck();
+      return of(null);
+    })).subscribe(res => {
+      if (!res) return;
+      const mapped = this.mapCertificado(res);
+      if (!mapped?.codigo) {
         this.salvandoCert = false;
+        this.message.error('Resposta inválida ao salvar certificado.');
+        this.cdr.markForCheck();
+        return;
+      }
+      this.finalizarCertificadoPosSalvar(mapped);
+    });
+  }
+
+  private finalizarCertificadoPosSalvar(cert: PessoaCertificadoData): void {
+    const codigoCert = cert.codigo;
+    const remover = this.certRemoverArquivoFisico;
+    const arquivo = this.certPfxFile;
+
+    const concluir = (atualizado: PessoaCertificadoData) => {
+      this.certificado = atualizado;
+      this.pessoa = { ...this.pessoa, certificado: atualizado };
+      this.editandoCert = false;
+      this.certPfxFile = null;
+      this.certRemoverArquivoFisico = false;
+      this.salvandoCert = false;
+      this.enviandoCertPfx = false;
+      this.resetCertForm();
+      this.message.success('Certificado digital salvo com sucesso!');
+      this.cdr.markForCheck();
+    };
+
+    if (remover) {
+      this.http.delete<any>(`${this.api}/Pessoa/Certificado/${codigoCert}/ArquivoFisico`, { headers: this.h })
+        .pipe(catchError(() => of({ ...cert, arquivoFisico: null })))
+        .subscribe(r => {
+          const c = this.mapCertificado(r) ?? { ...cert, arquivoFisico: null };
+          if (arquivo) this.enviarArquivoFisicoCert(codigoCert, arquivo, c);
+          else concluir(c);
+        });
+      return;
+    }
+
+    if (arquivo) {
+      this.enviarArquivoFisicoCert(codigoCert, arquivo, cert);
+      return;
+    }
+
+    concluir(cert);
+  }
+
+  private enviarArquivoFisicoCert(codigoCert: number, arquivo: File, certBase: PessoaCertificadoData): void {
+    this.enviandoCertPfx = true;
+    const fd = new FormData();
+    fd.append('arquivo', arquivo, arquivo.name);
+    this.http.post<any>(`${this.api}/Pessoa/Certificado/${codigoCert}/ArquivoFisico`, fd, { headers: this.h })
+      .pipe(catchError(err => {
+        const msg = typeof err?.error === 'string' ? err.error : (err?.error?.message || err?.error);
+        this.message.error(msg || 'Certificado salvo, mas falha ao enviar o arquivo .pfx.');
+        this.enviandoCertPfx = false;
+        this.salvandoCert = false;
+        this.certificado = certBase;
+        this.pessoa = { ...this.pessoa, certificado: certBase };
+        this.cdr.markForCheck();
+        return of(null);
+      }))
+      .subscribe(res => {
+        if (!res) return;
+        const c = this.mapCertificado(res) ?? certBase;
+        this.certificado = c;
+        this.pessoa = { ...this.pessoa, certificado: c };
+        this.editandoCert = false;
+        this.certPfxFile = null;
+        this.certRemoverArquivoFisico = false;
+        this.salvandoCert = false;
+        this.enviandoCertPfx = false;
+        this.resetCertForm();
         this.message.success('Certificado digital salvo com sucesso!');
         this.cdr.markForCheck();
-      },
-      error: (e) => {
-        this.message.error(e?.error?.message || e?.error || `Erro ao salvar certificado (${e.status})`);
-        this.salvandoCert = false;
-        this.cdr.markForCheck();
-      }
-    });
+      });
+  }
+
+  onCertPfxSelecionado(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    const nome = file.name.toLowerCase();
+    if (!nome.endsWith('.pfx') && !nome.endsWith('.p12')) {
+      this.message.warning('Selecione um arquivo .pfx ou .p12.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      this.message.warning('O arquivo excede 5 MB.');
+      return;
+    }
+    this.certPfxFile = file;
+    this.certRemoverArquivoFisico = false;
+    this.cdr.markForCheck();
+  }
+
+  marcarRemoverArquivoFisico(): void {
+    this.certRemoverArquivoFisico = true;
+    this.certPfxFile = null;
+    this.cdr.markForCheck();
+  }
+
+  baixarArquivoFisicoCert(): void {
+    const chave = this.certificado?.arquivoFisico?.trim();
+    if (!chave) {
+      this.message.warning('Nenhum arquivo físico anexado.');
+      return;
+    }
+    this.arquivoService.abrir(this.codigoPessoa, chave, 'Certificado Digital');
   }
 
   excluirCertificado() {
