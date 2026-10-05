@@ -64,6 +64,7 @@ export const appRoutes: Routes = [
 			{ path: 'devedores', loadComponent: () => import('./admin/devedores.component').then(m => m.DevedoresComponent) },
 			{ path: 'devedores-anterior', loadComponent: () => import('./admin/devedores-anterior.component').then(m => m.DevedoresAnteriorComponent) },
 			{ path: 'historico-das', loadComponent: () => import('./admin/historico-das.component').then(m => m.HistoricoDasComponent) },
+			{ path: 'relatorio-nfe', loadComponent: () => import('./admin/relatorio-nfe.component').then(m => m.RelatorioNfeComponent) },
 			{ path: 'validacao-das', loadComponent: () => import('./admin/validacao-das.component').then(m => m.ValidacaoDasComponent) },
 			{ path: 'pendencias-das', loadComponent: () => import('./admin/pendencias-das.component').then(m => m.PendenciasDasComponent) },
 			{ path: 'gestao-pessoal', loadComponent: () => import('./admin/gestao-pessoal.component').then(m => m.GestaoPessoalComponent) },

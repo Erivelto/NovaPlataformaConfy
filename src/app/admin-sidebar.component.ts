@@ -62,6 +62,9 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
             <li nz-menu-item (click)="go('/administrativo/historico-das')" [nzSelected]="isActive('/administrativo/historico-das')">
               <span nz-icon nzType="bar-chart"></span> Relatório DAS
             </li>
+            <li nz-menu-item (click)="go('/administrativo/relatorio-nfe')" [nzSelected]="isActive('/administrativo/relatorio-nfe')">
+              <span nz-icon nzType="file-text"></span> Relatório NFE
+            </li>
             <li nz-menu-item (click)="go('/administrativo/solicitacoes')" [nzSelected]="isActive('/administrativo/solicitacoes')">
               <span nz-icon nzType="unordered-list"></span> Solicitações Lista
             </li>
