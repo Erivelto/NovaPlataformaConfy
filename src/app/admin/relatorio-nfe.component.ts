@@ -14,6 +14,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageModule, NzMessageService } from 'ng-zorro-antd/message';
+import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
@@ -65,7 +66,7 @@ interface RelatorioNfeDto {
     CommonModule, FormsModule,
     NzCardModule, NzTableModule, NzTagModule, NzIconModule,
     NzButtonModule, NzSkeletonModule, NzInputModule, NzCheckboxModule,
-    NzToolTipModule, NzMessageModule,
+    NzToolTipModule, NzMessageModule, NzAlertModule,
     PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
@@ -80,18 +81,27 @@ interface RelatorioNfeDto {
         </button>
       </div>
 
+      <nz-alert
+        *ngIf="relatorio && !loading"
+        nzType="info"
+        nzShowIcon
+        style="margin-bottom: 12px"
+        [nzMessage]="textoCompetencia"
+        nzDescription="A geração de impostos usa sempre o mês calendário anterior. Notas do mês corrente não entram neste relatório.">
+      </nz-alert>
+
       <div class="tiles-row" *ngIf="!loading && relatorio">
         <div class="tile-stats">
           <div class="count primary">{{ relatorio.totalComNotasMesAtual }}</div>
-          <h3>Com NF-e no mês</h3>
+          <h3>Com NF-e em {{ labelMes(relatorio.mesReferencia, relatorio.anoReferencia) }}</h3>
         </div>
         <div class="tile-stats">
           <div class="count green">{{ relatorio.somaValorMesAtual | currency:'BRL':'symbol':'1.2-2' }}</div>
-          <h3>Total mês atual</h3>
+          <h3>Total {{ labelMes(relatorio.mesReferencia, relatorio.anoReferencia) }}</h3>
         </div>
         <div class="tile-stats">
           <div class="count muted">{{ relatorio.somaValorMesPassado | currency:'BRL':'symbol':'1.2-2' }}</div>
-          <h3>Total mês anterior</h3>
+          <h3>Total {{ labelMes(relatorio.mesAnterior, relatorio.anoAnterior) }}</h3>
         </div>
         <div class="tile-stats">
           <div class="count warn">{{ relatorio.totalComAlertaDuplicidade }}</div>
@@ -104,7 +114,9 @@ interface RelatorioNfeDto {
           <input nz-input placeholder="Buscar código, razão ou documento..." [(ngModel)]="filtro" (ngModelChange)="filtrar()" />
         </nz-input-group>
         <ng-template #pfx><span nz-icon nzType="search"></span></ng-template>
-        <label nz-checkbox [(ngModel)]="somenteComNotas" (ngModelChange)="filtrar()">Somente com NF-e no mês atual</label>
+        <label nz-checkbox [(ngModel)]="somenteComNotas" (ngModelChange)="filtrar()">
+          Somente com NF-e em {{ relatorio ? labelMes(relatorio.mesReferencia, relatorio.anoReferencia) : 'mês de referência' }}
+        </label>
         <app-export-excel-button
           [data]="$any(linhasFiltradasExport)"
           [columns]="exportColumns"
@@ -131,8 +143,8 @@ interface RelatorioNfeDto {
             <th nzWidth="90px" [nzSortFn]="sortCodigo">CodigoPessoa</th>
             <th>Razão Social</th>
             <th nzWidth="110px" nzAlign="center" [nzSortFn]="sortQtd">Quantidade NFE</th>
-            <th nzWidth="150px" [nzSortFn]="sortAtual" nzSortOrder="descend">Valor Total Mês Atual</th>
-            <th nzWidth="150px" [nzSortFn]="sortPassado">Valor Total Mês Passado</th>
+            <th nzWidth="150px" [nzSortFn]="sortAtual" nzSortOrder="descend">{{ tituloColMesReferencia }}</th>
+            <th nzWidth="150px" [nzSortFn]="sortPassado">{{ tituloColMesPassado }}</th>
             <th nzWidth="100px" nzAlign="center">Alerta</th>
           </tr>
         </thead>
@@ -158,7 +170,7 @@ interface RelatorioNfeDto {
                   <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 3 }"></nz-skeleton>
                 </div>
                 <div *ngIf="!g.carregandoNotas && g.notasCarregadas && !g.notas?.length" class="empty-nested">
-                  Nenhuma NF-e no mês atual.
+                  Nenhuma NF-e no mês de referência ({{ relatorio ? labelMes(relatorio.mesReferencia, relatorio.anoReferencia) : '' }}).
                 </div>
                 <nz-table
                   *ngIf="!g.carregandoNotas && g.notas?.length"
@@ -234,20 +246,52 @@ export class RelatorioNfeComponent implements OnInit {
   linhas: RelatorioNfeLinha[] = [];
   linhasFiltradas: RelatorioNfeLinha[] = [];
 
-  exportColumns: ExcelExportColumn[] = [
-    { key: 'codigoPessoa', title: 'CodigoPessoa' },
-    { key: 'razao', title: 'Razão Social' },
-    { key: 'documento', title: 'Documento' },
-    { key: 'quantidadeNfe', title: 'Quantidade NFE' },
-    { key: 'valorTotalMesAtual', title: 'Valor Total Mês Atual', format: v => fmtCurrency(v) },
-    { key: 'valorTotalMesPassado', title: 'Valor Total Mês Passado', format: v => fmtCurrency(v) },
-    { key: 'alertaDuplicidade', title: 'Alerta Duplicidade' }
+  exportColumns: ExcelExportColumn[] = [];
+
+  private static readonly MESES = [
+    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
   ];
 
+  labelMes(mes: number, ano: number): string {
+    if (mes < 1 || mes > 12) return `${mes}/${ano}`;
+    return `${RelatorioNfeComponent.MESES[mes - 1]}/${ano}`;
+  }
+
+  get tituloColMesReferencia(): string {
+    if (!this.relatorio) return 'Valor mês referência (imposto)';
+    return `Total ${this.labelMes(this.relatorio.mesReferencia, this.relatorio.anoReferencia)}`;
+  }
+
+  get tituloColMesPassado(): string {
+    if (!this.relatorio) return 'Valor mês anterior';
+    return `Total ${this.labelMes(this.relatorio.mesAnterior, this.relatorio.anoAnterior)}`;
+  }
+
+  get textoCompetencia(): string {
+    if (!this.relatorio) return '';
+    const cal = RelatorioNfeComponent.MESES[new Date().getMonth()];
+    const ref = this.labelMes(this.relatorio.mesReferencia, this.relatorio.anoReferencia);
+    const ant = this.labelMes(this.relatorio.mesAnterior, this.relatorio.anoAnterior);
+    return `Em ${cal}: mês atual do relatório = ${ref} · mês passado = ${ant}`;
+  }
+
   get subtitulo(): string {
-    if (!this.relatorio) return 'Clientes Online — somatório de NF-e';
-    const m = String(this.relatorio.mesReferencia).padStart(2, '0');
-    return `Clientes Online (física = não) · ${m}/${this.relatorio.anoReferencia} vs mês anterior`;
+    if (!this.relatorio) return 'Clientes Online — base para imposto (mês calendário anterior)';
+    return `Clientes Online · imposto sobre ${this.labelMes(this.relatorio.mesReferencia, this.relatorio.anoReferencia)}`;
+  }
+
+  private atualizarColunasExport(): void {
+    if (!this.relatorio) return;
+    this.exportColumns = [
+      { key: 'codigoPessoa', title: 'CodigoPessoa' },
+      { key: 'razao', title: 'Razão Social' },
+      { key: 'documento', title: 'Documento' },
+      { key: 'quantidadeNfe', title: 'Quantidade NFE' },
+      { key: 'valorTotalMesAtual', title: this.tituloColMesReferencia, format: v => fmtCurrency(v) },
+      { key: 'valorTotalMesPassado', title: this.tituloColMesPassado, format: v => fmtCurrency(v) },
+      { key: 'alertaDuplicidade', title: 'Alerta Duplicidade' }
+    ];
   }
 
   get linhasFiltradasExport(): Record<string, unknown>[] {
@@ -287,6 +331,7 @@ export class RelatorioNfeComponent implements OnInit {
           return;
         }
         this.relatorio = res;
+        this.atualizarColunasExport();
         this.linhas = (res.clientes || []).map(c => ({
           ...c,
           expand: false,
