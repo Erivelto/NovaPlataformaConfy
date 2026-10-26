@@ -72,36 +72,25 @@ interface ListaResponse {
       nzBordered
       [nzPageSize]="10"
       [nzShowPagination]="itens.length > 10"
-      [nzScroll]="{ x: '1100px' }">
+      [nzScroll]="{ x: '960px' }">
       <thead>
         <tr>
-          <th nzWidth="140px">CNPJ</th>
+          <th nzWidth="100px" nzAlign="center">Codigo</th>
           <th>Razão Social</th>
           <th nzWidth="120px">Valor devido</th>
           <th nzWidth="90px" nzAlign="center">Mensalidades</th>
           <th nzWidth="160px">Situação</th>
-          <th nzWidth="140px">Prazo 30 dias</th>
           <th nzWidth="150px" nzAlign="center">Ação</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let r of itens" [class.row-expirado]="r.prazoExpirado">
-          <td class="mono">{{ r.documento || '—' }}</td>
+          <td nzAlign="center" class="mono">{{ r.codigoPessoa }}</td>
           <td>{{ r.razao || '—' }}</td>
           <td>{{ r.valorDevido | currency:'BRL':'symbol':'1.2-2' }}</td>
           <td nzAlign="center"><nz-tag nzColor="red">{{ r.quantidadeMensalidades }}</nz-tag></td>
           <td>
             <nz-tag [nzColor]="corStatus(r.statusFluxo)">{{ labelStatus(r.statusFluxo) }}</nz-tag>
-          </td>
-          <td>
-            <span *ngIf="r.dataLimiteRegularizacao">
-              {{ r.dataLimiteRegularizacao | date:'dd/MM/yyyy' }}
-              <nz-tag *ngIf="r.prazoExpirado" nzColor="red" style="margin-left:4px">Expirado</nz-tag>
-              <span *ngIf="!r.prazoExpirado && r.diasRestantesPrazo != null" class="muted">
-                ({{ r.diasRestantesPrazo }} dias)
-              </span>
-            </span>
-            <span *ngIf="!r.dataLimiteRegularizacao" class="muted">—</span>
           </td>
           <td nzAlign="center">
             <button
