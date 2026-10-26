@@ -69,6 +69,8 @@ interface DashboardKpi {
     <div class="admin-dashboard">
       <app-page-title title="Painel Administrativo" subtitle="Indicadores operacionais da plataforma Contfy"></app-page-title>
 
+      <app-admin-inadimplencia-exclusao class="inadimp-top"></app-admin-inadimplencia-exclusao>
+
       <div class="admin-banner">
         <i nz-icon nzType="crown" nzTheme="fill" class="banner-icon"></i>
         <div>
@@ -94,13 +96,6 @@ interface DashboardKpi {
         </nz-card>
       </div>
 
-      <nz-card nzTitle="Exclusão por inadimplência (2+ mensalidades)" style="margin-top: 16px" nzBordered>
-        <p class="sec-hint">
-          Clientes com duas ou mais mensalidades em aberto. Gilvan aprova; depois qualquer analista envia o aviso de 30 dias (e-mail e WhatsApp).
-        </p>
-        <app-admin-inadimplencia-exclusao></app-admin-inadimplencia-exclusao>
-      </nz-card>
-
       <app-admin-chat-widget #chatWidget></app-admin-chat-widget>
     </div>
   `,
@@ -118,7 +113,7 @@ interface DashboardKpi {
     `.kpi-label { color: rgba(0, 0, 0, 0.45); font-size: 0.88rem; min-height: 2.4em; }`,
     `.kpi-value { font-size: 1.5rem; font-weight: 800; margin-top: 6px; line-height: 1.2; }`,
     `.kpi-sub { color: rgba(0, 0, 0, 0.35); font-size: 0.78rem; margin-top: 4px; }`,
-    `.sec-hint { color: rgba(0,0,0,.55); font-size: 0.88rem; margin: 0 0 12px; }`
+    `.inadimp-top { display: block; margin: 0 0 18px; }`
   ]
 })
 export class DashboardAdminComponent implements OnInit {
