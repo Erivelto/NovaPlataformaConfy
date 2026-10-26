@@ -12,6 +12,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { PageTitleComponent } from './page-title.component';
 import { AdminChatWidgetComponent } from './components/admin-chat-widget.component';
+import { AdminInadimplenciaExclusaoComponent } from './admin/admin-inadimplencia-exclusao.component';
 import { LoginService } from './services/login.service';
 import { environment } from '../environments/environment';
 
@@ -62,7 +63,7 @@ interface DashboardKpi {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, RouterModule, NzCardModule, NzGridModule, NzIconModule,
-    NzSkeletonModule, PageTitleComponent, AdminChatWidgetComponent
+    NzSkeletonModule, PageTitleComponent, AdminChatWidgetComponent, AdminInadimplenciaExclusaoComponent
   ],
   template: `
     <div class="admin-dashboard">
@@ -93,6 +94,13 @@ interface DashboardKpi {
         </nz-card>
       </div>
 
+      <nz-card nzTitle="Exclusão por inadimplência (2+ mensalidades)" style="margin-top: 16px" nzBordered>
+        <p class="sec-hint">
+          Clientes com duas ou mais mensalidades em aberto. Gilvan aprova; depois qualquer analista envia o aviso de 30 dias (e-mail e WhatsApp).
+        </p>
+        <app-admin-inadimplencia-exclusao></app-admin-inadimplencia-exclusao>
+      </nz-card>
+
       <app-admin-chat-widget #chatWidget></app-admin-chat-widget>
     </div>
   `,
@@ -109,7 +117,8 @@ interface DashboardKpi {
     `.kpi-icon { font-size: 24px; margin-bottom: 8px; }`,
     `.kpi-label { color: rgba(0, 0, 0, 0.45); font-size: 0.88rem; min-height: 2.4em; }`,
     `.kpi-value { font-size: 1.5rem; font-weight: 800; margin-top: 6px; line-height: 1.2; }`,
-    `.kpi-sub { color: rgba(0, 0, 0, 0.35); font-size: 0.78rem; margin-top: 4px; }`
+    `.kpi-sub { color: rgba(0, 0, 0, 0.35); font-size: 0.78rem; margin-top: 4px; }`,
+    `.sec-hint { color: rgba(0,0,0,.55); font-size: 0.88rem; margin: 0 0 12px; }`
   ]
 })
 export class DashboardAdminComponent implements OnInit {

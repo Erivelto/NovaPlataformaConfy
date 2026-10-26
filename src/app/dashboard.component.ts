@@ -49,22 +49,22 @@ interface NotaFiscal {
     <div class="dashboard">
       <app-page-title title="Painel" subtitle="Visão geral das suas notas fiscais"></app-page-title>
 
-      <!-- Alerta BLOQUEADO: mais de 2 mensalidades atrasadas -->
+      <!-- Alerta BLOQUEADO: mensalidade em aberto após virar o mês (dia 1 do mês seguinte ao vencimento) -->
       <div *ngIf="mensalidadeStatus.bloqueado" class="bloqueado-alert" (click)="irParaMensalidade()">
         <div class="bloqueado-alert-icon"><i nz-icon nzType="stop" nzTheme="fill"></i></div>
         <div class="bloqueado-alert-body">
           <div class="bloqueado-alert-title">Acesso Temporariamente Bloqueado</div>
-          <div class="bloqueado-alert-msg">Identificamos mais de uma mensalidade da contabilidade em atraso em nossa plataforma. Por esse motivo, o seu acesso está temporariamente bloqueado. Solicitamos a regularização do débito o quanto antes para reativação do serviço.</div>
+          <div class="bloqueado-alert-msg">Há mensalidade da contabilidade em aberto referente a um mês já encerrado (bloqueio a partir do dia 1 do mês seguinte ao vencimento). Regularize o débito para reativar o acesso à plataforma.</div>
           <div class="bloqueado-alert-cta">Clique aqui para regularizar <i nz-icon nzType="arrow-right"></i></div>
         </div>
       </div>
 
-      <!-- Alerta Mensalidade pendente (1–2 em atraso) -->
+      <!-- Alerta mensalidade em atraso (ainda no mês do vencimento ou antes do dia 1 seguinte) -->
       <div *ngIf="!mensalidadeStatus.bloqueado && mensalidadeStatus.atrasadas >= 1" class="mensalidade-alert" (click)="irParaMensalidade()">
         <div class="mensalidade-alert-icon"><i nz-icon nzType="exclamation-circle" nzTheme="fill"></i></div>
         <div class="mensalidade-alert-body">
           <div class="mensalidade-alert-title">Pendência de Mensalidade</div>
-          <div class="mensalidade-alert-msg">Identificamos uma pendência referente à mensalidade da contabilidade em nossa plataforma. Para evitar a suspensão automática das suas atividades e do seu acesso, solicitamos a regularização do débito o quanto antes.</div>
+          <div class="mensalidade-alert-msg">Identificamos mensalidade em atraso. Se não houver pagamento até virar o mês (acesso bloqueado a partir do dia 1 do mês seguinte ao vencimento), o acesso à plataforma será suspenso automaticamente.</div>
           <div class="mensalidade-alert-cta">Clique para regularização <i nz-icon nzType="arrow-right"></i></div>
         </div>
       </div>
