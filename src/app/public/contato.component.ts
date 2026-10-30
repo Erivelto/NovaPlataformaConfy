@@ -6,6 +6,12 @@ import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { SITE } from './site.constants';
 
+declare global {
+  interface Window {
+    gtag_report_conversion?: (url?: string) => boolean;
+  }
+}
+
 @Component({
   selector: 'app-contato',
   standalone: true,
@@ -22,7 +28,14 @@ import { SITE } from './site.constants';
         <nz-card>
           <h3><i nz-icon nzType="phone"></i> Telefone / WhatsApp</h3>
           <p>{{ site.whatsappDisplay }}</p>
-          <a nz-button nzType="primary" [href]="whatsappUrl" target="_blank" rel="noopener">Chamar no WhatsApp</a>
+          <a
+            nz-button
+            nzType="primary"
+            [href]="whatsappUrl"
+            rel="noopener"
+            (click)="onWhatsAppClick($event)">
+            Chamar no WhatsApp
+          </a>
         </nz-card>
         <nz-card>
           <h3><i nz-icon nzType="mail"></i> E-mail</h3>
@@ -49,4 +62,13 @@ import { SITE } from './site.constants';
 export class ContatoComponent {
   readonly site = SITE;
   readonly whatsappUrl = `https://wa.me/${SITE.whatsapp}`;
+
+  onWhatsAppClick(event: MouseEvent): void {
+    event.preventDefault();
+    if (typeof window.gtag_report_conversion === 'function') {
+      window.gtag_report_conversion(this.whatsappUrl);
+      return;
+    }
+    window.location.href = this.whatsappUrl;
+  }
 }
