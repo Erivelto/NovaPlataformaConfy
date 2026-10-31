@@ -11,6 +11,7 @@ import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageModule, NzMessageService } from 'ng-zorro-antd/message';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { environment } from '../../environments/environment';
 
 interface LinhaInadimplencia {
@@ -42,7 +43,7 @@ interface ListaResponse {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, NzTableModule, NzButtonModule, NzTagModule, NzIconModule,
-    NzSkeletonModule, NzAlertModule, NzToolTipModule, NzMessageModule
+    NzSkeletonModule, NzAlertModule, NzToolTipModule, NzMessageModule, NzPopconfirmModule
   ],
   template: `
     <section *ngIf="loading || total > 0" class="inadimp-hero" [class.inadimp-hero--loading]="loading">
@@ -95,7 +96,7 @@ interface ListaResponse {
               <th nzWidth="130px">Valor devido</th>
               <th nzWidth="100px" nzAlign="center">Mensalidades</th>
               <th nzWidth="170px">Situação</th>
-              <th nzWidth="160px" nzAlign="center">Ação</th>
+              <th nzWidth="200px" nzAlign="center">Ação</th>
             </tr>
           </thead>
           <tbody>
@@ -108,33 +109,48 @@ interface ListaResponse {
                 <nz-tag [nzColor]="corStatus(r.statusFluxo)">{{ labelStatus(r.statusFluxo) }}</nz-tag>
               </td>
               <td nzAlign="center">
-                <button
-                  *ngIf="r.statusFluxo === 'Pendente'"
-                  nz-button
-                  nzType="primary"
-                  nzSize="small"
-                  class="btn-aprovar"
-                  [disabled]="!podeAprovar || acaoLoading === r.codigoPessoa"
-                  [nzLoading]="acaoLoading === r.codigoPessoa"
-                  nz-tooltip
-                  [nzTooltipTitle]="podeAprovar ? 'Aprovar exclusão por inadimplência' : 'Somente gilvan@contfy.com pode aprovar'"
-                  (click)="aprovar(r)">
-                  Aprovar
-                </button>
-                <button
-                  *ngIf="r.statusFluxo === 'Aprovado'"
-                  nz-button
-                  nzType="primary"
-                  nzDanger
-                  nzSize="small"
-                  [nzLoading]="acaoLoading === r.codigoPessoa"
-                  (click)="enviarAviso(r)">
-                  Enviar Aviso
-                </button>
-                <span *ngIf="r.statusFluxo === 'AvisoEnviado'" class="ok-enviado">
-                  <i nz-icon nzType="check-circle" nzTheme="fill"></i>
-                  Enviado {{ r.dataEnvioAviso | date:'dd/MM/yyyy' }}
-                </span>
+                <div class="acoes-col">
+                  <button
+                    *ngIf="r.statusFluxo === 'Pendente'"
+                    nz-button
+                    nzType="primary"
+                    nzSize="small"
+                    class="btn-aprovar"
+                    [disabled]="!podeAprovar || acaoLoading === r.codigoPessoa"
+                    [nzLoading]="acaoLoading === r.codigoPessoa"
+                    nz-tooltip
+                    [nzTooltipTitle]="podeAprovar ? 'Aprovar exclusão por inadimplência' : 'Somente gilvan@contfy.com pode aprovar'"
+                    (click)="aprovar(r)">
+                    Aprovar
+                  </button>
+                  <button
+                    *ngIf="r.statusFluxo === 'Aprovado'"
+                    nz-button
+                    nzType="primary"
+                    nzDanger
+                    nzSize="small"
+                    [nzLoading]="acaoLoading === r.codigoPessoa"
+                    (click)="enviarAviso(r)">
+                    Enviar Aviso
+                  </button>
+                  <span *ngIf="r.statusFluxo === 'AvisoEnviado'" class="ok-enviado">
+                    <i nz-icon nzType="check-circle" nzTheme="fill"></i>
+                    Enviado {{ r.dataEnvioAviso | date:'dd/MM/yyyy' }}
+                  </span>
+                  <button
+                    nz-button
+                    nzType="default"
+                    nzSize="small"
+                    class="btn-pago"
+                    [nzLoading]="acaoLoading === r.codigoPessoa"
+                    nz-popconfirm
+                    nzPopconfirmTitle="Confirmar que o cliente regularizou o pagamento e remover da lista?"
+                    nzOkText="Sim, marcar pago"
+                    nzCancelText="Cancelar"
+                    (nzOnConfirm)="marcarPago(r)">
+                    Marcar pago
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -263,6 +279,24 @@ interface ListaResponse {
     }
 
     :host ::ng-deep .tag-mensal.ant-tag { font-weight: 700; font-size: 0.9rem; }
+
+    .acoes-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    :host ::ng-deep .btn-pago {
+      border-color: #52c41a;
+      color: #389e0d;
+      font-weight: 600;
+    }
+
+    :host ::ng-deep .btn-pago:hover {
+      border-color: #389e0d;
+      color: #237804;
+    }
   `]
 })
 export class AdminInadimplenciaExclusaoComponent implements OnInit {
@@ -332,6 +366,25 @@ export class AdminInadimplenciaExclusaoComponent implements OnInit {
       });
   }
 
+  marcarPago(r: LinhaInadimplencia): void {
+    this.acaoLoading = r.codigoPessoa;
+    this.cdr.markForCheck();
+    this.http.post<{ codigoPessoa: number }>(`${this.api}/${r.codigoPessoa}/MarcarPago`, {}, { headers: this.h })
+      .pipe(catchError(err => {
+        const msg = typeof err?.error === 'string' ? err.error : (err?.error?.message || err?.error);
+        this.message.error(msg || 'Falha ao marcar como pago.');
+        return of(null);
+      }))
+      .subscribe(res => {
+        this.acaoLoading = 0;
+        if (res) {
+          this.removerLinha(r.codigoPessoa);
+          this.message.success('Cliente marcado como pago e removido da lista.');
+        }
+        this.cdr.markForCheck();
+      });
+  }
+
   enviarAviso(r: LinhaInadimplencia): void {
     this.acaoLoading = r.codigoPessoa;
     this.cdr.markForCheck();
@@ -357,7 +410,18 @@ export class AdminInadimplenciaExclusaoComponent implements OnInit {
   private atualizarLinha(linha: LinhaInadimplencia): void {
     const i = this.itens.findIndex(x => x.codigoPessoa === linha.codigoPessoa);
     if (i >= 0) this.itens[i] = { ...this.itens[i], ...linha };
+    this.recalcularTotais();
+  }
+
+  private removerLinha(codigoPessoa: number): void {
+    this.itens = this.itens.filter(x => x.codigoPessoa !== codigoPessoa);
+    this.recalcularTotais();
+  }
+
+  private recalcularTotais(): void {
+    this.total = this.itens.length;
     this.valorTotal = this.itens.reduce((s, x) => s + Number(x.valorDevido || 0), 0);
+    this.prazoExpiradoCount = this.itens.filter(x => x.prazoExpirado).length;
   }
 
   labelStatus(s: string): string {
