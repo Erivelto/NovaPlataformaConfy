@@ -13,6 +13,7 @@ import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
+import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
@@ -42,7 +43,7 @@ interface ListaStatusAgendamento {
   imports: [
     CommonModule, FormsModule, RouterModule,
     NzCardModule, NzTableModule, NzIconModule, NzButtonModule,
-    NzSkeletonModule, NzInputModule, NzMessageModule, NzPopconfirmModule,
+    NzSkeletonModule, NzInputModule, NzMessageModule, NzPopconfirmModule, NzToolTipModule,
     PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
@@ -57,9 +58,9 @@ interface ListaStatusAgendamento {
         </nz-card>
       </div>
 
-      <nz-card style="margin-top:14px">
+      <nz-card class="grid-card">
         <div class="toolbar">
-          <nz-input-group [nzPrefix]="prefixIcon" style="max-width:320px">
+          <nz-input-group class="toolbar-search" [nzPrefix]="prefixIcon">
             <input nz-input placeholder="Pesquisar..." [(ngModel)]="busca" (ngModelChange)="onBuscaChange()" />
           </nz-input-group>
           <ng-template #prefixIcon><i nz-icon nzType="search"></i></ng-template>
@@ -70,75 +71,118 @@ interface ListaStatusAgendamento {
           <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{rows:8}"></nz-skeleton>
         </ng-container>
 
-        <nz-table
-          *ngIf="!loading"
-          #agendamentoTable
-          [nzData]="listaFiltrada"
-          nzBordered
-          nzSize="middle"
-          [nzShowPagination]="listaFiltrada.length > pageSize"
-          [nzPageSize]="pageSize"
-          [nzFrontPagination]="true"
-          [(nzPageIndex)]="pageIndex">
-          <thead>
-            <tr>
-              <th nzWidth="80px">Código</th>
-              <th nzWidth="100px">Cód. Cliente</th>
-              <th nzWidth="140px">CNPJ</th>
-              <th>Nome</th>
-              <th nzWidth="110px">Data</th>
-              <th nzWidth="100px" [nzSortFn]="sortValor">Valor</th>
-              <th nzWidth="150px" [nzSortFn]="sortStatus" nzSortOrder="ascend">Status</th>
-              <th nzWidth="200px" nzAlign="center">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of agendamentoTable.data; trackBy: trackByCodigo" [style.color]="corStatus(item.status)">
-              <td>{{ item.codigo }}</td>
-              <td>{{ item.codigoPessoa }}</td>
-              <td>{{ item.documento }}</td>
-              <td>{{ item.razao }}</td>
-              <td>{{ item.dataPrimeiraEmissao }}</td>
-              <td>{{ item.valor }}</td>
-              <td>{{ item.status }}</td>
-              <td nzAlign="center" class="acoes-cell">
-                <button
-                  *ngIf="podeEmitirNacional(item)"
-                  nz-button
-                  nzType="default"
-                  nzSize="small"
-                  nzShape="round"
-                  class="btn-emitir"
-                  nz-popconfirm
-                  nzPopconfirmTitle="Enviar DPS à NFS-e nacional (SEFIN) para este agendamento?"
-                  (nzOnConfirm)="emitirNfseNacional(item)"
-                  [nzLoading]="emitindoCodigo === item.codigo">
-                  <i nz-icon nzType="thunderbolt"></i> Emitir NFS-e
-                </button>
-                <button nz-button nzType="primary" nzSize="small" nzShape="round" (click)="abrirDetalhes(item)">
-                  <i nz-icon nzType="eye"></i> Detalhes
-                </button>
-              </td>
-            </tr>
-            <tr *ngIf="listaFiltrada.length === 0">
-              <td colspan="8" class="empty">Nenhum agendamento encontrado.</td>
-            </tr>
-          </tbody>
-        </nz-table>
+        <div *ngIf="!loading" class="agend-table-wrap">
+          <nz-table
+            #agendamentoTable
+            class="agend-table"
+            [nzData]="listaFiltrada"
+            nzBordered
+            nzSize="middle"
+            [nzTableLayout]="'fixed'"
+            [nzScroll]="{ x: '1120px' }"
+            [nzShowPagination]="listaFiltrada.length > pageSize"
+            [nzPageSize]="pageSize"
+            [nzFrontPagination]="true"
+            [(nzPageIndex)]="pageIndex">
+            <thead>
+              <tr>
+                <th nzWidth="72px">Código</th>
+                <th nzWidth="88px">Cód. Cliente</th>
+                <th nzWidth="132px">CNPJ</th>
+                <th nzWidth="240px">Nome</th>
+                <th nzWidth="96px">Data</th>
+                <th nzWidth="88px" [nzSortFn]="sortValor">Valor</th>
+                <th nzWidth="128px" [nzSortFn]="sortStatus" nzSortOrder="ascend">Status</th>
+                <th nzWidth="156px" nzAlign="center" nzRight>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of agendamentoTable.data; trackBy: trackByCodigo">
+                <td class="mono">{{ item.codigo }}</td>
+                <td class="mono">{{ item.codigoPessoa }}</td>
+                <td class="doc-cell">{{ item.documento }}</td>
+                <td class="nome-cell" nz-tooltip [nzTooltipTitle]="item.razao">{{ item.razao }}</td>
+                <td class="nowrap">{{ item.dataPrimeiraEmissao }}</td>
+                <td class="nowrap">{{ item.valor }}</td>
+                <td class="status-cell" [style.color]="corStatus(item.status)">{{ item.status }}</td>
+                <td nzAlign="center" nzRight>
+                  <div class="acoes-col">
+                    <button
+                      *ngIf="podeEmitirNacional(item)"
+                      nz-button
+                      nzType="default"
+                      nzSize="small"
+                      class="btn-emitir"
+                      nz-popconfirm
+                      nzPopconfirmTitle="Enviar DPS à NFS-e nacional (SEFIN) para este agendamento?"
+                      (nzOnConfirm)="emitirNfseNacional(item)"
+                      [nzLoading]="emitindoCodigo === item.codigo">
+                      <i nz-icon nzType="thunderbolt"></i> Emitir
+                    </button>
+                    <button nz-button nzType="primary" nzSize="small" (click)="abrirDetalhes(item)">
+                      <i nz-icon nzType="eye"></i> Detalhes
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="listaFiltrada.length === 0">
+                <td colspan="8" class="empty">Nenhum agendamento encontrado.</td>
+              </tr>
+            </tbody>
+          </nz-table>
+        </div>
       </nz-card>
     </div>
   `,
   styles: [`
-    .page { padding: 8px 4px; }
+    :host { display: block; }
+    .page { padding: 8px 0; max-width: 100%; }
     .kpis { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
-    .kpi { flex: 1; min-width: 150px; text-align: center; }
-    .kpi-icon { font-size: 24px; margin-bottom: 6px; }
+    .kpi { flex: 1; min-width: 140px; text-align: center; }
+    .kpi-icon { font-size: 22px; margin-bottom: 4px; }
     .kpi-label { color: rgba(0,0,0,.45); font-size: .88rem; }
-    .kpi-value { font-size: 1.4rem; font-weight: 800; margin: 4px 0; }
-    .toolbar { margin-bottom: 12px; }
+    .kpi-value { font-size: 1.35rem; font-weight: 800; margin: 2px 0; }
+    :host ::ng-deep .kpi .ant-card-body { padding: 14px 12px; }
+
+    .grid-card { margin-top: 14px; }
+    :host ::ng-deep .grid-card .ant-card-body { padding: 16px 16px 12px; }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .toolbar-search { flex: 0 1 320px; min-width: 200px; max-width: 100%; }
+
+    .agend-table-wrap { width: 100%; overflow: hidden; }
+    .mono { font-variant-numeric: tabular-nums; }
+    .doc-cell { font-size: 0.9rem; white-space: nowrap; }
+    .nome-cell {
+      max-width: 240px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .nowrap { white-space: nowrap; }
+    .status-cell { font-weight: 600; white-space: nowrap; }
+
+    .acoes-col {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      align-items: center;
+      max-width: 100%;
+    }
+
     .empty { text-align: center; padding: 32px; color: rgba(0,0,0,.45); }
-    .acoes-cell { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; }
     .btn-emitir { border-color: #722ed1; color: #722ed1; }
+
+    :host ::ng-deep .agend-table .ant-table { margin: 0; }
+    :host ::ng-deep .agend-table .ant-table-container { border-radius: 4px; }
   `]
 })
 export class AgendamentoNfeComponent implements OnInit {
