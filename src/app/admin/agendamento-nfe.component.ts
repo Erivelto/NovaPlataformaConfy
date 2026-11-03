@@ -79,7 +79,7 @@ interface ListaStatusAgendamento {
             nzBordered
             nzSize="middle"
             [nzTableLayout]="'fixed'"
-            [nzScroll]="{ x: '1120px' }"
+            [nzScroll]="{ x: '980px' }"
             [nzShowPagination]="listaFiltrada.length > pageSize"
             [nzPageSize]="pageSize"
             [nzFrontPagination]="true"
@@ -88,8 +88,7 @@ interface ListaStatusAgendamento {
               <tr>
                 <th nzWidth="72px">Código</th>
                 <th nzWidth="88px">Cód. Cliente</th>
-                <th nzWidth="132px">CNPJ</th>
-                <th nzWidth="240px">Nome</th>
+                <th nzWidth="280px">Nome</th>
                 <th nzWidth="96px">Data</th>
                 <th nzWidth="88px" [nzSortFn]="sortValor">Valor</th>
                 <th nzWidth="128px" [nzSortFn]="sortStatus" nzSortOrder="ascend">Status</th>
@@ -100,7 +99,6 @@ interface ListaStatusAgendamento {
               <tr *ngFor="let item of agendamentoTable.data; trackBy: trackByCodigo">
                 <td class="mono">{{ item.codigo }}</td>
                 <td class="mono">{{ item.codigoPessoa }}</td>
-                <td class="doc-cell">{{ item.documento }}</td>
                 <td class="nome-cell" nz-tooltip [nzTooltipTitle]="item.razao">{{ item.razao }}</td>
                 <td class="nowrap">{{ item.dataPrimeiraEmissao }}</td>
                 <td class="nowrap">{{ item.valor }}</td>
@@ -126,7 +124,7 @@ interface ListaStatusAgendamento {
                 </td>
               </tr>
               <tr *ngIf="listaFiltrada.length === 0">
-                <td colspan="8" class="empty">Nenhum agendamento encontrado.</td>
+                <td colspan="7" class="empty">Nenhum agendamento encontrado.</td>
               </tr>
             </tbody>
           </nz-table>
@@ -158,9 +156,8 @@ interface ListaStatusAgendamento {
 
     .agend-table-wrap { width: 100%; overflow: hidden; }
     .mono { font-variant-numeric: tabular-nums; }
-    .doc-cell { font-size: 0.9rem; white-space: nowrap; }
     .nome-cell {
-      max-width: 240px;
+      max-width: 280px;
       font-weight: 500;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -202,7 +199,6 @@ export class AgendamentoNfeComponent implements OnInit {
   readonly exportColumns: ExcelExportColumn<ListaStatusAgendamento>[] = [
     { key: 'codigo', title: 'Código' },
     { key: 'codigoPessoa', title: 'Cód. Cliente' },
-    { key: 'documento', title: 'CNPJ' },
     { key: 'razao', title: 'Nome' },
     { key: 'dataPrimeiraEmissao', title: 'Data' },
     { key: 'valor', title: 'Valor' },
