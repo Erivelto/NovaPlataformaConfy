@@ -12,6 +12,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
@@ -41,7 +42,8 @@ interface ListaStatusAgendamento {
   imports: [
     CommonModule, FormsModule, RouterModule,
     NzCardModule, NzTableModule, NzIconModule, NzButtonModule,
-    NzSkeletonModule, NzInputModule, NzMessageModule, PageTitleComponent, ExportExcelButtonComponent
+    NzSkeletonModule, NzInputModule, NzMessageModule, NzPopconfirmModule,
+    PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
     <div class="page">
@@ -87,7 +89,7 @@ interface ListaStatusAgendamento {
               <th nzWidth="110px">Data</th>
               <th nzWidth="100px" [nzSortFn]="sortValor">Valor</th>
               <th nzWidth="150px" [nzSortFn]="sortStatus" nzSortOrder="ascend">Status</th>
-              <th nzWidth="110px" nzAlign="center"></th>
+              <th nzWidth="200px" nzAlign="center">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -99,7 +101,20 @@ interface ListaStatusAgendamento {
               <td>{{ item.dataPrimeiraEmissao }}</td>
               <td>{{ item.valor }}</td>
               <td>{{ item.status }}</td>
-              <td nzAlign="center">
+              <td nzAlign="center" class="acoes-cell">
+                <button
+                  *ngIf="podeEmitirNacional(item)"
+                  nz-button
+                  nzType="default"
+                  nzSize="small"
+                  nzShape="round"
+                  class="btn-emitir"
+                  nz-popconfirm
+                  nzPopconfirmTitle="Enviar DPS à NFS-e nacional (SEFIN) para este agendamento?"
+                  (nzOnConfirm)="emitirNfseNacional(item)"
+                  [nzLoading]="emitindoCodigo === item.codigo">
+                  <i nz-icon nzType="thunderbolt"></i> Emitir NFS-e
+                </button>
                 <button nz-button nzType="primary" nzSize="small" nzShape="round" (click)="abrirDetalhes(item)">
                   <i nz-icon nzType="eye"></i> Detalhes
                 </button>
@@ -122,6 +137,8 @@ interface ListaStatusAgendamento {
     .kpi-value { font-size: 1.4rem; font-weight: 800; margin: 4px 0; }
     .toolbar { margin-bottom: 12px; }
     .empty { text-align: center; padding: 32px; color: rgba(0,0,0,.45); }
+    .acoes-cell { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; }
+    .btn-emitir { border-color: #722ed1; color: #722ed1; }
   `]
 })
 export class AgendamentoNfeComponent implements OnInit {
@@ -129,6 +146,7 @@ export class AgendamentoNfeComponent implements OnInit {
   private buscaTimer?: ReturnType<typeof setTimeout>;
 
   loading = true;
+  emitindoCodigo: number | null = null;
   lista: ListaStatusAgendamento[] = [];
   listaFiltrada: ListaStatusAgendamento[] = [];
   busca = '';
@@ -241,6 +259,43 @@ export class AgendamentoNfeComponent implements OnInit {
     this.router.navigate(['/administrativo/agendamento-nfe/detalhe', item.codigo], {
       queryParams: { status: item.status }
     });
+  }
+
+  podeEmitirNacional(item: ListaStatusAgendamento): boolean {
+    const s = (item.status || '').toLowerCase();
+    return s.includes('aguardando') || s.includes('erro');
+  }
+
+  emitirNfseNacional(item: ListaStatusAgendamento): void {
+    this.emitindoCodigo = item.codigo;
+    this.cdr.markForCheck();
+    this.http.post<{
+      sucesso?: boolean;
+      mensagem?: string;
+      numeroNfe?: number;
+      respostaSefin?: string;
+    }>(`${this.api}/NfseNacional/emissao/agendamento/${item.codigo}`, {}, { headers: this.h })
+      .pipe(timeout(300000), catchError(err => {
+        const e = err as { error?: { mensagem?: string; message?: string } };
+        const msg = e?.error?.mensagem || e?.error?.message || 'Falha na comunicação com a API.';
+        this.message.error(msg);
+        this.emitindoCodigo = null;
+        this.cdr.markForCheck();
+        return of(null);
+      }))
+      .subscribe(res => {
+        if (!res) return;
+        const ok = res.sucesso === true;
+        if (ok) {
+          this.message.success(res.mensagem || `NFS-e emitida (NF ${res.numeroNfe ?? '—'}).`);
+          this.carregar();
+        } else {
+          this.message.error(res.mensagem || 'Emissão não concluída. Veja detalhes do agendamento.');
+          this.carregar();
+        }
+        this.emitindoCodigo = null;
+        this.cdr.markForCheck();
+      });
   }
 
   private normalizarItem(item: unknown): ListaStatusAgendamento {

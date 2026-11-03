@@ -162,14 +162,24 @@ interface DadosEmissaoNota {
 
         <ng-container *ngIf="mostrarAcoesErro">
           <nz-alert
-            nzType="error"
+            [nzType]="alertAcaoTipo"
             nzShowIcon
-            nzMessage="Agendamento com erro"
-            nzDescription="Utilize as ações abaixo para reenviar, marcar como emitido manualmente ou remover o agendamento."
+            [nzMessage]="alertAcaoTitulo"
+            [nzDescription]="alertAcaoDescricao"
             style="margin-top:16px">
           </nz-alert>
 
           <div class="acoes">
+            <button
+              nz-button
+              nzType="primary"
+              class="btn-nacional"
+              nz-popconfirm
+              nzPopconfirmTitle="Enviar DPS à NFS-e nacional (SEFIN) agora?"
+              (nzOnConfirm)="emitirNfseNacional()"
+              [nzLoading]="acaoEmAndamento">
+              <i nz-icon nzType="thunderbolt"></i> Emitir NFS-e nacional
+            </button>
             <button nz-button nzType="default" (click)="reenviarAgendamento()" [nzLoading]="acaoEmAndamento">
               Reenviar Agendamento
             </button>
@@ -234,6 +244,8 @@ interface DadosEmissaoNota {
     .fld-value { background: #fafafa; border: 1px solid #f0f0f0; border-radius: 4px; padding: 6px 10px; min-height: 34px; margin-bottom: 8px; word-break: break-word; }
     .fld-block { white-space: pre-wrap; min-height: 60px; }
     .acoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    .btn-nacional { background: #722ed1; border-color: #722ed1; }
+    .btn-nacional:hover { background: #9254de; border-color: #9254de; }
     .modal-desc { margin-bottom: 16px; color: rgba(0,0,0,.65); }
     .modal-resumo { margin-top: 12px; padding: 10px 12px; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 4px; font-size: .9rem; line-height: 1.6; }
   `]
@@ -263,6 +275,31 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
     const codigo = (this.corpo.status || '').toUpperCase();
     const label = (this.statusLista || '').toLowerCase();
     return codigo === 'E' || codigo === 'C' || label.includes('erro') || label.includes('aguardando');
+  }
+
+  get podeEmitirNacional(): boolean {
+    if (!this.corpo || this.corpo.excluido) return false;
+    const codigo = (this.corpo.status || '').toUpperCase();
+    if (codigo === 'O' || codigo === 'I') return false;
+    const label = (this.statusLista || '').toLowerCase();
+    return codigo === 'C' || codigo === 'E' || label.includes('aguardando') || label.includes('erro');
+  }
+
+  get alertAcaoTipo(): 'error' | 'info' {
+    const codigo = (this.corpo?.status || '').toUpperCase();
+    const label = (this.statusLista || '').toLowerCase();
+    return codigo === 'E' || label.includes('erro') ? 'error' : 'info';
+  }
+
+  get alertAcaoTitulo(): string {
+    return this.alertAcaoTipo === 'error' ? 'Agendamento com erro' : 'Aguardando emissão';
+  }
+
+  get alertAcaoDescricao(): string {
+    if (this.alertAcaoTipo === 'error') {
+      return 'Use Emitir NFS-e nacional, reenviar, encerrar manualmente ou remover o agendamento.';
+    }
+    return 'Com um clique, a API monta a DPS, assina com o certificado do escritório e envia à SEFIN.';
   }
 
   get subtitulo(): string {
@@ -329,6 +366,34 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
           this.loading = false;
           this.cdr.markForCheck();
         });
+      });
+  }
+
+  emitirNfseNacional(): void {
+    if (!this.corpo || !this.podeEmitirNacional) return;
+    this.acaoEmAndamento = true;
+    this.cdr.markForCheck();
+    this.http.post<{
+      sucesso?: boolean;
+      mensagem?: string;
+      numeroNfe?: number;
+    }>(`${this.api}/NfseNacional/emissao/agendamento/${this.corpo.codigo}`, {}, { headers: this.h })
+      .pipe(timeout(300000), catchError(err => {
+        const e = err as { error?: { mensagem?: string } };
+        this.tratarErroAcao(e?.error?.mensagem || 'Falha ao emitir NFS-e nacional.', err);
+        return of(null);
+      }))
+      .subscribe(res => {
+        if (!res) return;
+        if (res.sucesso) {
+          this.message.success(res.mensagem || `NFS-e emitida (NF ${res.numeroNfe ?? '—'}).`);
+          this.acaoEmAndamento = false;
+          this.voltar();
+          return;
+        }
+        this.message.error(res.mensagem || 'Emissão não concluída.');
+        this.acaoEmAndamento = false;
+        this.carregar();
       });
   }
 
