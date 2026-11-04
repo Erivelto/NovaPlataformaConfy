@@ -174,10 +174,8 @@ interface DadosEmissaoNota {
               nz-button
               nzType="primary"
               class="btn-nacional"
-              nz-popconfirm
-              nzPopconfirmTitle="Enviar DPS à NFS-e nacional (SEFIN) agora?"
-              (nzOnConfirm)="emitirNfseNacional()"
-              [nzLoading]="acaoEmAndamento">
+              (click)="abrirEmissaoNacional()"
+              [disabled]="acaoEmAndamento">
               <i nz-icon nzType="thunderbolt"></i> Emitir NFS-e nacional
             </button>
             <button nz-button nzType="default" (click)="reenviarAgendamento()" [nzLoading]="acaoEmAndamento">
@@ -297,7 +295,7 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
 
   get alertAcaoDescricao(): string {
     if (this.alertAcaoTipo === 'error') {
-      return 'Use Emitir NFS-e nacional, reenviar, encerrar manualmente ou remover o agendamento.';
+      return 'Use Emitir NFS-e nacional (assistente), reenviar, encerrar manualmente ou remover o agendamento.';
     }
     return 'Com um clique, a API monta a DPS, assina com o certificado do escritório e envia à SEFIN.';
   }
@@ -369,32 +367,11 @@ export class AgendamentoNfeDetalheComponent implements OnInit {
       });
   }
 
-  emitirNfseNacional(): void {
+  abrirEmissaoNacional(): void {
     if (!this.corpo || !this.podeEmitirNacional) return;
-    this.acaoEmAndamento = true;
-    this.cdr.markForCheck();
-    this.http.post<{
-      sucesso?: boolean;
-      mensagem?: string;
-      numeroNfe?: number;
-    }>(`${this.api}/NfseNacional/emissao/agendamento/${this.corpo.codigo}`, {}, { headers: this.h })
-      .pipe(timeout(300000), catchError(err => {
-        const e = err as { error?: { mensagem?: string } };
-        this.tratarErroAcao(e?.error?.mensagem || 'Falha ao emitir NFS-e nacional.', err);
-        return of(null);
-      }))
-      .subscribe(res => {
-        if (!res) return;
-        if (res.sucesso) {
-          this.message.success(res.mensagem || `NFS-e emitida (NF ${res.numeroNfe ?? '—'}).`);
-          this.acaoEmAndamento = false;
-          this.voltar();
-          return;
-        }
-        this.message.error(res.mensagem || 'Emissão não concluída.');
-        this.acaoEmAndamento = false;
-        this.carregar();
-      });
+    this.router.navigate(['/administrativo/agendamento-nfe/emissao-nacional', this.corpo.codigo], {
+      queryParams: { status: this.statusLista || undefined }
+    });
   }
 
   reenviarAgendamento(): void {

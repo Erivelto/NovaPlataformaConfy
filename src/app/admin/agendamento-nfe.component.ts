@@ -111,10 +111,7 @@ interface ListaStatusAgendamento {
                       nzType="default"
                       nzSize="small"
                       class="btn-emitir"
-                      nz-popconfirm
-                      nzPopconfirmTitle="Enviar DPS à NFS-e nacional (SEFIN) para este agendamento?"
-                      (nzOnConfirm)="emitirNfseNacional(item)"
-                      [nzLoading]="emitindoCodigo === item.codigo">
+                      (click)="abrirEmissaoNacional(item)">
                       <i nz-icon nzType="thunderbolt"></i> Emitir
                     </button>
                     <button nz-button nzType="primary" nzSize="small" (click)="abrirDetalhes(item)">
@@ -306,36 +303,10 @@ export class AgendamentoNfeComponent implements OnInit {
     return s.includes('aguardando') || s.includes('erro');
   }
 
-  emitirNfseNacional(item: ListaStatusAgendamento): void {
-    this.emitindoCodigo = item.codigo;
-    this.cdr.markForCheck();
-    this.http.post<{
-      sucesso?: boolean;
-      mensagem?: string;
-      numeroNfe?: number;
-      respostaSefin?: string;
-    }>(`${this.api}/NfseNacional/emissao/agendamento/${item.codigo}`, {}, { headers: this.h })
-      .pipe(timeout(300000), catchError(err => {
-        const e = err as { error?: { mensagem?: string; message?: string } };
-        const msg = e?.error?.mensagem || e?.error?.message || 'Falha na comunicação com a API.';
-        this.message.error(msg);
-        this.emitindoCodigo = null;
-        this.cdr.markForCheck();
-        return of(null);
-      }))
-      .subscribe(res => {
-        if (!res) return;
-        const ok = res.sucesso === true;
-        if (ok) {
-          this.message.success(res.mensagem || `NFS-e emitida (NF ${res.numeroNfe ?? '—'}).`);
-          this.carregar();
-        } else {
-          this.message.error(res.mensagem || 'Emissão não concluída. Veja detalhes do agendamento.');
-          this.carregar();
-        }
-        this.emitindoCodigo = null;
-        this.cdr.markForCheck();
-      });
+  abrirEmissaoNacional(item: ListaStatusAgendamento): void {
+    this.router.navigate(['/administrativo/agendamento-nfe/emissao-nacional', item.codigo], {
+      queryParams: { status: item.status }
+    });
   }
 
   private normalizarItem(item: unknown): ListaStatusAgendamento {
