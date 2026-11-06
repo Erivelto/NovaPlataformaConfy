@@ -1,0 +1,761 @@
+{
+    "total": 189,
+    "servicos": [
+        {
+            "codigo": "010101",
+            "descricao": "Análise e desenvolvimento de sistemas."
+        },
+        {
+            "codigo": "010201",
+            "descricao": "Programação."
+        },
+        {
+            "codigo": "010301",
+            "descricao": "Processamento de dados, textos, imagens, vídeos, páginas eletrônicas, aplicativos e sistemas de informação, entre outros formatos, e congêneres."
+        },
+        {
+            "codigo": "010302",
+            "descricao": "Armazenamento ou hospedagem de dados, textos, imagens, vídeos, páginas eletrônicas, aplicativos e sistemas de informação, entre outros formatos, e congêneres."
+        },
+        {
+            "codigo": "010401",
+            "descricao": "Elaboração de programas de computadores, inclusive de jogos eletrônicos, independentemente da arquitetura construtiva da máquina em que o programa será executado, incluindo tablets, smartphones e congêneres."
+        },
+        {
+            "codigo": "010501",
+            "descricao": "Licenciamento ou cessão de direito de uso de programas de computação."
+        },
+        {
+            "codigo": "010601",
+            "descricao": "Assessoria e consultoria em informática."
+        },
+        {
+            "codigo": "010701",
+            "descricao": "Suporte técnico em informática, inclusive instalação, configuração e manutenção de programas de computação e bancos de dados."
+        },
+        {
+            "codigo": "010801",
+            "descricao": "Planejamento, confecção, manutenção e atualização de páginas eletrônicas."
+        },
+        {
+            "codigo": "010901",
+            "descricao": "Disponibilização, sem cessão definitiva, de conteúdos de áudio por meio da internet (exceto distribuição condicionada)."
+        },
+        {
+            "codigo": "010902",
+            "descricao": "Disponibilização, sem cessão definitiva, de conteúdos de vídeo, imagem e texto por meio da internet."
+        },
+        {
+            "codigo": "020101",
+            "descricao": "Serviços de pesquisas e desenvolvimento de qualquer natureza."
+        },
+        {
+            "codigo": "030201",
+            "descricao": "Cessão de direito de uso de marcas e de sinais de propaganda."
+        },
+        {
+            "codigo": "030301",
+            "descricao": "Exploração de salões de festas, centro de convenções, stands e congêneres."
+        },
+        {
+            "codigo": "030302",
+            "descricao": "Exploração de escritórios virtuais e congêneres."
+        },
+        {
+            "codigo": "030303",
+            "descricao": "Exploração de quadras esportivas, estádios, ginásios e congêneres."
+        },
+        {
+            "codigo": "030304",
+            "descricao": "Exploração de auditórios, casas de espetáculos e congêneres."
+        },
+        {
+            "codigo": "030305",
+            "descricao": "Exploração de parques de diversões e congêneres."
+        },
+        {
+            "codigo": "030401",
+            "descricao": "Locação, sublocação, arrendamento, direito de passagem ou permissão de uso de ferrovia."
+        },
+        {
+            "codigo": "030402",
+            "descricao": "Locação, sublocação, arrendamento, direito de passagem ou permissão de uso de rodovia."
+        },
+        {
+            "codigo": "030403",
+            "descricao": "Locação, sublocação, arrendamento, direito de passagem ou permissão de uso de postes, cabos, dutos e condutos."
+        },
+        {
+            "codigo": "030501",
+            "descricao": "Cessão de andaimes, palcos, coberturas e outras estruturas de uso temporário."
+        },
+        {
+            "codigo": "040101",
+            "descricao": "Medicina."
+        },
+        {
+            "codigo": "040102",
+            "descricao": "Biomedicina."
+        },
+        {
+            "codigo": "040201",
+            "descricao": "Análises clínicas e congêneres."
+        },
+        {
+            "codigo": "040202",
+            "descricao": "Patologia e congêneres."
+        },
+        {
+            "codigo": "040203",
+            "descricao": "Eletricidade médica (eletroestimulação de nervos e músculos, cardioversão, etc) e congêneres."
+        },
+        {
+            "codigo": "040204",
+            "descricao": "Radioterapia, quimioterapia e congêneres."
+        },
+        {
+            "codigo": "040205",
+            "descricao": "Ultra-sonografia, ressonância magnética, radiologia, tomografia e congêneres."
+        },
+        {
+            "codigo": "040301",
+            "descricao": "Hospitais e congêneres."
+        },
+        {
+            "codigo": "040302",
+            "descricao": "Laboratórios e congêneres."
+        },
+        {
+            "codigo": "040303",
+            "descricao": "Clínicas, sanatórios, manicômios, casas de saúde, prontos-socorros, ambulatórios e congêneres."
+        },
+        {
+            "codigo": "040401",
+            "descricao": "Instrumentação cirúrgica."
+        },
+        {
+            "codigo": "040501",
+            "descricao": "Acupuntura."
+        },
+        {
+            "codigo": "040601",
+            "descricao": "Enfermagem, inclusive serviços auxiliares."
+        },
+        {
+            "codigo": "040701",
+            "descricao": "Serviços farmacêuticos."
+        },
+        {
+            "codigo": "040801",
+            "descricao": "Terapia ocupacional."
+        },
+        {
+            "codigo": "040802",
+            "descricao": "Fisioterapia."
+        },
+        {
+            "codigo": "040803",
+            "descricao": "Fonoaudiologia."
+        },
+        {
+            "codigo": "040901",
+            "descricao": "Terapias de qualquer espécie destinadas ao tratamento físico, orgânico e mental."
+        },
+        {
+            "codigo": "041001",
+            "descricao": "Nutrição."
+        },
+        {
+            "codigo": "041101",
+            "descricao": "Obstetrícia."
+        },
+        {
+            "codigo": "041201",
+            "descricao": "Odontologia."
+        },
+        {
+            "codigo": "041301",
+            "descricao": "Ortóptica."
+        },
+        {
+            "codigo": "041401",
+            "descricao": "Próteses sob encomenda."
+        },
+        {
+            "codigo": "041501",
+            "descricao": "Psicanálise."
+        },
+        {
+            "codigo": "041601",
+            "descricao": "Psicologia."
+        },
+        {
+            "codigo": "041701",
+            "descricao": "Casas de repouso e congêneres."
+        },
+        {
+            "codigo": "041702",
+            "descricao": "Casas de recuperação e congêneres."
+        },
+        {
+            "codigo": "041703",
+            "descricao": "Creches e congêneres."
+        },
+        {
+            "codigo": "041704",
+            "descricao": "Asilos e congêneres."
+        },
+        {
+            "codigo": "041801",
+            "descricao": "Inseminação artificial, fertilização in vitro e congêneres."
+        },
+        {
+            "codigo": "041901",
+            "descricao": "Bancos de sangue, leite, pele, olhos, óvulos, sêmen e congêneres."
+        },
+        {
+            "codigo": "042001",
+            "descricao": "Coleta de sangue, leite, tecidos, sêmen, órgãos e materiais biológicos de qualquer espécie."
+        },
+        {
+            "codigo": "042101",
+            "descricao": "Unidade de atendimento, assistência ou tratamento móvel e congêneres."
+        },
+        {
+            "codigo": "042201",
+            "descricao": "Planos de medicina de grupo ou individual e convênios para prestação de assistência médica, hospitalar, odontológica e congêneres."
+        },
+        {
+            "codigo": "042301",
+            "descricao": "Outros planos de saúde que se cumpram através de serviços de terceiros contratados."
+        },
+        {
+            "codigo": "050101",
+            "descricao": "Medicina veterinária."
+        },
+        {
+            "codigo": "050102",
+            "descricao": "Zootecnia."
+        },
+        {
+            "codigo": "050201",
+            "descricao": "Hospitais e congêneres, na área veterinária."
+        },
+        {
+            "codigo": "050202",
+            "descricao": "Clínicas, ambulatórios, prontos-socorros e congêneres, na área veterinária."
+        },
+        {
+            "codigo": "050301",
+            "descricao": "Laboratórios de análise na área veterinária."
+        },
+        {
+            "codigo": "050401",
+            "descricao": "Inseminação artificial, fertilização in vitro e congêneres."
+        },
+        {
+            "codigo": "050501",
+            "descricao": "Bancos de sangue e de órgãos e congêneres."
+        },
+        {
+            "codigo": "050601",
+            "descricao": "Coleta de sangue, leite, tecidos, sêmen, órgãos e materiais biológicos de qualquer espécie."
+        },
+        {
+            "codigo": "050701",
+            "descricao": "Unidade de atendimento, assistência ou tratamento móvel e congêneres."
+        },
+        {
+            "codigo": "050801",
+            "descricao": "Guarda, tratamento, amestramento, embelezamento, alojamento e congêneres."
+        },
+        {
+            "codigo": "050901",
+            "descricao": "Planos de atendimento e assistência médico-veterinária."
+        },
+        {
+            "codigo": "060101",
+            "descricao": "Barbearia, cabeleireiros, manicuros, pedicuros e congêneres."
+        },
+        {
+            "codigo": "060201",
+            "descricao": "Esteticistas, tratamento de pele, depilação e congêneres."
+        },
+        {
+            "codigo": "060301",
+            "descricao": "Banhos, duchas, sauna, massagens e congêneres."
+        },
+        {
+            "codigo": "060401",
+            "descricao": "Ginástica, dança, esportes, natação, artes marciais e demais atividades físicas."
+        },
+        {
+            "codigo": "060501",
+            "descricao": "Centros de emagrecimento, spa e congêneres."
+        },
+        {
+            "codigo": "060601",
+            "descricao": "Aplicação de tatuagens, piercings e congêneres."
+        },
+        {
+            "codigo": "070101",
+            "descricao": "Engenharia e congêneres."
+        },
+        {
+            "codigo": "070102",
+            "descricao": "Agronomia e congêneres."
+        },
+        {
+            "codigo": "070103",
+            "descricao": "Agrimensura e congêneres."
+        },
+        {
+            "codigo": "070104",
+            "descricao": "Arquitetura, urbanismo e congêneres."
+        },
+        {
+            "codigo": "070105",
+            "descricao": "Geologia e congêneres."
+        },
+        {
+            "codigo": "070106",
+            "descricao": "Paisagismo e congêneres."
+        },
+        {
+            "codigo": "070201",
+            "descricao": "Execução, por administração, de obras de construção civil, hidráulica ou elétrica."
+        },
+        {
+            "codigo": "070202",
+            "descricao": "Execução, por empreitada ou subempreitada, de obras de construção civil."
+        },
+        {
+            "codigo": "070301",
+            "descricao": "Elaboração de planos diretores, estudos de viabilidade, estudos organizacionais e outros, relacionados com obras e serviços de engenharia."
+        },
+        {
+            "codigo": "070302",
+            "descricao": "Elaboração de anteprojetos, projetos básicos e projetos executivos para trabalhos de engenharia."
+        },
+        {
+            "codigo": "070401",
+            "descricao": "Demolição."
+        },
+        {
+            "codigo": "070501",
+            "descricao": "Reparação, conservação e reforma de edifícios e congêneres."
+        },
+        {
+            "codigo": "070502",
+            "descricao": "Reparação, conservação e reforma de estradas, pontes, portos e congêneres."
+        },
+        {
+            "codigo": "070601",
+            "descricao": "Colocação e instalação de tapetes, carpetes, cortinas e congêneres, com material fornecido pelo tomador."
+        },
+        {
+            "codigo": "070602",
+            "descricao": "Colocação e instalação de assoalhos, revestimentos de parede, vidros, divisórias, placas de gesso."
+        },
+        {
+            "codigo": "070701",
+            "descricao": "Recuperação, raspagem, polimento e lustração de pisos."
+        },
+        {
+            "codigo": "070801",
+            "descricao": "Calafetação."
+        },
+        {
+            "codigo": "070901",
+            "descricao": "Varrição, coleta e remoção de lixo, rejeitos e outros resíduos."
+        },
+        {
+            "codigo": "070902",
+            "descricao": "Incineração, tratamento, reciclagem, separação e destinação final de lixo."
+        },
+        {
+            "codigo": "071001",
+            "descricao": "Limpeza, manutenção e conservação de vias e logradouros públicos, parques."
+        },
+        {
+            "codigo": "071002",
+            "descricao": "Limpeza, manutenção e conservação de imóveis, chaminés, piscinas."
+        },
+        {
+            "codigo": "071101",
+            "descricao": "Decoração."
+        },
+        {
+            "codigo": "071102",
+            "descricao": "Jardinagem, inclusive corte e poda de árvores."
+        },
+        {
+            "codigo": "071201",
+            "descricao": "Controle e tratamento de efluentes de qualquer natureza e de agentes físicos, químicos e biológicos."
+        },
+        {
+            "codigo": "071301",
+            "descricao": "Dedetização, desinfecção, desinsetização, imunização, higienização, desratização, pulverização."
+        },
+        {
+            "codigo": "071601",
+            "descricao": "Florestamento, reflorestamento, semeadura, adubação, reparação de solo, plantio, silvicultura e congêneres."
+        },
+        {
+            "codigo": "071701",
+            "descricao": "Escoramento, contenção de encostas e serviços congêneres."
+        },
+        {
+            "codigo": "071801",
+            "descricao": "Limpeza e dragagem de rios, portos, canais, baías, lagos, represas."
+        },
+        {
+            "codigo": "071901",
+            "descricao": "Acompanhamento e fiscalização da execução de obras de engenharia, arquitetura e urbanismo."
+        },
+        {
+            "codigo": "072001",
+            "descricao": "Aerofotogrametria, cartografia, mapeamento."
+        },
+        {
+            "codigo": "072002",
+            "descricao": "Levantamentos batimétricos, geográficos, geodésicos, geológicos."
+        },
+        {
+            "codigo": "072003",
+            "descricao": "Levantamentos topográficos."
+        },
+        {
+            "codigo": "080101",
+            "descricao": "Ensino regular pré-escolar, fundamental e médio."
+        },
+        {
+            "codigo": "080102",
+            "descricao": "Ensino regular superior."
+        },
+        {
+            "codigo": "080201",
+            "descricao": "Instrução, treinamento, orientação pedagógica e educacional, avaliação de conhecimentos."
+        },
+        {
+            "codigo": "090101",
+            "descricao": "Hospedagem em hotéis, hotelaria marítima e congêneres."
+        },
+        {
+            "codigo": "090102",
+            "descricao": "Hospedagem em pensões, albergues, pousadas, ocupação por temporada."
+        },
+        {
+            "codigo": "090103",
+            "descricao": "Hospedagem em motéis."
+        },
+        {
+            "codigo": "090104",
+            "descricao": "Hospedagem em apart-service condominiais, flat, apart-hotéis."
+        },
+        {
+            "codigo": "090201",
+            "descricao": "Agenciamento e intermediação de programas de turismo, passeios, viagens, excursões, hospedagens."
+        },
+        {
+            "codigo": "090202",
+            "descricao": "Organização, promoção e execução de programas de turismo."
+        },
+        {
+            "codigo": "090301",
+            "descricao": "Guias de turismo."
+        },
+        {
+            "codigo": "100101",
+            "descricao": "Agenciamento, corretagem ou intermediação de câmbio."
+        },
+        {
+            "codigo": "100102",
+            "descricao": "Agenciamento, corretagem ou intermediação de seguros."
+        },
+        {
+            "codigo": "100103",
+            "descricao": "Agenciamento, corretagem ou intermediação de cartões de crédito."
+        },
+        {
+            "codigo": "100104",
+            "descricao": "Agenciamento, corretagem ou intermediação de planos de saúde."
+        },
+        {
+            "codigo": "100105",
+            "descricao": "Agenciamento, corretagem ou intermediação de planos de previdência privada."
+        },
+        {
+            "codigo": "100201",
+            "descricao": "Agenciamento, corretagem ou intermediação de títulos em geral e valores mobiliários."
+        },
+        {
+            "codigo": "100202",
+            "descricao": "Agenciamento, corretagem ou intermediação de contratos quaisquer."
+        },
+        {
+            "codigo": "100301",
+            "descricao": "Agenciamento, corretagem ou intermediação de direitos de propriedade industrial, artística ou literária."
+        },
+        {
+            "codigo": "100401",
+            "descricao": "Agenciamento, corretagem ou intermediação de contratos de arrendamento mercantil (leasing)."
+        },
+        {
+            "codigo": "100402",
+            "descricao": "Agenciamento, corretagem ou intermediação de contratos de franquia (franchising)."
+        },
+        {
+            "codigo": "100403",
+            "descricao": "Agenciamento, corretagem ou intermediação de faturização (factoring)."
+        },
+        {
+            "codigo": "100501",
+            "descricao": "Agenciamento, corretagem ou intermediação de bens móveis ou imóveis."
+        },
+        {
+            "codigo": "100601",
+            "descricao": "Agenciamento marítimo."
+        },
+        {
+            "codigo": "100701",
+            "descricao": "Agenciamento de notícias."
+        },
+        {
+            "codigo": "100801",
+            "descricao": "Agenciamento de publicidade e propaganda."
+        },
+        {
+            "codigo": "100901",
+            "descricao": "Representação de qualquer natureza, inclusive comercial."
+        },
+        {
+            "codigo": "110101",
+            "descricao": "Guarda e estacionamento de veículos terrestres automotores."
+        },
+        {
+            "codigo": "110102",
+            "descricao": "Guarda e estacionamento de aeronaves e de embarcações."
+        },
+        {
+            "codigo": "110201",
+            "descricao": "Vigilância, segurança ou monitoramento de bens, pessoas e semoventes."
+        },
+        {
+            "codigo": "110301",
+            "descricao": "Escolta, inclusive de veículos e cargas."
+        },
+        {
+            "codigo": "110401",
+            "descricao": "Armazenamento, depósito, guarda de bens de qualquer espécie."
+        },
+        {
+            "codigo": "110402",
+            "descricao": "Carga, descarga, arrumação de bens."
+        },
+        {
+            "codigo": "120101",
+            "descricao": "Espetáculos teatrais."
+        },
+        {
+            "codigo": "120201",
+            "descricao": "Exibições cinematográficas."
+        },
+        {
+            "codigo": "120301",
+            "descricao": "Espetáculos circenses."
+        },
+        {
+            "codigo": "120401",
+            "descricao": "Programas de auditório."
+        },
+        {
+            "codigo": "120501",
+            "descricao": "Parques de diversões, centros de lazer."
+        },
+        {
+            "codigo": "120601",
+            "descricao": "Boates, taxi-dancing."
+        },
+        {
+            "codigo": "120701",
+            "descricao": "Shows, ballet, danças, desfiles, bailes, óperas, concertos."
+        },
+        {
+            "codigo": "120801",
+            "descricao": "Feiras, exposições, congressos."
+        },
+        {
+            "codigo": "120901",
+            "descricao": "Bilhares."
+        },
+        {
+            "codigo": "120902",
+            "descricao": "Boliches."
+        },
+        {
+            "codigo": "120903",
+            "descricao": "Diversões eletrônicas ou não."
+        },
+        {
+            "codigo": "121001",
+            "descricao": "Corridas e competições de animais."
+        },
+        {
+            "codigo": "121101",
+            "descricao": "Competições esportivas ou de destreza física ou intelectual."
+        },
+        {
+            "codigo": "121201",
+            "descricao": "Execução de música."
+        },
+        {
+            "codigo": "121301",
+            "descricao": "Produção de eventos, espetáculos, shows, ballet."
+        },
+        {
+            "codigo": "121401",
+            "descricao": "Fornecimento de música para ambientes fechados."
+        },
+        {
+            "codigo": "121501",
+            "descricao": "Desfiles de blocos carnavalescos ou folclóricos."
+        },
+        {
+            "codigo": "130201",
+            "descricao": "Fonografia ou gravação de sons, trucagem, dublagem."
+        },
+        {
+            "codigo": "130301",
+            "descricao": "Fotografia e cinematografia, revelação, ampliação."
+        },
+        {
+            "codigo": "130401",
+            "descricao": "Reprografia, microfilmagem e digitalização."
+        },
+        {
+            "codigo": "130501",
+            "descricao": "Composição gráfica, clicheria, litografia."
+        },
+        {
+            "codigo": "140101",
+            "descricao": "Lubrificação, limpeza, revisão, conserto, manutenção de máquinas, veículos, equipamentos."
+        },
+        {
+            "codigo": "140201",
+            "descricao": "Assistência técnica."
+        },
+        {
+            "codigo": "140301",
+            "descricao": "Recondicionamento de motores."
+        },
+        {
+            "codigo": "140401",
+            "descricao": "Recauchutagem ou regeneração de pneus."
+        },
+        {
+            "codigo": "140501",
+            "descricao": "Restauração, pintura, lavagem, galvanoplastia, polimento de objetos."
+        },
+        {
+            "codigo": "140601",
+            "descricao": "Instalação e montagem de aparelhos, máquinas, equipamentos."
+        },
+        {
+            "codigo": "140801",
+            "descricao": "Encadernação, gravação de livros."
+        },
+        {
+            "codigo": "141001",
+            "descricao": "Tinturaria e lavanderia."
+        },
+        {
+            "codigo": "141101",
+            "descricao": "Tapeçaria e reforma de estofamentos."
+        },
+        {
+            "codigo": "141201",
+            "descricao": "Funilaria e lanternagem."
+        },
+        {
+            "codigo": "141401",
+            "descricao": "Guincho intramunicipal."
+        },
+        {
+            "codigo": "150101",
+            "descricao": "Administração de fundos."
+        },
+        {
+            "codigo": "150103",
+            "descricao": "Administração de cartão de crédito ou débito."
+        },
+        {
+            "codigo": "170101",
+            "descricao": "Assessoria ou consultoria de qualquer natureza."
+        },
+        {
+            "codigo": "170401",
+            "descricao": "Recrutamento, agenciamento, seleção e colocação de mão-de-obra."
+        },
+        {
+            "codigo": "170501",
+            "descricao": "Fornecimento de mão-de-obra temporária."
+        },
+        {
+            "codigo": "170601",
+            "descricao": "Propaganda e publicidade."
+        },
+        {
+            "codigo": "170801",
+            "descricao": "Franquia (franchising)."
+        },
+        {
+            "codigo": "170901",
+            "descricao": "Perícias, laudos, exames técnicos."
+        },
+        {
+            "codigo": "171101",
+            "descricao": "Organização de festas e recepções."
+        },
+        {
+            "codigo": "171102",
+            "descricao": "Bufê."
+        },
+        {
+            "codigo": "171401",
+            "descricao": "Advocacia."
+        },
+        {
+            "codigo": "171601",
+            "descricao": "Auditoria."
+        },
+        {
+            "codigo": "171901",
+            "descricao": "Contabilidade."
+        },
+        {
+            "codigo": "172201",
+            "descricao": "Cobrança em geral."
+        },
+        {
+            "codigo": "200101",
+            "descricao": "Serviços portuários (terra)."
+        },
+        {
+            "codigo": "210101",
+            "descricao": "Serviços de registros públicos, cartorários e notariais."
+        },
+        {
+            "codigo": "250101",
+            "descricao": "Funerais, fornecimento de caixão, capela, traslado."
+        },
+        {
+            "codigo": "260101",
+            "descricao": "Serviços de coleta, remessa ou entrega de correspondências, objetos."
+        },
+        {
+            "codigo": "990101",
+            "descricao": "Serviços sem a incidência de ISSQN e ICMS."
+        }
+    ]
+}

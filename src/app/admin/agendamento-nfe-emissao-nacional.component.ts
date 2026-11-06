@@ -22,6 +22,7 @@ import { NzMessageModule, NzMessageService } from 'ng-zorro-antd/message';
 import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
 import { LC116_SERVICOS, lc116RotuloCompleto } from './lc116-servicos';
+import { NBS_SERVICOS, nbsRotuloCompleto } from './nbs-servicos';
 
 interface NfseWizard {
   etapaAtual: number;
@@ -217,8 +218,20 @@ interface FormularioEmissao {
             <div nz-col [nzSpan]="24" [nzXs]="24">
               <nz-form-item>
                 <nz-form-label nzRequired>Código NBS / serviço nacional</nz-form-label>
-                <nz-form-control nzExtra="Obrigatório na DPS (até 9 dígitos). Preencha manualmente.">
-                  <input nz-input [(ngModel)]="wizard.codigoServicoNbs" placeholder="Ex.: 010101001" maxlength="20" />
+                <nz-form-control nzExtra="Pesquise pelo código ou pela descrição. Lista nacional NBS; o valor salvo é o código numérico.">
+                  <nz-select
+                    class="nbs-select"
+                    [(ngModel)]="nbsCodigoSelecionado"
+                    nzShowSearch
+                    nzAllowClear
+                    nzPlaceHolder="Ex.: digite 010101 ou parte da descrição..."
+                    [nzFilterOption]="filterNbsOption"
+                    (ngModelChange)="onNbsSelect($event)">
+                    <nz-option
+                      *ngFor="let o of nbsLista"
+                      [nzValue]="o.codigo"
+                      [nzLabel]="o.codigo + ' — ' + o.descricao"></nz-option>
+                  </nz-select>
                 </nz-form-control>
               </nz-form-item>
             </div>
@@ -266,7 +279,7 @@ interface FormularioEmissao {
             <dt>Prestador</dt><dd>{{ form?.prestador?.razao }} ({{ form?.prestador?.documento }})</dd>
             <dt>Tomador</dt><dd>{{ form?.tomador?.razao }} ({{ form?.tomador?.documento }})</dd>
             <dt>LC116</dt><dd>{{ rotuloLc116Resumo }}</dd>
-            <dt>NBS</dt><dd>{{ wizard.codigoServicoNbs || '—' }}</dd>
+            <dt>NBS</dt><dd>{{ rotuloNbsResumo }}</dd>
             <dt>Valor</dt><dd>R$ {{ wizard.valorServico | number:'1.2-2' }} · ISS {{ wizard.aliquotaIss }}% = R$ {{ issCalculado | number:'1.2-2' }}</dd>
             <dt>Descrição</dt><dd class="desc">{{ wizard.descricaoServico || '—' }}</dd>
           </dl>
@@ -311,8 +324,8 @@ interface FormularioEmissao {
     .resumo dt { color: rgba(0,0,0,.55); margin: 0; }
     .resumo dd { margin: 0; font-weight: 500; }
     .resumo .desc { font-weight: 400; white-space: pre-wrap; }
-    :host ::ng-deep .lc116-select.ant-select { width: 100%; max-width: 100%; }
-    :host ::ng-deep .lc116-select .ant-select-selector { min-height: 40px; }
+    :host ::ng-deep .lc116-select.ant-select, :host ::ng-deep .nbs-select.ant-select { width: 100%; max-width: 100%; }
+    :host ::ng-deep .lc116-select .ant-select-selector, :host ::ng-deep .nbs-select .ant-select-selector { min-height: 40px; }
   `]
 })
 export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
@@ -330,8 +343,20 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
   lc116CodigoSelecionado: string | null = null;
   readonly lc116Lista = LC116_SERVICOS;
 
+  /** Valor do nz-select NBS (código da lista). */
+  nbsCodigoSelecionado: string | null = null;
+  readonly nbsLista = NBS_SERVICOS;
+
   /** Select2-like: busca por rótulo ou código. */
   filterLc116Option = (input: string, option: { nzLabel?: string | number | null; nzValue?: unknown }): boolean => {
+    const q = (input || '').trim().toLowerCase();
+    if (!q) return true;
+    const label = String(option.nzLabel ?? '').toLowerCase();
+    const val = String(option.nzValue ?? '').toLowerCase();
+    return label.includes(q) || val.includes(q.replace(/\D/g, ''));
+  };
+
+  filterNbsOption = (input: string, option: { nzLabel?: string | number | null; nzValue?: unknown }): boolean => {
     const q = (input || '').trim().toLowerCase();
     if (!q) return true;
     const label = String(option.nzLabel ?? '').toLowerCase();
@@ -356,6 +381,11 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
   get rotuloLc116Resumo(): string {
     if (!this.wizard?.codigoLc116) return '—';
     return lc116RotuloCompleto(this.wizard.codigoLc116) || this.wizard.codigoLc116;
+  }
+
+  get rotuloNbsResumo(): string {
+    if (!this.wizard?.codigoServicoNbs) return '—';
+    return nbsRotuloCompleto(this.wizard.codigoServicoNbs) || this.wizard.codigoServicoNbs;
   }
 
   get issCalculado(): number {
@@ -413,6 +443,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
         this.form = this.mapFormulario(raw);
         this.wizard = this.form.wizard;
         this.syncLc116SelectFromWizard();
+        this.syncNbsSelectFromWizard();
         this.step = Math.min(Math.max(this.wizard.etapaAtual ?? 0, 0), 3);
         this.loading = false;
         this.cdr.markForCheck();
@@ -427,11 +458,30 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
+  onNbsSelect(codigo: string | null): void {
+    if (!this.wizard) return;
+    const d = codigo ? this.apenasDigitos(codigo) : '';
+    this.wizard.codigoServicoNbs = d;
+    this.nbsCodigoSelecionado = d || null;
+    this.cdr.markForCheck();
+  }
+
   private syncLc116SelectFromWizard(): void {
     if (!this.wizard) return;
     const six = this.apenasDigitos(this.wizard.codigoLc116).slice(0, 6);
     this.lc116CodigoSelecionado = six.length === 6 ? six : null;
     if (six.length === 6) this.wizard.codigoLc116 = six;
+  }
+
+  private syncNbsSelectFromWizard(): void {
+    if (!this.wizard) return;
+    const d = this.apenasDigitos(this.wizard.codigoServicoNbs);
+    if (!d) {
+      this.nbsCodigoSelecionado = null;
+      return;
+    }
+    const hit = this.nbsLista.find((s) => d === s.codigo || d.startsWith(s.codigo));
+    this.nbsCodigoSelecionado = hit ? hit.codigo : null;
   }
 
   voltarPasso(): void {
