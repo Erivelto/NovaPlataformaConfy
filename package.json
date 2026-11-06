@@ -12,6 +12,7 @@
     "build:prod": "ng build --configuration production",
     "build:deploy-amplify": "node scripts/amplify-build-app-zip.cjs",
     "build:deploy-amplify:site": "node scripts/amplify-build-site-zip.cjs",
+    "build:lc116-nbs-mapa": "node scripts/build-lc116-nbs-mapa.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

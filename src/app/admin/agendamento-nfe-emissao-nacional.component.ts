@@ -22,7 +22,9 @@ import { NzMessageModule, NzMessageService } from 'ng-zorro-antd/message';
 import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
 import { LC116_SERVICOS, lc116RotuloCompleto } from './lc116-servicos';
-import { NBS_SERVICOS, nbsRotuloCompleto } from './nbs-servicos';
+import { NBS_SERVICOS, nbsRotuloCompleto, type NbsServico } from './nbs-servicos';
+import { codigosNbsPermitidosParaLc116, codigoNbsPermitidoParaLc116 } from './lc116-nbs-opcoes';
+import { descricaoNbsReforma, nbsRotuloReformaCompleto } from './nbs-reforma-catalogo';
 
 interface NfseWizard {
   etapaAtual: number;
@@ -218,17 +220,17 @@ interface FormularioEmissao {
             <div nz-col [nzSpan]="24" [nzXs]="24">
               <nz-form-item>
                 <nz-form-label nzRequired>Código NBS / serviço nacional</nz-form-label>
-                <nz-form-control nzExtra="Pesquise pelo código ou pela descrição. Lista nacional NBS; o valor salvo é o código numérico.">
+                <nz-form-control [nzExtra]="nbsAjudaExtra">
                   <nz-select
                     class="nbs-select"
                     [(ngModel)]="nbsCodigoSelecionado"
                     nzShowSearch
                     nzAllowClear
-                    nzPlaceHolder="Ex.: digite 010101 ou parte da descrição..."
+                    [nzPlaceHolder]="nbsPlaceholder"
                     [nzFilterOption]="filterNbsOption"
                     (ngModelChange)="onNbsSelect($event)">
                     <nz-option
-                      *ngFor="let o of nbsLista"
+                      *ngFor="let o of nbsOpcoesVisiveis"
                       [nzValue]="o.codigo"
                       [nzLabel]="o.codigo + ' — ' + o.descricao"></nz-option>
                   </nz-select>
@@ -347,6 +349,35 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
   nbsCodigoSelecionado: string | null = null;
   readonly nbsLista = NBS_SERVICOS;
 
+  /** Itens NBS exibidos conforme LC116 (lista completa se não houver mapa na planilha). */
+  get nbsOpcoesVisiveis(): NbsServico[] {
+    const lc = this.apenasDigitos(this.wizard?.codigoLc116 ?? this.lc116CodigoSelecionado ?? '').slice(0, 6);
+    const permitidos = lc.length === 6 ? codigosNbsPermitidosParaLc116(lc) : null;
+    if (permitidos == null) return this.nbsLista;
+    if (permitidos.length === 0) return [];
+    return permitidos.map((codigo) => ({
+      codigo,
+      descricao: descricaoNbsReforma(codigo) || '—'
+    }));
+  }
+
+  get nbsAjudaExtra(): string {
+    const lc = this.apenasDigitos(this.wizard?.codigoLc116 ?? '').slice(0, 6);
+    const permitidos = lc.length === 6 ? codigosNbsPermitidosParaLc116(lc) : null;
+    if (permitidos?.length) {
+      return `Somente NBS da tabela da reforma compatíveis com LC116 ${lc} (${permitidos.length} opção(ões)).`;
+    }
+    return 'Pesquise pelo código ou pela descrição. Com mapa LC116×NBS (CSV), escolha o LC116 para filtrar os NBS.';
+  }
+
+  get nbsPlaceholder(): string {
+    const lc = this.apenasDigitos(this.wizard?.codigoLc116 ?? '').slice(0, 6);
+    const permitidos = lc.length === 6 ? codigosNbsPermitidosParaLc116(lc) : null;
+    if (lc.length !== 6) return 'Primeiro selecione o LC116…';
+    if (permitidos && !permitidos.length) return 'Nenhum NBS mapeado para este LC116.';
+    return 'Ex.: digite o código ou parte da descrição…';
+  }
+
   /** Select2-like: busca por rótulo ou código. */
   filterLc116Option = (input: string, option: { nzLabel?: string | number | null; nzValue?: unknown }): boolean => {
     const q = (input || '').trim().toLowerCase();
@@ -385,7 +416,9 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
 
   get rotuloNbsResumo(): string {
     if (!this.wizard?.codigoServicoNbs) return '—';
-    return nbsRotuloCompleto(this.wizard.codigoServicoNbs) || this.wizard.codigoServicoNbs;
+    const d = this.apenasDigitos(this.wizard.codigoServicoNbs);
+    if (descricaoNbsReforma(d)) return nbsRotuloReformaCompleto(d);
+    return nbsRotuloCompleto(this.wizard.codigoServicoNbs) || d;
   }
 
   get issCalculado(): number {
@@ -443,6 +476,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
         this.form = this.mapFormulario(raw);
         this.wizard = this.form.wizard;
         this.syncLc116SelectFromWizard();
+        this.aplicarFiltroNbsAposLc116();
         this.syncNbsSelectFromWizard();
         this.step = Math.min(Math.max(this.wizard.etapaAtual ?? 0, 0), 3);
         this.loading = false;
@@ -455,6 +489,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     const six = codigo ? this.apenasDigitos(codigo).slice(0, 6) : '';
     this.wizard.codigoLc116 = six;
     this.lc116CodigoSelecionado = six || null;
+    this.aplicarFiltroNbsAposLc116();
     this.cdr.markForCheck();
   }
 
@@ -480,8 +515,40 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       this.nbsCodigoSelecionado = null;
       return;
     }
+    const lc = this.apenasDigitos(this.wizard.codigoLc116).slice(0, 6);
+    if (lc.length === 6 && !codigoNbsPermitidoParaLc116(lc, this.wizard.codigoServicoNbs)) {
+      this.nbsCodigoSelecionado = null;
+      return;
+    }
+    const permitidos = lc.length === 6 ? codigosNbsPermitidosParaLc116(lc) : null;
+    if (permitidos?.length) {
+      if (permitidos.includes(d)) {
+        this.nbsCodigoSelecionado = d;
+        return;
+      }
+      const matches = permitidos.filter((p) => d.startsWith(p) || p.startsWith(d));
+      if (matches.length) {
+        matches.sort((a, b) => b.length - a.length);
+        this.nbsCodigoSelecionado = matches[0];
+        return;
+      }
+      this.nbsCodigoSelecionado = null;
+      return;
+    }
     const hit = this.nbsLista.find((s) => d === s.codigo || d.startsWith(s.codigo));
     this.nbsCodigoSelecionado = hit ? hit.codigo : null;
+  }
+
+  /** Limpa NBS se deixou de ser compatível com o LC116 atual. */
+  private aplicarFiltroNbsAposLc116(): void {
+    if (!this.wizard) return;
+    const lc = this.apenasDigitos(this.wizard.codigoLc116).slice(0, 6);
+    if (lc.length !== 6) return;
+    const nbs = this.wizard.codigoServicoNbs;
+    if (nbs && !codigoNbsPermitidoParaLc116(lc, nbs)) {
+      this.wizard.codigoServicoNbs = '';
+      this.nbsCodigoSelecionado = null;
+    }
   }
 
   voltarPasso(): void {
@@ -519,6 +586,10 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       }
       if (!this.apenasDigitos(this.wizard.codigoServicoNbs)) {
         this.message.warning('Informe o código NBS / serviço.');
+        return false;
+      }
+      if (!codigoNbsPermitidoParaLc116(lc, this.wizard.codigoServicoNbs)) {
+        this.message.warning('Selecione um código NBS compatível com o LC116 escolhido.');
         return false;
       }
       if (!this.wizard.descricaoServico?.trim()) {
