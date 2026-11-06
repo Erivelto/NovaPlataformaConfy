@@ -21,6 +21,7 @@ import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzMessageModule, NzMessageService } from 'ng-zorro-antd/message';
 import { PageTitleComponent } from '../page-title.component';
 import { environment } from '../../environments/environment';
+import { LC116_SERVICOS, lc116RotuloCompleto } from './lc116-servicos';
 
 interface NfseWizard {
   etapaAtual: number;
@@ -47,7 +48,6 @@ interface FormularioEmissao {
   wizard: NfseWizard;
   prestador?: { codigoPessoa: number; documento: string; razao: string; nomeFantasia: string; inscricaoMunicipal: string };
   tomador?: { codigo: number; documento: string; razao: string; email: string; cidade: string; uf: string; cep: string };
-  servicosCadastro: string[];
   tpAmb: number;
   ambienteLabel: string;
 }
@@ -194,29 +194,31 @@ interface FormularioEmissao {
         <!-- Passo 1: Serviço -->
         <nz-card *ngIf="step === 1" nzTitle="Serviço / NBS">
           <div nz-row [nzGutter]="[16, 12]">
-            <div nz-col [nzSpan]="12" [nzXs]="24">
+            <div nz-col [nzSpan]="24" [nzXs]="24">
+              <nz-form-item>
+                <nz-form-label nzRequired>LC116 / código prefeitura</nz-form-label>
+                <nz-form-control nzExtra="Pesquise pelo código (6 dígitos) ou pela descrição. Lista nacional LC 116.">
+                  <nz-select
+                    class="lc116-select"
+                    [(ngModel)]="lc116CodigoSelecionado"
+                    nzShowSearch
+                    nzAllowClear
+                    nzPlaceHolder="Ex.: digite 010601 ou 'Assessoria'..."
+                    [nzFilterOption]="filterLc116Option"
+                    (ngModelChange)="onLc116Select($event)">
+                    <nz-option
+                      *ngFor="let o of lc116Lista"
+                      [nzValue]="o.codigo"
+                      [nzLabel]="o.codigo + ' — ' + o.descricao"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzSpan]="24" [nzXs]="24">
               <nz-form-item>
                 <nz-form-label nzRequired>Código NBS / serviço nacional</nz-form-label>
-                <nz-form-control nzExtra="Obrigatório na DPS (até 9 dígitos).">
-                  <input nz-input [(ngModel)]="wizard.codigoServicoNbs" placeholder="Ex.: 010101001" />
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-            <div nz-col [nzSpan]="12" [nzXs]="24">
-              <nz-form-item>
-                <nz-form-label>LC116 / código prefeitura</nz-form-label>
-                <nz-form-control>
-                  <input nz-input [(ngModel)]="wizard.codigoLc116" placeholder="Ex.: 0101" />
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-            <div nz-col [nzSpan]="24" *ngIf="servicosCadastro.length">
-              <nz-form-item>
-                <nz-form-label>Serviços no cadastro</nz-form-label>
-                <nz-form-control>
-                  <nz-select [(ngModel)]="servicoSelecionado" nzPlaceHolder="Selecione..." nzAllowClear (ngModelChange)="aplicarServicoCadastro($event)">
-                    <nz-option *ngFor="let s of servicosCadastro" [nzValue]="s" [nzLabel]="s"></nz-option>
-                  </nz-select>
+                <nz-form-control nzExtra="Obrigatório na DPS (até 9 dígitos). Preencha manualmente.">
+                  <input nz-input [(ngModel)]="wizard.codigoServicoNbs" placeholder="Ex.: 010101001" maxlength="20" />
                 </nz-form-control>
               </nz-form-item>
             </div>
@@ -263,7 +265,8 @@ interface FormularioEmissao {
             <dt>Competência</dt><dd>{{ wizard.dataCompetencia || '—' }}</dd>
             <dt>Prestador</dt><dd>{{ form?.prestador?.razao }} ({{ form?.prestador?.documento }})</dd>
             <dt>Tomador</dt><dd>{{ form?.tomador?.razao }} ({{ form?.tomador?.documento }})</dd>
-            <dt>NBS / LC116</dt><dd>{{ wizard.codigoServicoNbs || '—' }} / {{ wizard.codigoLc116 || wizard.codigoServicoNbs || '—' }}</dd>
+            <dt>LC116</dt><dd>{{ rotuloLc116Resumo }}</dd>
+            <dt>NBS</dt><dd>{{ wizard.codigoServicoNbs || '—' }}</dd>
             <dt>Valor</dt><dd>R$ {{ wizard.valorServico | number:'1.2-2' }} · ISS {{ wizard.aliquotaIss }}% = R$ {{ issCalculado | number:'1.2-2' }}</dd>
             <dt>Descrição</dt><dd class="desc">{{ wizard.descricaoServico || '—' }}</dd>
           </dl>
@@ -308,6 +311,8 @@ interface FormularioEmissao {
     .resumo dt { color: rgba(0,0,0,.55); margin: 0; }
     .resumo dd { margin: 0; font-weight: 500; }
     .resumo .desc { font-weight: 400; white-space: pre-wrap; }
+    :host ::ng-deep .lc116-select.ant-select { width: 100%; max-width: 100%; }
+    :host ::ng-deep .lc116-select .ant-select-selector { min-height: 40px; }
   `]
 })
 export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
@@ -321,8 +326,18 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
   step = 0;
   form: FormularioEmissao | null = null;
   wizard: NfseWizard | null = null;
-  servicosCadastro: string[] = [];
-  servicoSelecionado: string | null = null;
+  /** Valor do nz-select LC116 (código 6 dígitos). */
+  lc116CodigoSelecionado: string | null = null;
+  readonly lc116Lista = LC116_SERVICOS;
+
+  /** Select2-like: busca por rótulo ou código. */
+  filterLc116Option = (input: string, option: { nzLabel?: string | number | null; nzValue?: unknown }): boolean => {
+    const q = (input || '').trim().toLowerCase();
+    if (!q) return true;
+    const label = String(option.nzLabel ?? '').toLowerCase();
+    const val = String(option.nzValue ?? '').toLowerCase();
+    return label.includes(q) || val.includes(q.replace(/\D/g, ''));
+  };
 
   get destinatarioSim(): boolean {
     return this.wizard?.destinatarioEhAdquirente !== false;
@@ -336,6 +351,11 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
   }
   set compraGovSim(v: boolean) {
     if (this.wizard) this.wizard.ehCompraGovernamental = v;
+  }
+
+  get rotuloLc116Resumo(): string {
+    if (!this.wizard?.codigoLc116) return '—';
+    return lc116RotuloCompleto(this.wizard.codigoLc116) || this.wizard.codigoLc116;
   }
 
   get issCalculado(): number {
@@ -392,17 +412,26 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
         }
         this.form = this.mapFormulario(raw);
         this.wizard = this.form.wizard;
-        this.servicosCadastro = this.form.servicosCadastro || [];
+        this.syncLc116SelectFromWizard();
         this.step = Math.min(Math.max(this.wizard.etapaAtual ?? 0, 0), 3);
         this.loading = false;
         this.cdr.markForCheck();
       });
   }
 
-  aplicarServicoCadastro(codigo: string | null): void {
-    if (!codigo || !this.wizard) return;
-    this.wizard.codigoServicoNbs = this.apenasDigitos(codigo);
+  onLc116Select(codigo: string | null): void {
+    if (!this.wizard) return;
+    const six = codigo ? this.apenasDigitos(codigo).slice(0, 6) : '';
+    this.wizard.codigoLc116 = six;
+    this.lc116CodigoSelecionado = six || null;
     this.cdr.markForCheck();
+  }
+
+  private syncLc116SelectFromWizard(): void {
+    if (!this.wizard) return;
+    const six = this.apenasDigitos(this.wizard.codigoLc116).slice(0, 6);
+    this.lc116CodigoSelecionado = six.length === 6 ? six : null;
+    if (six.length === 6) this.wizard.codigoLc116 = six;
   }
 
   voltarPasso(): void {
@@ -433,6 +462,11 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       }
     }
     if (this.step === 1) {
+      const lc = this.apenasDigitos(this.wizard.codigoLc116).slice(0, 6);
+      if (lc.length !== 6) {
+        this.message.warning('Selecione o item LC116 / código prefeitura (6 dígitos).');
+        return false;
+      }
       if (!this.apenasDigitos(this.wizard.codigoServicoNbs)) {
         this.message.warning('Informe o código NBS / serviço.');
         return false;
@@ -459,8 +493,10 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     this.step = 2;
     if (!this.validarPasso()) { this.step = prev; return; }
     this.step = prev;
-    if (!this.apenasDigitos(this.wizard.codigoServicoNbs) || !(Number(this.wizard.valorServico) > 0)) {
-      this.message.warning('Revise serviço/NBS e valores antes de emitir.');
+    if (this.apenasDigitos(this.wizard.codigoLc116).length !== 6
+      || !this.apenasDigitos(this.wizard.codigoServicoNbs)
+      || !(Number(this.wizard.valorServico) > 0)) {
+      this.message.warning('Revise LC116, NBS e valores antes de emitir.');
       return;
     }
     this.emitindo = true;
@@ -528,7 +564,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       destinatarioEhAdquirente: w.destinatarioEhAdquirente,
       ehCompraGovernamental: w.ehCompraGovernamental,
       codigoServicoNbs: w.codigoServicoNbs,
-      codigoLc116: w.codigoLc116,
+      codigoLc116: this.apenasDigitos(w.codigoLc116).slice(0, 6),
       descricaoServico: w.descricaoServico,
       valorServico: Number(w.valorServico) || 0,
       aliquotaIss: Number(w.aliquotaIss) || 0
@@ -544,14 +580,11 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     const w = (r['wizard'] ?? r['Wizard']) as Record<string, unknown> | undefined;
     const prest = (r['prestador'] ?? r['Prestador']) as Record<string, unknown> | undefined;
     const tom = (r['tomador'] ?? r['Tomador']) as Record<string, unknown> | undefined;
-    const servicos = (r['servicosCadastro'] ?? r['ServicosCadastro']) as string[] | undefined;
-
     return {
       codigoCorpoEmissaoNota: Number(r['codigoCorpoEmissaoNota'] ?? r['CodigoCorpoEmissaoNota']),
       statusAgendamento: String(r['statusAgendamento'] ?? r['StatusAgendamento'] ?? ''),
       tpAmb: Number(r['tpAmb'] ?? r['TpAmb'] ?? 2),
       ambienteLabel: String(r['ambienteLabel'] ?? r['AmbienteLabel'] ?? ''),
-      servicosCadastro: servicos || [],
       prestador: prest ? {
         codigoPessoa: Number(prest['codigoPessoa'] ?? prest['CodigoPessoa']),
         documento: String(prest['documento'] ?? prest['Documento'] ?? ''),
