@@ -14,6 +14,8 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService, NzMessageModule } from 'ng-zorro-antd/message';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
+import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { PageTitleComponent } from '../page-title.component';
 import { ExportExcelButtonComponent } from '../components/export-excel-button.component';
 import { ExcelExportColumn } from '../services/excel-export.service';
@@ -44,6 +46,7 @@ interface ListaStatusAgendamento {
     CommonModule, FormsModule, RouterModule,
     NzCardModule, NzTableModule, NzIconModule, NzButtonModule,
     NzSkeletonModule, NzInputModule, NzMessageModule, NzPopconfirmModule, NzToolTipModule,
+    NzModalModule, NzSelectModule,
     PageTitleComponent, ExportExcelButtonComponent
   ],
   template: `
@@ -114,6 +117,16 @@ interface ListaStatusAgendamento {
                       (click)="abrirEmissaoNacional(item)">
                       <i nz-icon nzType="thunderbolt"></i> Emitir
                     </button>
+                    <button
+                      *ngIf="podeCancelarNacional(item)"
+                      nz-button
+                      nzType="default"
+                      nzDanger
+                      nzSize="small"
+                      [nzLoading]="cancelandoCodigo === item.codigo"
+                      (click)="abrirModalCancelamento(item)">
+                      <i nz-icon nzType="stop"></i> Cancelar NF
+                    </button>
                     <button nz-button nzType="primary" nzSize="small" (click)="abrirDetalhes(item)">
                       <i nz-icon nzType="eye"></i> Detalhes
                     </button>
@@ -127,6 +140,46 @@ interface ListaStatusAgendamento {
           </nz-table>
         </div>
       </nz-card>
+
+      <nz-modal
+        [(nzVisible)]="cancelModalVisivel"
+        nzTitle="Cancelar NFS-e nacional"
+        [nzFooter]="null"
+        (nzOnCancel)="fecharModalCancelamento()">
+        <ng-container *nzModalContent>
+          <p *ngIf="cancelAlvo" class="cancel-hint">
+            Agendamento <strong>{{ cancelAlvo.codigo }}</strong> — {{ cancelAlvo.razao }}
+          </p>
+          <p class="cancel-warn" *ngIf="cancelChaveNfse">Chave: <span class="mono">{{ cancelChaveNfse }}</span></p>
+          <p class="cancel-warn" *ngIf="!cancelChaveNfse && cancelElegibilidadeCarregando">Verificando elegibilidade…</p>
+          <p class="cancel-warn" *ngIf="cancelElegibilidadeMsg && !cancelPodeCancelar">{{ cancelElegibilidadeMsg }}</p>
+          <label class="cancel-label">Motivo (código SEFIN)</label>
+          <nz-select class="cancel-select" [(ngModel)]="cancelCodigoMotivo" nzPlaceHolder="Selecione">
+            <nz-option [nzValue]="1" nzLabel="1 — Erro na emissão"></nz-option>
+            <nz-option [nzValue]="2" nzLabel="2 — Serviço não prestado"></nz-option>
+            <nz-option [nzValue]="9" nzLabel="9 — Outros"></nz-option>
+          </nz-select>
+          <label class="cancel-label">Justificativa (mín. 15 caracteres)</label>
+          <textarea
+            nz-input
+            [(ngModel)]="cancelMotivoTexto"
+            rows="4"
+            maxlength="255"
+            placeholder="Descreva o motivo do cancelamento para a SEFIN…"></textarea>
+          <div class="cancel-footer">
+            <button nz-button (click)="fecharModalCancelamento()" [disabled]="cancelandoCodigo != null">Voltar</button>
+            <button
+              nz-button
+              nzType="primary"
+              nzDanger
+              [nzLoading]="cancelandoCodigo != null"
+              [disabled]="!cancelPodeCancelar"
+              (click)="confirmarCancelamentoNacional()">
+              Confirmar cancelamento
+            </button>
+          </div>
+        </ng-container>
+      </nz-modal>
     </div>
   `,
   styles: [`
@@ -174,6 +227,11 @@ interface ListaStatusAgendamento {
 
     .empty { text-align: center; padding: 32px; color: rgba(0,0,0,.45); }
     .btn-emitir { border-color: #722ed1; color: #722ed1; }
+    .cancel-hint { margin-bottom: 8px; }
+    .cancel-warn { color: #cf1322; font-size: 0.9rem; }
+    .cancel-label { display: block; margin: 12px 0 6px; font-weight: 600; }
+    .cancel-select { width: 100%; margin-bottom: 4px; }
+    .cancel-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
     :host ::ng-deep .agend-table .ant-table { margin: 0; }
     :host ::ng-deep .agend-table .ant-table-container { border-radius: 4px; }
@@ -185,6 +243,15 @@ export class AgendamentoNfeComponent implements OnInit {
 
   loading = true;
   emitindoCodigo: number | null = null;
+  cancelandoCodigo: number | null = null;
+  cancelModalVisivel = false;
+  cancelAlvo: ListaStatusAgendamento | null = null;
+  cancelCodigoMotivo = 9;
+  cancelMotivoTexto = '';
+  cancelChaveNfse = '';
+  cancelPodeCancelar = false;
+  cancelElegibilidadeMsg = '';
+  cancelElegibilidadeCarregando = false;
   lista: ListaStatusAgendamento[] = [];
   listaFiltrada: ListaStatusAgendamento[] = [];
   busca = '';
@@ -285,6 +352,7 @@ export class AgendamentoNfeComponent implements OnInit {
   corStatus(status: string): string {
     switch (status) {
       case 'Sucesso': return '#389e0d';
+      case 'Cancelado': return '#595959';
       case 'Aguardando Execução': return '#4169e1';
       case 'Erro': return '#cf1322';
       case 'Executando': return '#B18904';
@@ -301,6 +369,83 @@ export class AgendamentoNfeComponent implements OnInit {
   podeEmitirNacional(item: ListaStatusAgendamento): boolean {
     const s = (item.status || '').toLowerCase();
     return s.includes('aguardando') || s.includes('erro');
+  }
+
+  podeCancelarNacional(item: ListaStatusAgendamento): boolean {
+    const s = (item.status || '').toLowerCase();
+    return s === 'sucesso' || s.includes('sucesso');
+  }
+
+  abrirModalCancelamento(item: ListaStatusAgendamento): void {
+    this.cancelAlvo = item;
+    this.cancelCodigoMotivo = 9;
+    this.cancelMotivoTexto = '';
+    this.cancelChaveNfse = '';
+    this.cancelPodeCancelar = false;
+    this.cancelElegibilidadeMsg = '';
+    this.cancelModalVisivel = true;
+    this.cancelElegibilidadeCarregando = true;
+    this.cdr.markForCheck();
+
+    this.http
+      .get<{ podeCancelar?: boolean; PodeCancelar?: boolean; chaveNfse?: string; ChaveNfse?: string; mensagem?: string; Mensagem?: string }>(
+        `${this.api}/NfseNacional/cancelamento/agendamento/${item.codigo}/elegibilidade`,
+        { headers: this.h }
+      )
+      .pipe(timeout(20000), catchError(() => of({ podeCancelar: false, mensagem: 'Falha ao consultar elegibilidade.' })))
+      .subscribe(res => {
+        this.cancelPodeCancelar = !!(res.podeCancelar ?? res.PodeCancelar);
+        this.cancelChaveNfse = String(res.chaveNfse ?? res.ChaveNfse ?? '');
+        this.cancelElegibilidadeMsg = String(res.mensagem ?? res.Mensagem ?? '');
+        this.cancelElegibilidadeCarregando = false;
+        this.cdr.markForCheck();
+      });
+  }
+
+  fecharModalCancelamento(): void {
+    if (this.cancelandoCodigo != null) return;
+    this.cancelModalVisivel = false;
+    this.cancelAlvo = null;
+  }
+
+  confirmarCancelamentoNacional(): void {
+    const item = this.cancelAlvo;
+    if (!item) return;
+    const motivo = (this.cancelMotivoTexto || '').trim();
+    if (motivo.length < 15) {
+      this.message.warning('Informe o motivo com pelo menos 15 caracteres.');
+      return;
+    }
+    if (!this.cancelPodeCancelar) {
+      this.message.error(this.cancelElegibilidadeMsg || 'Este agendamento não pode ser cancelado.');
+      return;
+    }
+
+    this.cancelandoCodigo = item.codigo;
+    this.http
+      .post<{ sucesso?: boolean; Sucesso?: boolean; mensagem?: string; Mensagem?: string }>(
+        `${this.api}/NfseNacional/cancelamento/agendamento/${item.codigo}`,
+        { codigoMotivo: this.cancelCodigoMotivo, motivo },
+        { headers: this.h }
+      )
+      .pipe(timeout(180000), catchError(err => {
+        const msg = err?.error?.mensagem ?? err?.error?.Mensagem ?? 'Erro ao cancelar NFS-e nacional.';
+        return of({ sucesso: false, mensagem: msg });
+      }))
+      .subscribe(res => {
+        this.cancelandoCodigo = null;
+        const ok = !!(res.sucesso ?? res.Sucesso);
+        const msg = String(res.mensagem ?? res.Mensagem ?? (ok ? 'Cancelada.' : 'Falha no cancelamento.'));
+        if (ok) {
+          this.message.success(msg);
+          this.cancelModalVisivel = false;
+          this.cancelAlvo = null;
+          this.carregar();
+        } else {
+          this.message.error(msg);
+        }
+        this.cdr.markForCheck();
+      });
   }
 
   abrirEmissaoNacional(item: ListaStatusAgendamento): void {
@@ -340,7 +485,8 @@ export class AgendamentoNfeComponent implements OnInit {
     if (s.includes('aguardando')) return 1;
     if (s.includes('executando') || s.includes('execusao') || s.includes('execução')) return 2;
     if (s.includes('sucesso')) return 3;
-    return 4;
+    if (s.includes('cancelado')) return 4;
+    return 5;
   }
 
   private parseValor(valor: string): number {
