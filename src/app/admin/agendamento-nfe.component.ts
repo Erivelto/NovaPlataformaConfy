@@ -38,6 +38,23 @@ interface ListaStatusAgendamento {
   status: string;
 }
 
+/** Resposta API .NET (camelCase ou PascalCase). */
+interface NfseElegibilidadeCancelamentoRes {
+  podeCancelar?: boolean;
+  PodeCancelar?: boolean;
+  chaveNfse?: string;
+  ChaveNfse?: string;
+  mensagem?: string;
+  Mensagem?: string;
+}
+
+interface NfseCancelamentoResultadoRes {
+  sucesso?: boolean;
+  Sucesso?: boolean;
+  mensagem?: string;
+  Mensagem?: string;
+}
+
 @Component({
   selector: 'app-agendamento-nfe',
   standalone: true,
@@ -388,11 +405,16 @@ export class AgendamentoNfeComponent implements OnInit {
     this.cdr.markForCheck();
 
     this.http
-      .get<{ podeCancelar?: boolean; PodeCancelar?: boolean; chaveNfse?: string; ChaveNfse?: string; mensagem?: string; Mensagem?: string }>(
+      .get<NfseElegibilidadeCancelamentoRes>(
         `${this.api}/NfseNacional/cancelamento/agendamento/${item.codigo}/elegibilidade`,
         { headers: this.h }
       )
-      .pipe(timeout(20000), catchError(() => of({ podeCancelar: false, mensagem: 'Falha ao consultar elegibilidade.' })))
+      .pipe(
+        timeout(20000),
+        catchError(() =>
+          of<NfseElegibilidadeCancelamentoRes>({ podeCancelar: false, mensagem: 'Falha ao consultar elegibilidade.' })
+        )
+      )
       .subscribe(res => {
         this.cancelPodeCancelar = !!(res.podeCancelar ?? res.PodeCancelar);
         this.cancelChaveNfse = String(res.chaveNfse ?? res.ChaveNfse ?? '');
@@ -423,15 +445,18 @@ export class AgendamentoNfeComponent implements OnInit {
 
     this.cancelandoCodigo = item.codigo;
     this.http
-      .post<{ sucesso?: boolean; Sucesso?: boolean; mensagem?: string; Mensagem?: string }>(
+      .post<NfseCancelamentoResultadoRes>(
         `${this.api}/NfseNacional/cancelamento/agendamento/${item.codigo}`,
         { codigoMotivo: this.cancelCodigoMotivo, motivo },
         { headers: this.h }
       )
-      .pipe(timeout(180000), catchError(err => {
-        const msg = err?.error?.mensagem ?? err?.error?.Mensagem ?? 'Erro ao cancelar NFS-e nacional.';
-        return of({ sucesso: false, mensagem: msg });
-      }))
+      .pipe(
+        timeout(180000),
+        catchError(err => {
+          const msg = err?.error?.mensagem ?? err?.error?.Mensagem ?? 'Erro ao cancelar NFS-e nacional.';
+          return of<NfseCancelamentoResultadoRes>({ sucesso: false, mensagem: msg });
+        })
+      )
       .subscribe(res => {
         this.cancelandoCodigo = null;
         const ok = !!(res.sucesso ?? res.Sucesso);
