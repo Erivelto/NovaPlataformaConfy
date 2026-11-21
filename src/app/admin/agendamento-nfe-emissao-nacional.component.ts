@@ -40,6 +40,8 @@ interface NfseWizard {
   ehCompraGovernamental: boolean | null;
   codigoServicoNbs: string;
   codigoLc116: string;
+  /** cTribMun — 3 dígitos exigidos por vários municípios (ex. São Paulo). */
+  codigoTributacaoMunicipal: string;
   descricaoServico: string;
   valorServico: number;
   aliquotaIss: number;
@@ -199,8 +201,8 @@ interface FormularioEmissao {
           <div nz-row [nzGutter]="[16, 12]">
             <div nz-col [nzSpan]="24" [nzXs]="24">
               <nz-form-item>
-                <nz-form-label nzRequired>LC116 / código prefeitura</nz-form-label>
-                <nz-form-control nzExtra="Pesquise pelo código (6 dígitos) ou pela descrição. Lista nacional LC 116.">
+                <nz-form-label nzRequired>LC116 — tributação nacional</nz-form-label>
+                <nz-form-control nzExtra="cTribNac: 6 dígitos (lista nacional LC 116 / desdobro).">
                   <nz-select
                     class="lc116-select"
                     [(ngModel)]="lc116CodigoSelecionado"
@@ -214,6 +216,17 @@ interface FormularioEmissao {
                       [nzValue]="o.codigo"
                       [nzLabel]="o.codigo + ' — ' + o.descricao"></nz-option>
                   </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzSpan]="24" [nzXs]="24">
+              <nz-form-item>
+                <nz-form-label nzRequired>Código tributação municipal (cTribMun)</nz-form-label>
+                <nz-form-control nzExtra="3 dígitos exigidos pela prefeitura do prestador (ex. São Paulo). Consulte o cadastro do serviço na contabilidade.">
+                  <input nz-input maxlength="3" inputmode="numeric"
+                    [ngModel]="wizard.codigoTributacaoMunicipal"
+                    (ngModelChange)="onCTribMunChange($event)"
+                    placeholder="Ex.: 001" />
                 </nz-form-control>
               </nz-form-item>
             </div>
@@ -281,6 +294,7 @@ interface FormularioEmissao {
             <dt>Prestador</dt><dd>{{ form?.prestador?.razao }} ({{ form?.prestador?.documento }})</dd>
             <dt>Tomador</dt><dd>{{ form?.tomador?.razao }} ({{ form?.tomador?.documento }})</dd>
             <dt>LC116</dt><dd>{{ rotuloLc116Resumo }}</dd>
+            <dt>cTribMun</dt><dd>{{ codigoTribMunResumo }}</dd>
             <dt>NBS</dt><dd>{{ rotuloNbsResumo }}</dd>
             <dt>Valor</dt><dd>R$ {{ wizard.valorServico | number:'1.2-2' }} · ISS {{ wizard.aliquotaIss }}% = R$ {{ issCalculado | number:'1.2-2' }}</dd>
             <dt>Descrição</dt><dd class="desc">{{ wizard.descricaoServico || '—' }}</dd>
@@ -414,6 +428,11 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     return lc116RotuloCompleto(this.wizard.codigoLc116) || this.wizard.codigoLc116;
   }
 
+  get codigoTribMunResumo(): string {
+    const d = this.apenasDigitos(this.wizard?.codigoTributacaoMunicipal ?? '');
+    return d.length === 3 ? d : '—';
+  }
+
   get rotuloNbsResumo(): string {
     if (!this.wizard?.codigoServicoNbs) return '—';
     const d = this.apenasDigitos(this.wizard.codigoServicoNbs);
@@ -490,6 +509,13 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     this.wizard.codigoLc116 = six;
     this.lc116CodigoSelecionado = six || null;
     this.aplicarFiltroNbsAposLc116();
+    this.cdr.markForCheck();
+  }
+
+  onCTribMunChange(valor: string): void {
+    if (!this.wizard) return;
+    const d = this.apenasDigitos(valor ?? '').slice(-3);
+    this.wizard.codigoTributacaoMunicipal = d.length ? d.padStart(3, '0') : '';
     this.cdr.markForCheck();
   }
 
@@ -581,7 +607,11 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     if (this.step === 1) {
       const lc = this.apenasDigitos(this.wizard.codigoLc116).slice(0, 6);
       if (lc.length !== 6) {
-        this.message.warning('Selecione o item LC116 / código prefeitura (6 dígitos).');
+        this.message.warning('Selecione o item LC116 nacional (6 dígitos).');
+        return false;
+      }
+      if (this.apenasDigitos(this.wizard.codigoTributacaoMunicipal).length !== 3) {
+        this.message.warning('Informe o código de tributação municipal (cTribMun) com 3 dígitos.');
         return false;
       }
       if (!this.apenasDigitos(this.wizard.codigoServicoNbs)) {
@@ -615,9 +645,10 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     if (!this.validarPasso()) { this.step = prev; return; }
     this.step = prev;
     if (this.apenasDigitos(this.wizard.codigoLc116).length !== 6
+      || this.apenasDigitos(this.wizard.codigoTributacaoMunicipal).length !== 3
       || !this.apenasDigitos(this.wizard.codigoServicoNbs)
       || !(Number(this.wizard.valorServico) > 0)) {
-      this.message.warning('Revise LC116, NBS e valores antes de emitir.');
+      this.message.warning('Revise LC116, cTribMun, NBS e valores antes de emitir.');
       return;
     }
     this.emitindo = true;
@@ -686,6 +717,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       ehCompraGovernamental: w.ehCompraGovernamental,
       codigoServicoNbs: w.codigoServicoNbs,
       codigoLc116: this.apenasDigitos(w.codigoLc116).slice(0, 6),
+      codigoTributacaoMunicipal: this.apenasDigitos(w.codigoTributacaoMunicipal).slice(-3).padStart(3, '0'),
       descricaoServico: w.descricaoServico,
       valorServico: Number(w.valorServico) || 0,
       aliquotaIss: Number(w.aliquotaIss) || 0
@@ -742,6 +774,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       ehCompraGovernamental: x['ehCompraGovernamental'] != null ? Boolean(x['ehCompraGovernamental']) : false,
       codigoServicoNbs: String(x['codigoServicoNbs'] ?? x['CodigoServicoNbs'] ?? ''),
       codigoLc116: String(x['codigoLc116'] ?? x['CodigoLc116'] ?? ''),
+      codigoTributacaoMunicipal: String(x['codigoTributacaoMunicipal'] ?? x['CodigoTributacaoMunicipal'] ?? ''),
       descricaoServico: String(x['descricaoServico'] ?? x['DescricaoServico'] ?? ''),
       valorServico: Number(x['valorServico'] ?? x['ValorServico'] ?? 0),
       aliquotaIss: Number(x['aliquotaIss'] ?? x['AliquotaIss'] ?? 0)
