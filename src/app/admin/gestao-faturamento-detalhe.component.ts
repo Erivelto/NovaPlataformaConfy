@@ -302,6 +302,22 @@ interface PessoaUploadNotas {
           <p style="margin-bottom:12px;color:rgba(0,0,0,.65)">
             Anexe o PDF da NF-e <strong>{{ notaAnexo?.numeroNFE }}</strong> (tipo: Notas Fiscal).
           </p>
+          <div style="margin-bottom:12px">
+            <button
+              nz-button
+              nzType="default"
+              [nzLoading]="buscandoDanfseAdn"
+              [disabled]="fazendoUploadAnexo"
+              (click)="buscarDanfseNaAdn()">
+              <i nz-icon nzType="cloud-download"></i> Buscar DANFSe na ADN
+            </button>
+          </div>
+          <nz-alert
+            nzType="info"
+            nzMessage="Para NFS-e emitida pela Contfy. Se a ADN responder 503, aguarde e tente de novo."
+            nzShowIcon
+            style="margin-bottom:12px">
+          </nz-alert>
           <nz-upload
             nzAction=""
             [nzBeforeUpload]="beforeUploadAnexo"
@@ -313,7 +329,7 @@ interface PessoaUploadNotas {
         </ng-template>
       </ng-container>
       <ng-template #footerAnexo>
-        <button nz-button (click)="fecharAnexoModal()" [disabled]="fazendoUploadAnexo">Fechar</button>
+        <button nz-button (click)="fecharAnexoModal()" [disabled]="fazendoUploadAnexo || buscandoDanfseAdn">Fechar</button>
         <button
           *ngIf="!anexoAtual"
           nz-button
@@ -487,6 +503,7 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
   fileListAnexo: NzUploadFile[] = [];
   selectedFileAnexo: File | null = null;
   fazendoUploadAnexo = false;
+  buscandoDanfseAdn = false;
   excluindoAnexo = false;
 
   envioVisible = false;
@@ -772,6 +789,51 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
     this.cdr.markForCheck();
     return false;
   };
+
+  buscarDanfseNaAdn(): void {
+    if (this.anexoAtual) {
+      this.message.warning('Esta NF-e já possui anexo.');
+      return;
+    }
+    if (!this.notaAnexo) return;
+
+    this.buscandoDanfseAdn = true;
+    this.cdr.markForCheck();
+
+    const numero = this.notaAnexo.numeroNFE;
+    this.http.post<{ sucesso?: boolean; mensagem?: string; httpStatus?: number; urlAdn?: string; chaveNfse?: string }>(
+      `${this.api}/NfseNacional/danfse/anexar/pessoa/${this.codigoPessoa}/nota/${numero}`,
+      {},
+      { headers: this.headers }
+    ).pipe(timeout(120000), catchError(err => {
+      const body = err?.error;
+      const msg = body?.mensagem || body?.Mensagem
+        || (body?.httpStatus ? `ADN respondeu HTTP ${body.httpStatus}. Tente novamente mais tarde.` : '')
+        || `Falha ao buscar DANFSe (${err?.status ?? '—'}).`;
+      this.message.error(msg);
+      this.buscandoDanfseAdn = false;
+      this.cdr.markForCheck();
+      return of(null);
+    })).subscribe(res => {
+      this.buscandoDanfseAdn = false;
+      if (!res) return;
+      if (res.sucesso) {
+        this.message.success(res.mensagem || 'PDF anexado com sucesso.');
+        this.http.get<any>(`${this.api}/PessoaUploadNotas/PorNota/${this.codigoPessoa}/${numero}`, { headers: this.headers })
+          .pipe(timeout(8000), catchError(() => of(null)))
+          .subscribe(raw => {
+            if (raw && (raw.codigo || raw.Codigo)) {
+              this.anexoAtual = this.mapAnexo(raw);
+              this.anexosPorNfe.set(this.nfeKey(numero), this.anexoAtual);
+            }
+            this.cdr.markForCheck();
+          });
+        return;
+      }
+      this.message.warning(res.mensagem || 'DANFSe não disponível.');
+      this.cdr.markForCheck();
+    });
+  }
 
   enviarAnexo(): void {
     if (this.anexoAtual) {
