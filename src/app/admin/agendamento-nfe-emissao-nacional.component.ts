@@ -221,8 +221,8 @@ interface FormularioEmissao {
             </div>
             <div nz-col [nzSpan]="24" [nzXs]="24">
               <nz-form-item>
-                <nz-form-label nzRequired>Código tributação municipal (cTribMun)</nz-form-label>
-                <nz-form-control nzExtra="3 dígitos exigidos pela prefeitura do prestador (ex. São Paulo). Consulte o cadastro do serviço na contabilidade.">
+                <nz-form-label>Código tributação municipal (cTribMun)</nz-form-label>
+                <nz-form-control nzExtra="Opcional: 3 dígitos do desdobro SP. Se vazio, a API consulta a ADN na emissão (recomendado).">
                   <input nz-input maxlength="3" inputmode="numeric"
                     [ngModel]="wizard.codigoTributacaoMunicipal"
                     (ngModelChange)="onCTribMunChange($event)"
@@ -610,10 +610,6 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
         this.message.warning('Selecione o item LC116 nacional (6 dígitos).');
         return false;
       }
-      if (this.apenasDigitos(this.wizard.codigoTributacaoMunicipal).length !== 3) {
-        this.message.warning('Informe o código de tributação municipal (cTribMun) com 3 dígitos.');
-        return false;
-      }
       if (!this.apenasDigitos(this.wizard.codigoServicoNbs)) {
         this.message.warning('Informe o código NBS / serviço.');
         return false;
@@ -645,10 +641,9 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     if (!this.validarPasso()) { this.step = prev; return; }
     this.step = prev;
     if (this.apenasDigitos(this.wizard.codigoLc116).length !== 6
-      || this.apenasDigitos(this.wizard.codigoTributacaoMunicipal).length !== 3
       || !this.apenasDigitos(this.wizard.codigoServicoNbs)
       || !(Number(this.wizard.valorServico) > 0)) {
-      this.message.warning('Revise LC116, cTribMun, NBS e valores antes de emitir.');
+      this.message.warning('Revise LC116, NBS e valores antes de emitir.');
       return;
     }
     this.emitindo = true;
@@ -717,7 +712,10 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       ehCompraGovernamental: w.ehCompraGovernamental,
       codigoServicoNbs: w.codigoServicoNbs,
       codigoLc116: this.apenasDigitos(w.codigoLc116).slice(0, 6),
-      codigoTributacaoMunicipal: this.apenasDigitos(w.codigoTributacaoMunicipal).slice(-3).padStart(3, '0'),
+      codigoTributacaoMunicipal: (() => {
+        const d = this.apenasDigitos(w.codigoTributacaoMunicipal);
+        return d.length === 3 ? d : d.length > 0 ? d.slice(-3).padStart(3, '0') : '';
+      })(),
       descricaoServico: w.descricaoServico,
       valorServico: Number(w.valorServico) || 0,
       aliquotaIss: Number(w.aliquotaIss) || 0
