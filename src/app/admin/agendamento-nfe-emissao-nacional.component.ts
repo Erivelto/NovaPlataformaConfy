@@ -42,6 +42,8 @@ interface NfseWizard {
   codigoLc116: string;
   /** cTribMun — 3 dígitos exigidos por vários municípios (ex. São Paulo). */
   codigoTributacaoMunicipal: string;
+  /** Inscrição municipal do prestador (IM na DPS — CNC/SP). */
+  inscricaoMunicipal: string;
   descricaoServico: string;
   valorServico: number;
   aliquotaIss: number;
@@ -83,6 +85,14 @@ interface FormularioEmissao {
       <nz-skeleton *ngIf="loading" [nzActive]="true" [nzParagraph]="{ rows: 10 }"></nz-skeleton>
 
       <ng-container *ngIf="!loading && wizard">
+        <nz-alert
+          *ngIf="form?.tpAmb === 1"
+          nzType="error"
+          nzShowIcon
+          nzMessage="Ambiente de PRODUÇÃO"
+          nzDescription="A NFS-e emitida terá efeito fiscal. Cancele no portal municipal/nacional se for apenas teste."
+          style="margin-bottom: 16px">
+        </nz-alert>
         <nz-alert
           nzType="info"
           nzShowIcon
@@ -148,6 +158,25 @@ interface FormularioEmissao {
             </div>
             <div nz-col [nzSpan]="8" [nzXs]="24"><label class="lbl">CNPJ</label><div class="ro">{{ form?.prestador?.documento || '—' }}</div></div>
             <div nz-col [nzSpan]="16" [nzXs]="24"><label class="lbl">Razão social</label><div class="ro">{{ form?.prestador?.razao || '—' }}</div></div>
+            <div nz-col [nzSpan]="24">
+              <nz-form-item>
+                <nz-form-label [nzRequired]="form?.tpAmb === 1">Inscrição municipal (IM)</nz-form-label>
+                <nz-form-control>
+                  <input
+                    nz-input
+                    [(ngModel)]="wizard.inscricaoMunicipal"
+                    maxlength="15"
+                    inputmode="numeric"
+                    placeholder="Número da CCM / IM na Prefeitura de São Paulo"
+                    style="max-width: 320px" />
+                  <div class="hint-im">
+                    Obrigatória em produção (IM na DPS). Cadastro do cliente:
+                    <strong>{{ imCadastroResumo }}</strong>.
+                    Deve coincidir com o CNC (município 3550308 + CNPJ + IM).
+                  </div>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
           </div>
         </nz-card>
 
@@ -292,6 +321,7 @@ interface FormularioEmissao {
           <dl class="resumo">
             <dt>Competência</dt><dd>{{ wizard.dataCompetencia || '—' }}</dd>
             <dt>Prestador</dt><dd>{{ form?.prestador?.razao }} ({{ form?.prestador?.documento }})</dd>
+            <dt>IM</dt><dd>{{ imWizardResumo }}</dd>
             <dt>Tomador</dt><dd>{{ form?.tomador?.razao }} ({{ form?.tomador?.documento }})</dd>
             <dt>LC116</dt><dd>{{ rotuloLc116Resumo }}</dd>
             <dt>cTribMun</dt><dd>{{ codigoTribMunResumo }}</dd>
@@ -340,6 +370,7 @@ interface FormularioEmissao {
     .resumo dt { color: rgba(0,0,0,.55); margin: 0; }
     .resumo dd { margin: 0; font-weight: 500; }
     .resumo .desc { font-weight: 400; white-space: pre-wrap; }
+    .hint-im { font-size: 12px; color: rgba(0,0,0,.55); margin-top: 6px; line-height: 1.45; max-width: 640px; }
     :host ::ng-deep .lc116-select.ant-select, :host ::ng-deep .nbs-select.ant-select { width: 100%; max-width: 100%; }
     :host ::ng-deep .lc116-select .ant-select-selector, :host ::ng-deep .nbs-select .ant-select-selector { min-height: 40px; }
   `]
@@ -390,6 +421,17 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     if (lc.length !== 6) return 'Primeiro selecione o LC116…';
     if (permitidos && !permitidos.length) return 'Nenhum NBS mapeado para este LC116.';
     return 'Ex.: digite o código ou parte da descrição…';
+  }
+
+  get imCadastroResumo(): string {
+    const d = this.apenasDigitos(this.form?.prestador?.inscricaoMunicipal ?? '');
+    if (!d || /^0+$/.test(d)) return 'não informada ou 00000';
+    return d;
+  }
+
+  get imWizardResumo(): string {
+    const d = this.apenasDigitos(this.wizard?.inscricaoMunicipal ?? '');
+    return d || '—';
   }
 
   /** Select2-like: busca por rótulo ou código. */
@@ -603,6 +645,13 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
         this.message.warning('Informe série e número da DPS.');
         return false;
       }
+      if (this.form?.tpAmb === 1) {
+        const im = this.apenasDigitos(this.wizard.inscricaoMunicipal);
+        if (!im || /^0+$/.test(im)) {
+          this.message.warning('Informe a Inscrição Municipal real do prestador (campo IM).');
+          return false;
+        }
+      }
     }
     if (this.step === 1) {
       const lc = this.apenasDigitos(this.wizard.codigoLc116).slice(0, 6);
@@ -716,6 +765,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
         const d = this.apenasDigitos(w.codigoTributacaoMunicipal);
         return d.length === 3 ? d : d.length > 0 ? d.slice(-3).padStart(3, '0') : '';
       })(),
+      inscricaoMunicipal: this.apenasDigitos(w.inscricaoMunicipal),
       descricaoServico: w.descricaoServico,
       valorServico: Number(w.valorServico) || 0,
       aliquotaIss: Number(w.aliquotaIss) || 0
@@ -773,6 +823,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       codigoServicoNbs: String(x['codigoServicoNbs'] ?? x['CodigoServicoNbs'] ?? ''),
       codigoLc116: String(x['codigoLc116'] ?? x['CodigoLc116'] ?? ''),
       codigoTributacaoMunicipal: String(x['codigoTributacaoMunicipal'] ?? x['CodigoTributacaoMunicipal'] ?? ''),
+      inscricaoMunicipal: String(x['inscricaoMunicipal'] ?? x['InscricaoMunicipal'] ?? ''),
       descricaoServico: String(x['descricaoServico'] ?? x['DescricaoServico'] ?? ''),
       valorServico: Number(x['valorServico'] ?? x['ValorServico'] ?? 0),
       aliquotaIss: Number(x['aliquotaIss'] ?? x['AliquotaIss'] ?? 0)
