@@ -318,7 +318,8 @@ export class DashboardComponent implements OnInit {
         const raw = Array.isArray(data) ? data : [];
         const notas: NotaFiscal[] = raw.map((n: any) => ({
           ...n,
-          cancelada: n.excluido === 1,
+          cancelada: n.cancelada === true || n.Cancelada === true
+            || n.excluido === 1 || n.excluido === true || n.Excluido === true,
           valor: n.valorTotal ?? n.valor ?? 0
         }));
         const ativas = notas.filter(n => !n.cancelada);

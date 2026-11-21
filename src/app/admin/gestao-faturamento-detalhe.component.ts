@@ -659,7 +659,8 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
   private normalizarNota(n: any): NotaFiscal {
     return {
       ...n,
-      cancelada: n.cancelada === true || n.Cancelada === true || n.excluido === 1,
+      cancelada: n.cancelada === true || n.Cancelada === true
+        || n.excluido === 1 || n.excluido === true || n.Excluido === true,
       valor: n.valor ?? n.Valor ?? n.valorTotal ?? 0
     };
   }

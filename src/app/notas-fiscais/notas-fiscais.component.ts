@@ -306,8 +306,8 @@ export class NotasFiscaisComponent implements OnInit {
         this.notas = raw
           .map((n: any) => ({
             ...n,
-            cancelada: n.excluido === 1,
-            valor: n.valorTotal ?? n.valor ?? 0
+            cancelada: this.notaEstaCancelada(n),
+            valor: n.valorTotal ?? n.valor ?? n.Valor ?? 0
           }))
           .sort((a: NotaFiscal, b: NotaFiscal) => {
             const nfeA = a.numeroNFE ?? 0;
@@ -325,6 +325,13 @@ export class NotasFiscaisComponent implements OnInit {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  /** API NotasFiscais retorna `cancelada` (NotaFiscal.Excluido); legado usa `excluido`. */
+  private notaEstaCancelada(n: any): boolean {
+    if (n?.cancelada === true || n?.Cancelada === true) return true;
+    const ex = n?.excluido ?? n?.Excluido;
+    return ex === 1 || ex === true || ex === '1';
   }
 
   parseBrl(valor: string | number | undefined | null): number {
