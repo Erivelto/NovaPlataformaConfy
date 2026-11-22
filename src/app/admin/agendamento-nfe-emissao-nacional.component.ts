@@ -24,6 +24,11 @@ import { environment } from '../../environments/environment';
 import { LC116_SERVICOS, lc116RotuloCompleto } from './lc116-servicos';
 import { NBS_SERVICOS, nbsRotuloCompleto, type NbsServico } from './nbs-servicos';
 import { codigosNbsPermitidosParaLc116, codigoNbsPermitidoParaLc116 } from './lc116-nbs-opcoes';
+import {
+  CTRIBMUN_OMITIR,
+  ctribMunDosUltimosTresDigitos,
+  opcoesCTribMunPorLc116Nacional
+} from './lc116-ctribmun-opcoes';
 import { descricaoNbsReforma, nbsRotuloReformaCompleto } from './nbs-reforma-catalogo';
 
 interface NfseWizard {
@@ -247,18 +252,25 @@ interface FormularioEmissao {
             </div>
             <div nz-col [nzSpan]="24" [nzXs]="24">
               <nz-form-item>
-                <nz-form-label>Código tributação municipal (cTribMun)</nz-form-label>
-                <nz-form-control nzExtra="Opcional: 3 dígitos do desdobro SP. Se vazio, a API consulta a ADN na emissão (recomendado).">
-                  <input nz-input maxlength="3" inputmode="numeric"
-                    [ngModel]="wizard.codigoTributacaoMunicipal"
-                    (ngModelChange)="onCTribMunChange($event)"
-                    placeholder="Ex.: 001" />
+                <nz-form-label nzRequired>Código tributação municipal (cTribMun)</nz-form-label>
+                <nz-form-control [nzExtra]="cTribMunAjudaExtra">
+                  <nz-select
+                    class="ctribmun-select"
+                    [(ngModel)]="cTribMunSelecionado"
+                    [nzOptions]="cTribMunNzOptions"
+                    [compareWith]="compararCodigoOuOmitir"
+                    nzShowSearch
+                    nzAllowClear
+                    [nzDisabled]="!lc116CodigoSelecionado"
+                    [nzPlaceHolder]="cTribMunPlaceholder"
+                    (ngModelChange)="onCTribMunSelect($event)">
+                  </nz-select>
                 </nz-form-control>
               </nz-form-item>
             </div>
             <div nz-col [nzSpan]="24" [nzXs]="24">
               <nz-form-item>
-                <nz-form-label nzRequired>Código NBS / serviço nacional</nz-form-label>
+                <nz-form-label>Código NBS / serviço nacional (opcional)</nz-form-label>
                 <nz-form-control [nzExtra]="nbsAjudaExtra">
                   <nz-select
                     class="nbs-select"
@@ -365,8 +377,8 @@ interface FormularioEmissao {
     .resumo dd { margin: 0; font-weight: 500; }
     .resumo .desc { font-weight: 400; white-space: pre-wrap; }
     .hint-im { font-size: 12px; color: rgba(0,0,0,.55); margin-top: 6px; line-height: 1.45; max-width: 640px; }
-    :host ::ng-deep .lc116-select.ant-select, :host ::ng-deep .nbs-select.ant-select { width: 100%; max-width: 100%; }
-    :host ::ng-deep .lc116-select .ant-select-selector, :host ::ng-deep .nbs-select .ant-select-selector { min-height: 40px; }
+    :host ::ng-deep .lc116-select.ant-select, :host ::ng-deep .nbs-select.ant-select, :host ::ng-deep .ctribmun-select.ant-select { width: 100%; max-width: 100%; }
+    :host ::ng-deep .lc116-select .ant-select-selector, :host ::ng-deep .nbs-select .ant-select-selector, :host ::ng-deep .ctribmun-select .ant-select-selector { min-height: 40px; }
   `]
 })
 export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
@@ -382,6 +394,8 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
   wizard: NfseWizard | null = null;
   /** Valor do nz-select LC116 (código 6 dígitos). */
   lc116CodigoSelecionado: string | null = null;
+  /** cTribMun (3 dígitos) ou {@link CTRIBMUN_OMITIR}. */
+  cTribMunSelecionado: string | null = null;
   readonly lc116Lista = LC116_SERVICOS;
   readonly lc116NzOptions = LC116_SERVICOS.map(o => ({
     value: o.codigo,
@@ -390,6 +404,34 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
 
   compararCodigoLista = (a: string | null | undefined, b: string | null | undefined): boolean =>
     String(a ?? '') === String(b ?? '');
+
+  compararCodigoOuOmitir = (a: string | null | undefined, b: string | null | undefined): boolean =>
+    String(a ?? '') === String(b ?? '');
+
+  get cTribMunNzOptions(): { value: string; label: string }[] {
+    const lc = this.lc116CodigoSelecionado;
+    if (!lc) return [];
+    const base = opcoesCTribMunPorLc116Nacional(lc).map(o => ({ value: o.value, label: o.label }));
+    return [
+      ...base,
+      { value: CTRIBMUN_OMITIR, label: 'Sem complemento municipal (não enviar cTribMun no XML)' }
+    ];
+  }
+
+  get cTribMunPlaceholder(): string {
+    if (!this.lc116CodigoSelecionado) return 'Selecione primeiro o LC116 nacional';
+    if (this.cTribMunNzOptions.length <= 1) return 'Nenhum desdobro listado para este LC116';
+    return 'Selecione o código complementar municipal (3 dígitos)';
+  }
+
+  get cTribMunAjudaExtra(): string {
+    const lc = this.lc116CodigoSelecionado;
+    if (!lc) {
+      return 'O complemento depende do LC116 nacional (cTribNac, 6 dígitos). Cada prefeitura pode ou não exigir os 3 dígitos — use “Sem complemento” quando o emissor nacional não habilitar o campo.';
+    }
+    const sugestao = ctribMunDosUltimosTresDigitos(lc);
+    return `Desdobros sugeridos a partir do item LC116 ${lc.slice(0, 2)}.${lc.slice(2, 4)} (últimos 3 dígitos do cTribNac). Para o código ${lc}, sugestão: ${sugestao || '—'}. Confira no emissor nacional da sua cidade se o complemento é obrigatório.`;
+  }
 
   /** Valor do nz-select NBS (código da lista). */
   nbsCodigoSelecionado: string | null = null;
@@ -462,6 +504,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
   }
 
   get codigoTribMunResumo(): string {
+    if (this.cTribMunSelecionado === CTRIBMUN_OMITIR) return 'Não enviar (sem complemento)';
     const d = this.apenasDigitos(this.wizard?.codigoTributacaoMunicipal ?? '');
     return d.length === 3 ? d : '—';
   }
@@ -529,6 +572,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
         this.wizard = this.form.wizard;
         this.syncLc116SelectFromWizard();
         this.aplicarFiltroNbsAposLc116();
+        this.syncCTribMunFromWizard();
         this.syncNbsSelectFromWizard();
         this.step = Math.min(Math.max(this.wizard.etapaAtual ?? 0, 0), 3);
         this.loading = false;
@@ -544,14 +588,63 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       this.lc116CodigoSelecionado = six.length === 6 ? six : null;
     }
     this.aplicarFiltroNbsAposLc116();
+    this.aplicarCTribMunSugerido();
     this.cdr.markForCheck();
   }
 
-  onCTribMunChange(valor: string): void {
+  onCTribMunSelect(valor: string | null): void {
     if (!this.wizard) return;
-    const d = this.apenasDigitos(valor ?? '').slice(-3);
-    this.wizard.codigoTributacaoMunicipal = d.length ? d.padStart(3, '0') : '';
+    if (!valor || valor === CTRIBMUN_OMITIR) {
+      this.wizard.codigoTributacaoMunicipal = '';
+      this.cTribMunSelecionado = valor === CTRIBMUN_OMITIR ? CTRIBMUN_OMITIR : null;
+    } else {
+      const d = this.apenasDigitos(valor).slice(-3).padStart(3, '0');
+      this.wizard.codigoTributacaoMunicipal = d;
+      this.cTribMunSelecionado = d;
+    }
     this.cdr.markForCheck();
+  }
+
+  private aplicarCTribMunSugerido(): void {
+    if (!this.wizard || !this.lc116CodigoSelecionado) {
+      this.cTribMunSelecionado = null;
+      this.wizard && (this.wizard.codigoTributacaoMunicipal = '');
+      return;
+    }
+    const atual = this.apenasDigitos(this.wizard.codigoTributacaoMunicipal);
+    const opcoes = opcoesCTribMunPorLc116Nacional(this.lc116CodigoSelecionado);
+    if (atual.length === 3 && opcoes.some(o => o.value === atual)) {
+      this.cTribMunSelecionado = atual;
+      return;
+    }
+    if (opcoes.length === 1) {
+      this.cTribMunSelecionado = opcoes[0].value;
+      this.wizard.codigoTributacaoMunicipal = opcoes[0].value;
+      return;
+    }
+    const padrao = ctribMunDosUltimosTresDigitos(this.lc116CodigoSelecionado);
+    if (padrao && opcoes.some(o => o.value === padrao)) {
+      this.cTribMunSelecionado = padrao;
+      this.wizard.codigoTributacaoMunicipal = padrao;
+      return;
+    }
+    this.cTribMunSelecionado = null;
+    this.wizard.codigoTributacaoMunicipal = '';
+  }
+
+  private syncCTribMunFromWizard(): void {
+    if (!this.wizard) return;
+    const d = this.apenasDigitos(this.wizard.codigoTributacaoMunicipal);
+    if (d.length === 3) {
+      this.cTribMunSelecionado = d;
+      this.wizard.codigoTributacaoMunicipal = d;
+      return;
+    }
+    if (!d.length && this.lc116CodigoSelecionado) {
+      this.aplicarCTribMunSugerido();
+      return;
+    }
+    this.cTribMunSelecionado = null;
   }
 
   onNbsSelect(codigo: string | null): void {
@@ -651,12 +744,20 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
         this.message.warning('Selecione o item LC116 nacional (6 dígitos).');
         return false;
       }
-      if (!this.apenasDigitos(this.wizard.codigoServicoNbs)) {
-        this.message.warning('Informe o código NBS / serviço.');
+      if (!this.cTribMunSelecionado) {
+        this.message.warning('Selecione o código tributação municipal (cTribMun) ou opção sem complemento.');
         return false;
       }
-      if (!codigoNbsPermitidoParaLc116(lc, this.wizard.codigoServicoNbs)) {
-        this.message.warning('Selecione um código NBS compatível com o LC116 escolhido.');
+      if (this.cTribMunSelecionado !== CTRIBMUN_OMITIR) {
+        const ct = this.apenasDigitos(this.wizard.codigoTributacaoMunicipal);
+        if (ct.length !== 3) {
+          this.message.warning('O cTribMun deve ter 3 dígitos.');
+          return false;
+        }
+      }
+      const nbs = this.apenasDigitos(this.wizard.codigoServicoNbs);
+      if (nbs && !codigoNbsPermitidoParaLc116(lc, this.wizard.codigoServicoNbs)) {
+        this.message.warning('O código NBS informado não é compatível com o LC116 escolhido.');
         return false;
       }
       if (!this.wizard.descricaoServico?.trim()) {
@@ -682,9 +783,9 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     if (!this.validarPasso()) { this.step = prev; return; }
     this.step = prev;
     if (this.apenasDigitos(this.wizard.codigoLc116).length !== 6
-      || !this.apenasDigitos(this.wizard.codigoServicoNbs)
+      || !this.cTribMunSelecionado
       || !(Number(this.wizard.valorServico) > 0)) {
-      this.message.warning('Revise LC116, NBS e valores antes de emitir.');
+      this.message.warning('Revise LC116, cTribMun e valores antes de emitir.');
       return;
     }
     this.emitindo = true;
