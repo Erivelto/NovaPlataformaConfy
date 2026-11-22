@@ -433,7 +433,13 @@ interface PessoaUploadNotas {
         <p class="cancel-warn" *ngIf="!cancelChaveNfse && cancelElegibilidadeCarregando">Verificando elegibilidade…</p>
         <p class="cancel-warn" *ngIf="cancelElegibilidadeMsg && !cancelPodeCancelar">{{ cancelElegibilidadeMsg }}</p>
         <label class="cancel-label">Motivo (código SEFIN)</label>
-        <nz-select class="cancel-select" [(ngModel)]="cancelCodigoMotivo" nzPlaceHolder="Selecione">
+        <nz-select
+          class="cancel-select"
+          name="cancelCodigoMotivo"
+          [(ngModel)]="cancelCodigoMotivo"
+          [nzShowSearch]="false"
+          [compareWith]="compareMotivoSefin"
+          nzPlaceHolder="Selecione">
           <nz-option [nzValue]="1" nzLabel="1 — Erro na emissão"></nz-option>
           <nz-option [nzValue]="2" nzLabel="2 — Serviço não prestado"></nz-option>
           <nz-option [nzValue]="9" nzLabel="9 — Outros"></nz-option>
@@ -552,6 +558,7 @@ interface PessoaUploadNotas {
     .cancel-select { width: 100%; margin-bottom: 4px; }
     .cancel-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.85rem; word-break: break-all; }
+    :host ::ng-deep .ant-select-dropdown { z-index: 1100; }
   `]
 })
 export class GestaoFaturamentoDetalheComponent implements OnInit {
@@ -601,6 +608,9 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
   cancelPodeCancelar = false;
   cancelElegibilidadeMsg = '';
   cancelElegibilidadeCarregando = false;
+
+  compareMotivoSefin = (a: number | string | null | undefined, b: number | string | null | undefined): boolean =>
+    Number(a) === Number(b);
 
   readonly exportColumns: ExcelExportColumn[] = [
     { key: 'numeroNFE', title: 'Nº da Nota' },

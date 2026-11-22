@@ -235,15 +235,12 @@ interface FormularioEmissao {
                   <nz-select
                     class="lc116-select"
                     [(ngModel)]="lc116CodigoSelecionado"
+                    [nzOptions]="lc116NzOptions"
+                    [compareWith]="compararCodigoLista"
                     nzShowSearch
                     nzAllowClear
                     nzPlaceHolder="Ex.: digite 010601 ou 'Assessoria'..."
-                    [nzFilterOption]="filterLc116Option"
                     (ngModelChange)="onLc116Select($event)">
-                    <nz-option
-                      *ngFor="let o of lc116Lista"
-                      [nzValue]="o.codigo"
-                      [nzLabel]="o.codigo + ' — ' + o.descricao"></nz-option>
                   </nz-select>
                 </nz-form-control>
               </nz-form-item>
@@ -266,15 +263,12 @@ interface FormularioEmissao {
                   <nz-select
                     class="nbs-select"
                     [(ngModel)]="nbsCodigoSelecionado"
+                    [nzOptions]="nbsNzOptions"
+                    [compareWith]="compararCodigoLista"
                     nzShowSearch
                     nzAllowClear
                     [nzPlaceHolder]="nbsPlaceholder"
-                    [nzFilterOption]="filterNbsOption"
                     (ngModelChange)="onNbsSelect($event)">
-                    <nz-option
-                      *ngFor="let o of nbsOpcoesVisiveis"
-                      [nzValue]="o.codigo"
-                      [nzLabel]="o.codigo + ' — ' + o.descricao"></nz-option>
                   </nz-select>
                 </nz-form-control>
               </nz-form-item>
@@ -389,12 +383,26 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
   /** Valor do nz-select LC116 (código 6 dígitos). */
   lc116CodigoSelecionado: string | null = null;
   readonly lc116Lista = LC116_SERVICOS;
+  readonly lc116NzOptions = LC116_SERVICOS.map(o => ({
+    value: o.codigo,
+    label: `${o.codigo} — ${o.descricao}`
+  }));
+
+  compararCodigoLista = (a: string | null | undefined, b: string | null | undefined): boolean =>
+    String(a ?? '') === String(b ?? '');
 
   /** Valor do nz-select NBS (código da lista). */
   nbsCodigoSelecionado: string | null = null;
   readonly nbsLista = NBS_SERVICOS;
 
   /** Itens NBS exibidos conforme LC116 (lista completa se não houver mapa na planilha). */
+  get nbsNzOptions(): { value: string; label: string }[] {
+    return this.nbsOpcoesVisiveis.map(o => ({
+      value: o.codigo,
+      label: `${o.codigo} — ${o.descricao}`
+    }));
+  }
+
   get nbsOpcoesVisiveis(): NbsServico[] {
     const lc = this.apenasDigitos(this.wizard?.codigoLc116 ?? this.lc116CodigoSelecionado ?? '').slice(0, 6);
     const permitidos = lc.length === 6 ? codigosNbsPermitidosParaLc116(lc) : null;
@@ -433,23 +441,6 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     const d = this.apenasDigitos(this.wizard?.inscricaoMunicipal ?? '');
     return d || '—';
   }
-
-  /** Select2-like: busca por rótulo ou código. */
-  filterLc116Option = (input: string, option: { nzLabel?: string | number | null; nzValue?: unknown }): boolean => {
-    const q = (input || '').trim().toLowerCase();
-    if (!q) return true;
-    const label = String(option.nzLabel ?? '').toLowerCase();
-    const val = String(option.nzValue ?? '').toLowerCase();
-    return label.includes(q) || val.includes(q.replace(/\D/g, ''));
-  };
-
-  filterNbsOption = (input: string, option: { nzLabel?: string | number | null; nzValue?: unknown }): boolean => {
-    const q = (input || '').trim().toLowerCase();
-    if (!q) return true;
-    const label = String(option.nzLabel ?? '').toLowerCase();
-    const val = String(option.nzValue ?? '').toLowerCase();
-    return label.includes(q) || val.includes(q.replace(/\D/g, ''));
-  };
 
   get destinatarioSim(): boolean {
     return this.wizard?.destinatarioEhAdquirente !== false;
@@ -549,7 +540,9 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     if (!this.wizard) return;
     const six = codigo ? this.apenasDigitos(codigo).slice(0, 6) : '';
     this.wizard.codigoLc116 = six;
-    this.lc116CodigoSelecionado = six || null;
+    if (six !== codigo && (six.length === 6 || !codigo)) {
+      this.lc116CodigoSelecionado = six.length === 6 ? six : null;
+    }
     this.aplicarFiltroNbsAposLc116();
     this.cdr.markForCheck();
   }
@@ -565,7 +558,6 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     if (!this.wizard) return;
     const d = codigo ? this.apenasDigitos(codigo) : '';
     this.wizard.codigoServicoNbs = d;
-    this.nbsCodigoSelecionado = d || null;
     this.cdr.markForCheck();
   }
 
