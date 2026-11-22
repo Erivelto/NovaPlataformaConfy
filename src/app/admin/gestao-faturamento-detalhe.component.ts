@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { of } from 'rxjs';
+import { of, TimeoutError } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -774,14 +774,19 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
     };
   }
 
-  private mensagemErroElegibilidade(err: HttpErrorResponse): string {
-    const body = err?.error;
+  private mensagemErroElegibilidade(err: unknown): string {
+    if (err instanceof TimeoutError) {
+      return 'A consulta demorou demais. Tente novamente.';
+    }
+    if (!(err instanceof HttpErrorResponse)) {
+      return 'Falha ao consultar elegibilidade.';
+    }
+    const body = err.error;
     const api = body?.mensagem ?? body?.Mensagem;
     if (api) return String(api);
     if (err.status === 401) return 'Sessão expirada. Faça login novamente.';
     if (err.status === 404) return 'Recurso não encontrado. Confirme se a API foi publicada com o cancelamento por nota.';
     if (err.status === 0) return 'Sem resposta da API (rede, CORS ou servidor offline).';
-    if (err.name === 'TimeoutError') return 'A consulta demorou demais. Tente novamente.';
     return `Falha ao consultar elegibilidade (HTTP ${err.status ?? 'erro'}).`;
   }
 
@@ -821,7 +826,7 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
       )
       .pipe(
         timeout(45000),
-        catchError((err: HttpErrorResponse) =>
+        catchError((err: unknown) =>
           of<NfseElegibilidadeCancelamentoRes>({ podeCancelar: false, mensagem: this.mensagemErroElegibilidade(err) })
         )
       )
