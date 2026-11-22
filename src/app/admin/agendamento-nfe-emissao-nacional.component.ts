@@ -698,7 +698,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     this.emitindo = true;
     this.syncEtapa();
     const body = { wizard: this.toApiWizard() };
-    this.http.post<{ sucesso?: boolean; mensagem?: string; numeroNfe?: number }>(
+    this.http.post<{ sucesso?: boolean; mensagem?: string; numeroNfe?: number; danfseAnexado?: boolean; danfseMensagem?: string }>(
       `${this.api}/NfseNacional/emissao/agendamento/${this.codigo}`,
       body,
       { headers: this.h }
@@ -711,7 +711,12 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     })).subscribe(res => {
       if (!res) return;
       if (res.sucesso) {
-        this.message.success(res.mensagem || `NFS-e emitida (NF ${res.numeroNfe ?? '—'}).`);
+        const pdfMsg = res.danfseMensagem || (res.danfseAnexado ? 'PDF anexado.' : '');
+        const texto = (res.mensagem || `NFS-e emitida (NF ${res.numeroNfe ?? '—'}).`)
+          + (pdfMsg ? ` ${pdfMsg}` : '');
+        res.danfseAnexado === false && pdfMsg
+          ? this.message.warning(texto)
+          : this.message.success(texto);
         this.emitindo = false;
         this.voltarLista();
         return;

@@ -132,6 +132,9 @@ interface PessoaUploadNotas {
             <button nz-button nzType="primary" (click)="carregarNotas()" [nzLoading]="loadingNotas">
               <i nz-icon nzType="search"></i> Buscar
             </button>
+            <button nz-button nzType="default" [nzLoading]="capturandoAdn" (click)="sincronizarCapturaAdn()">
+              <i nz-icon nzType="sync"></i> Captura ADN (NSU)
+            </button>
           </div>
         </div>
 
@@ -309,12 +312,12 @@ interface PessoaUploadNotas {
               [nzLoading]="buscandoDanfseAdn"
               [disabled]="fazendoUploadAnexo"
               (click)="buscarDanfseNaAdn()">
-              <i nz-icon nzType="cloud-download"></i> Buscar DANFSe na ADN
+              <i nz-icon nzType="file-text"></i> Gerar DANFSe (NT-008)
             </button>
           </div>
           <nz-alert
             nzType="info"
-            nzMessage="Para NFS-e emitida pela Contfy. Se a ADN responder 503, aguarde e tente de novo."
+            nzMessage="Gera PDF local a partir do XML (SEFIN/ADN). Requer microserviço DanfseRender na API."
             nzShowIcon
             style="margin-bottom:12px">
           </nz-alert>
@@ -504,6 +507,7 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
   selectedFileAnexo: File | null = null;
   fazendoUploadAnexo = false;
   buscandoDanfseAdn = false;
+  capturandoAdn = false;
   excluindoAnexo = false;
 
   envioVisible = false;
@@ -789,6 +793,34 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
     this.cdr.markForCheck();
     return false;
   };
+
+  sincronizarCapturaAdn(): void {
+    this.capturandoAdn = true;
+    this.cdr.markForCheck();
+    this.http.post<{ sucesso?: boolean; mensagem?: string; documentosNovos?: number; ultimoNsu?: number }>(
+      `${this.api}/NfseNacional/captura/adn/pessoa/${this.codigoPessoa}`,
+      {},
+      { headers: this.headers }
+    ).pipe(timeout(300000), catchError(err => {
+      this.message.error(err?.error?.mensagem || 'Falha na captura ADN.');
+      this.capturandoAdn = false;
+      this.cdr.markForCheck();
+      return of(null);
+    })).subscribe(res => {
+      this.capturandoAdn = false;
+      if (!res) return;
+      if (res.sucesso) {
+        this.message.success(
+          (res.mensagem || 'Captura concluída.')
+          + (res.documentosNovos != null ? ` Documentos: ${res.documentosNovos}.` : '')
+        );
+        this.carregarAnexos();
+      } else {
+        this.message.warning(res.mensagem || 'Captura sem novos documentos.');
+      }
+      this.cdr.markForCheck();
+    });
+  }
 
   buscarDanfseNaAdn(): void {
     if (this.anexoAtual) {
