@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
@@ -763,13 +763,26 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
 
   private normalizarNota(n: any): NotaFiscal {
     const chave = String(n.chaveNfseNacional ?? n.ChaveNfseNacional ?? '').trim();
+    const numeroNFE = Number(n.numeroNFE ?? n.NumeroNFE ?? n.numeroNfe ?? 0);
     return {
       ...n,
+      numeroNFE,
       cancelada: n.cancelada === true || n.Cancelada === true
         || n.excluido === 1 || n.excluido === true || n.Excluido === true,
       valor: n.valor ?? n.Valor ?? n.valorTotal ?? 0,
       chaveNfseNacional: chave
     };
+  }
+
+  private mensagemErroElegibilidade(err: HttpErrorResponse): string {
+    const body = err?.error;
+    const api = body?.mensagem ?? body?.Mensagem;
+    if (api) return String(api);
+    if (err.status === 401) return 'Sessão expirada. Faça login novamente.';
+    if (err.status === 404) return 'Recurso não encontrado. Confirme se a API foi publicada com o cancelamento por nota.';
+    if (err.status === 0) return 'Sem resposta da API (rede, CORS ou servidor offline).';
+    if (err.name === 'TimeoutError') return 'A consulta demorou demais. Tente novamente.';
+    return `Falha ao consultar elegibilidade (HTTP ${err.status ?? 'erro'}).`;
   }
 
   podeCancelarNfseNacional(item: NotaFiscal): boolean {
@@ -793,15 +806,23 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
     this.cancelElegibilidadeCarregando = true;
     this.cdr.markForCheck();
 
+    const numero = item.numeroNFE;
+    if (!numero) {
+      this.cancelElegibilidadeMsg = 'Número da nota inválido. Atualize a lista e tente de novo.';
+      this.cancelElegibilidadeCarregando = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
     this.http
       .get<NfseElegibilidadeCancelamentoRes>(
-        `${this.api}/NfseNacional/cancelamento/pessoa/${this.codigoPessoa}/nota/${item.numeroNFE}/elegibilidade`,
+        `${this.api}/NfseNacional/cancelamento/pessoa/${this.codigoPessoa}/nota/${numero}/elegibilidade`,
         { headers: this.headers }
       )
       .pipe(
-        timeout(20000),
-        catchError(() =>
-          of<NfseElegibilidadeCancelamentoRes>({ podeCancelar: false, mensagem: 'Falha ao consultar elegibilidade.' })
+        timeout(45000),
+        catchError((err: HttpErrorResponse) =>
+          of<NfseElegibilidadeCancelamentoRes>({ podeCancelar: false, mensagem: this.mensagemErroElegibilidade(err) })
         )
       )
       .subscribe(res => {
