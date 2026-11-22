@@ -14,8 +14,12 @@ import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { environment } from '../../environments/environment';
+
+/** Limite da coluna CorpoEmissaoNota.CodigoPrefeitura (descrição CNAE pode ser maior — truncamos ao salvar). */
+const MAX_CODIGO_PREFEITURA = 500;
 
 interface Tomador {
   Codigo?: number;
@@ -24,6 +28,11 @@ interface Tomador {
   razao?: string;
   Excluido?: boolean;
   excluido?: boolean;
+}
+
+interface PessoaCnaeOpcao {
+  codigo: number;
+  descricao: string;
 }
 
 @Component({
@@ -35,7 +44,7 @@ interface Tomador {
     NzButtonModule, NzIconModule, NzModalModule,
     NzInputModule, NzDatePickerModule, NzCheckboxModule,
     NzDividerModule, NzAlertModule, NzSkeletonModule,
-    NzStepsModule, NzRadioModule, NzTagModule
+    NzStepsModule, NzRadioModule, NzTagModule, NzSelectModule
   ],
   template: `
     <button *ngIf="showButton" nz-button nzType="primary" (click)="openWizard()">
@@ -193,9 +202,28 @@ interface Tomador {
               <label class="form-label">Valor (R$) <span class="req">*</span></label>
               <input nz-input [value]="wizardForm.valorStr" (input)="onValorInput($event)" placeholder="R$ 0,00" style="width:220px" inputmode="numeric">
             </div>
-            <div class="form-field">
+            <div class="form-field" style="flex:1; min-width:260px; max-width:100%">
               <label class="form-label">Código Serviço/Atividade</label>
-              <input nz-input [(ngModel)]="wizardForm.codigoPrefeitura" placeholder="Código opcional" maxlength="50" style="width:220px">
+              <nz-select
+                [(ngModel)]="wizardForm.codigoCnae"
+                nzAllowClear
+                nzPlaceHolder="Selecione a atividade (CNAE)"
+                [nzLoading]="loadingCnaes"
+                style="width:100%"
+                (ngModelChange)="onCnaeChange($event)">
+                <nz-option
+                  *ngFor="let c of cnaesOpcoes"
+                  [nzValue]="c.codigo"
+                  [nzLabel]="rotuloCnaeOpcao(c)"
+                  [nzTitle]="c.descricao">
+                </nz-option>
+              </nz-select>
+              <div class="hint" *ngIf="!loadingCnaes && cnaesOpcoes.length === 0">
+                Nenhuma atividade cadastrada para este cliente (aba Dados Cadastrais).
+              </div>
+              <div class="hint" *ngIf="cnaeSelecionadoTruncado">
+                Texto maior que {{ MAX_CODIGO_PREFEITURA }} caracteres será cortado no envio.
+              </div>
             </div>
           </div>
         </div>
@@ -242,7 +270,7 @@ interface Tomador {
               </div>
               <div class="resumo-field resumo-field-sm">
                 <label class="resumo-label"><i nz-icon nzType="tags"></i> Código Serviço/Atividade</label>
-                <div class="resumo-value">{{ wizardForm.codigoPrefeitura || '-' }}</div>
+                <div class="resumo-value resumo-descricao">{{ resumoAtividadeCnae || '-' }}</div>
               </div>
               <div class="resumo-field resumo-field-sm">
                 <label class="resumo-label"><i nz-icon nzType="global"></i> Exterior</label>
@@ -296,6 +324,7 @@ interface Tomador {
 })
 export class NovaSolicitacaoNfeComponent {
   private readonly apiBase = environment.apiUrl;
+  readonly MAX_CODIGO_PREFEITURA = MAX_CODIGO_PREFEITURA;
 
   @Input({ required: true }) codigoPessoa = 0;
   @Input() buttonLabel = 'Nova Solicitação Nfe';
@@ -309,6 +338,8 @@ export class NovaSolicitacaoNfeComponent {
 
   tomadores: Tomador[] = [];
   loadingTomadores = false;
+  cnaesOpcoes: PessoaCnaeOpcao[] = [];
+  loadingCnaes = false;
 
   adicionandoTomador = false;
   buscandoCnpj = false;
@@ -330,8 +361,18 @@ export class NovaSolicitacaoNfeComponent {
     data: null as Date | null,
     repetir: false,
     exterior: false,
-    codigoPrefeitura: ''
+    codigoPrefeitura: '',
+    codigoCnae: null as number | null
   };
+
+  get resumoAtividadeCnae(): string {
+    return this.wizardForm.codigoPrefeitura?.trim() || '';
+  }
+
+  get cnaeSelecionadoTruncado(): boolean {
+    const c = this.cnaesOpcoes.find(x => x.codigo === this.wizardForm.codigoCnae);
+    return !!c && c.descricao.length > MAX_CODIGO_PREFEITURA;
+  }
 
   disabledDate = (current: Date): boolean => {
     const now = new Date();
@@ -365,7 +406,10 @@ export class NovaSolicitacaoNfeComponent {
     const agora = new Date();
     let dataInicial = new Date();
     if (agora.getHours() >= 19) dataInicial.setDate(dataInicial.getDate() + 1);
-    this.wizardForm = { codigoTomador: null, tomadorNome: '', descricao: '', valorStr: '', valor: null, data: dataInicial, repetir: false, exterior: false, codigoPrefeitura: '' };
+    this.wizardForm = {
+      codigoTomador: null, tomadorNome: '', descricao: '', valorStr: '', valor: null, data: dataInicial,
+      repetir: false, exterior: false, codigoPrefeitura: '', codigoCnae: null
+    };
     this.erroWizard = '';
     this.adicionandoTomador = false;
     this.loadingTomadores = true;
@@ -374,8 +418,50 @@ export class NovaSolicitacaoNfeComponent {
     this.cdr.markForCheck();
     setTimeout(() => {
       this.carregarTomadores();
+      this.carregarCnaes();
       this.carregarUltimaDescricao();
     }, 0);
+  }
+
+  private carregarCnaes(): void {
+    this.loadingCnaes = true;
+    this.cnaesOpcoes = [];
+    this.http.get<unknown>(`${this.apiBase}/PessoaCnae?CodigoPessoa=${this.codigoPessoa}`, { headers: this.headers }).subscribe({
+      next: (data) => {
+        const lista = Array.isArray(data) ? data : [];
+        this.cnaesOpcoes = lista
+          .map((raw: any) => ({
+            codigo: raw?.codigo ?? raw?.Codigo ?? 0,
+            descricao: String(raw?.descricao ?? raw?.Descricao ?? '').trim()
+          }))
+          .filter(c => c.codigo > 0 && c.descricao.length > 0);
+        this.loadingCnaes = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.cnaesOpcoes = [];
+        this.loadingCnaes = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  rotuloCnaeOpcao(c: PessoaCnaeOpcao): string {
+    if (c.descricao.length <= 120) return c.descricao;
+    return c.descricao.slice(0, 117) + '...';
+  }
+
+  onCnaeChange(codigo: number | null): void {
+    if (codigo == null) {
+      this.wizardForm.codigoPrefeitura = '';
+      this.cdr.markForCheck();
+      return;
+    }
+    const item = this.cnaesOpcoes.find(c => c.codigo === codigo);
+    this.wizardForm.codigoPrefeitura = item
+      ? item.descricao.slice(0, MAX_CODIGO_PREFEITURA)
+      : '';
+    this.cdr.markForCheck();
   }
 
   private carregarUltimaDescricao(): void {
@@ -623,7 +709,7 @@ export class NovaSolicitacaoNfeComponent {
       CodigoEmissaoNota: 0,
       Status: 'C',
       exterior: this.wizardForm.exterior,
-      CodigoPrefeitura: this.wizardForm.codigoPrefeitura
+      CodigoPrefeitura: (this.wizardForm.codigoPrefeitura || '').slice(0, MAX_CODIGO_PREFEITURA)
     };
     this.http.post(`${this.apiBase}/CorpoEmissaoNota`, payload, { headers: this.headers }).subscribe({
       next: () => {
