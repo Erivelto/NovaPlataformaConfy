@@ -40,6 +40,23 @@ interface NotaFiscal {
   valor?: string | number;
   tomador?: string;
   descricao?: string;
+  chaveNfseNacional?: string;
+}
+
+interface NfseElegibilidadeCancelamentoRes {
+  podeCancelar?: boolean;
+  PodeCancelar?: boolean;
+  chaveNfse?: string;
+  ChaveNfse?: string;
+  mensagem?: string;
+  Mensagem?: string;
+}
+
+interface NfseCancelamentoResultadoRes {
+  sucesso?: boolean;
+  Sucesso?: boolean;
+  mensagem?: string;
+  Mensagem?: string;
 }
 
 interface PessoaResumo {
@@ -180,7 +197,7 @@ interface PessoaUploadNotas {
               <th nzWidth="140px">Data de Emissão</th>
               <th>Valor</th>
               <th nzWidth="140px">Status</th>
-              <th nzWidth="220px" nzAlign="center">Ações</th>
+              <th nzWidth="300px" nzAlign="center">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -206,6 +223,17 @@ interface PessoaUploadNotas {
                   (click)="abrirAnexoModal(item)">
                   <i nz-icon [nzType]="temAnexo(item.numeroNFE) ? 'file-text' : 'paper-clip'"></i>
                   {{ temAnexo(item.numeroNFE) ? 'PDF' : 'Anexar' }}
+                </button>
+                <button
+                  *ngIf="podeCancelarNfseNacional(item)"
+                  nz-button
+                  nzSize="small"
+                  nzDanger
+                  nz-tooltip
+                  nzTooltipTitle="Cancelar NFS-e na SEFIN"
+                  [nzLoading]="cancelandoNumeroNfe === item.numeroNFE"
+                  (click)="abrirModalCancelamento(item)">
+                  <i nz-icon nzType="stop"></i> Cancelar NF
                 </button>
               </td>
             </tr>
@@ -391,6 +419,46 @@ interface PessoaUploadNotas {
         <button nz-button nzType="primary" (click)="salvarAddFaturamento()" [nzLoading]="salvandoAddFaturamento">Salvar</button>
       </ng-template>
     </nz-modal>
+
+    <nz-modal
+      [(nzVisible)]="cancelModalVisivel"
+      nzTitle="Cancelar NFS-e nacional"
+      [nzFooter]="null"
+      (nzOnCancel)="fecharModalCancelamento()">
+      <ng-container *nzModalContent>
+        <p *ngIf="notaCancelAlvo" class="cancel-hint">
+          Nota fiscal <strong>{{ notaCancelAlvo.numeroNFE }}</strong>
+        </p>
+        <p class="cancel-warn" *ngIf="cancelChaveNfse">Chave: <span class="mono">{{ cancelChaveNfse }}</span></p>
+        <p class="cancel-warn" *ngIf="!cancelChaveNfse && cancelElegibilidadeCarregando">Verificando elegibilidade…</p>
+        <p class="cancel-warn" *ngIf="cancelElegibilidadeMsg && !cancelPodeCancelar">{{ cancelElegibilidadeMsg }}</p>
+        <label class="cancel-label">Motivo (código SEFIN)</label>
+        <nz-select class="cancel-select" [(ngModel)]="cancelCodigoMotivo" nzPlaceHolder="Selecione">
+          <nz-option [nzValue]="1" nzLabel="1 — Erro na emissão"></nz-option>
+          <nz-option [nzValue]="2" nzLabel="2 — Serviço não prestado"></nz-option>
+          <nz-option [nzValue]="9" nzLabel="9 — Outros"></nz-option>
+        </nz-select>
+        <label class="cancel-label">Justificativa (mín. 15 caracteres)</label>
+        <textarea
+          nz-input
+          [(ngModel)]="cancelMotivoTexto"
+          rows="4"
+          maxlength="255"
+          placeholder="Descreva o motivo do cancelamento para a SEFIN…"></textarea>
+        <div class="cancel-footer">
+          <button nz-button (click)="fecharModalCancelamento()" [disabled]="cancelandoNumeroNfe != null">Voltar</button>
+          <button
+            nz-button
+            nzType="primary"
+            nzDanger
+            [nzLoading]="cancelandoNumeroNfe != null"
+            [disabled]="!cancelPodeCancelar"
+            (click)="confirmarCancelamentoNacional()">
+            Confirmar cancelamento
+          </button>
+        </div>
+      </ng-container>
+    </nz-modal>
   `,
   styles: [`
     .gestao-faturamento-detalhe { padding: 8px 4px; }
@@ -478,6 +546,12 @@ interface PessoaUploadNotas {
     .detalhe-descricao { white-space: pre-wrap; min-height: 80px; }
     .acoes-cell { white-space: nowrap; }
     .acoes-cell .ant-btn { margin: 0 2px; }
+    .cancel-hint { margin-bottom: 8px; }
+    .cancel-warn { color: #cf1322; font-size: 0.9rem; }
+    .cancel-label { display: block; margin: 12px 0 6px; font-weight: 600; }
+    .cancel-select { width: 100%; margin-bottom: 4px; }
+    .cancel-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.85rem; word-break: break-all; }
   `]
 })
 export class GestaoFaturamentoDetalheComponent implements OnInit {
@@ -517,6 +591,16 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
   addFaturamentoMesAno = '';
   addFaturamentoValor = '';
   salvandoAddFaturamento = false;
+
+  cancelandoNumeroNfe: number | null = null;
+  cancelModalVisivel = false;
+  notaCancelAlvo: NotaFiscal | null = null;
+  cancelCodigoMotivo = 9;
+  cancelMotivoTexto = '';
+  cancelChaveNfse = '';
+  cancelPodeCancelar = false;
+  cancelElegibilidadeMsg = '';
+  cancelElegibilidadeCarregando = false;
 
   readonly exportColumns: ExcelExportColumn[] = [
     { key: 'numeroNFE', title: 'Nº da Nota' },
@@ -678,12 +762,104 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
   }
 
   private normalizarNota(n: any): NotaFiscal {
+    const chave = String(n.chaveNfseNacional ?? n.ChaveNfseNacional ?? '').trim();
     return {
       ...n,
       cancelada: n.cancelada === true || n.Cancelada === true
         || n.excluido === 1 || n.excluido === true || n.Excluido === true,
-      valor: n.valor ?? n.Valor ?? n.valorTotal ?? 0
+      valor: n.valor ?? n.Valor ?? n.valorTotal ?? 0,
+      chaveNfseNacional: chave
     };
+  }
+
+  podeCancelarNfseNacional(item: NotaFiscal): boolean {
+    if (item.cancelada) return false;
+    const chave = (item.chaveNfseNacional ?? '').trim();
+    if (chave.length >= 50) return true;
+    const d = (item.descricao ?? '').toLowerCase();
+    if (d.includes('emitida diretamente pelo site da prefeitura')) return false;
+    if (d.includes('incluído diretamente na plataforma')) return false;
+    return !!item.descricao?.trim();
+  }
+
+  abrirModalCancelamento(item: NotaFiscal): void {
+    this.notaCancelAlvo = item;
+    this.cancelCodigoMotivo = 9;
+    this.cancelMotivoTexto = '';
+    this.cancelChaveNfse = '';
+    this.cancelPodeCancelar = false;
+    this.cancelElegibilidadeMsg = '';
+    this.cancelModalVisivel = true;
+    this.cancelElegibilidadeCarregando = true;
+    this.cdr.markForCheck();
+
+    this.http
+      .get<NfseElegibilidadeCancelamentoRes>(
+        `${this.api}/NfseNacional/cancelamento/pessoa/${this.codigoPessoa}/nota/${item.numeroNFE}/elegibilidade`,
+        { headers: this.headers }
+      )
+      .pipe(
+        timeout(20000),
+        catchError(() =>
+          of<NfseElegibilidadeCancelamentoRes>({ podeCancelar: false, mensagem: 'Falha ao consultar elegibilidade.' })
+        )
+      )
+      .subscribe(res => {
+        this.cancelPodeCancelar = !!(res.podeCancelar ?? res.PodeCancelar);
+        this.cancelChaveNfse = String(res.chaveNfse ?? res.ChaveNfse ?? '');
+        this.cancelElegibilidadeMsg = String(res.mensagem ?? res.Mensagem ?? '');
+        this.cancelElegibilidadeCarregando = false;
+        this.cdr.markForCheck();
+      });
+  }
+
+  fecharModalCancelamento(): void {
+    if (this.cancelandoNumeroNfe != null) return;
+    this.cancelModalVisivel = false;
+    this.notaCancelAlvo = null;
+  }
+
+  confirmarCancelamentoNacional(): void {
+    const nota = this.notaCancelAlvo;
+    if (!nota) return;
+    const motivo = (this.cancelMotivoTexto || '').trim();
+    if (motivo.length < 15) {
+      this.message.warning('Informe o motivo com pelo menos 15 caracteres.');
+      return;
+    }
+    if (!this.cancelPodeCancelar) {
+      this.message.error(this.cancelElegibilidadeMsg || 'Esta nota não pode ser cancelada.');
+      return;
+    }
+
+    this.cancelandoNumeroNfe = nota.numeroNFE;
+    this.http
+      .post<NfseCancelamentoResultadoRes>(
+        `${this.api}/NfseNacional/cancelamento/pessoa/${this.codigoPessoa}/nota/${nota.numeroNFE}`,
+        { codigoMotivo: this.cancelCodigoMotivo, motivo },
+        { headers: this.headers }
+      )
+      .pipe(
+        timeout(180000),
+        catchError(err => {
+          const msg = err?.error?.mensagem ?? err?.error?.Mensagem ?? 'Erro ao cancelar NFS-e nacional.';
+          return of<NfseCancelamentoResultadoRes>({ sucesso: false, mensagem: msg });
+        })
+      )
+      .subscribe(res => {
+        this.cancelandoNumeroNfe = null;
+        const ok = !!(res.sucesso ?? res.Sucesso);
+        const msg = String(res.mensagem ?? res.Mensagem ?? (ok ? 'Cancelada.' : 'Falha no cancelamento.'));
+        if (ok) {
+          this.message.success(msg);
+          this.cancelModalVisivel = false;
+          this.notaCancelAlvo = null;
+          this.carregarNotas();
+        } else {
+          this.message.error(msg);
+        }
+        this.cdr.markForCheck();
+      });
   }
 
   private validarPeriodo(): boolean {
