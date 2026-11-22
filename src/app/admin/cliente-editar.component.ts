@@ -52,6 +52,7 @@ interface PessoaCertificadoData {
 interface EnderecoData { codigo?: number; codigoPessoa?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; excluido?: boolean; }
 interface ValidacaoPessoa { usuario: boolean; celular: boolean; prefeitura: boolean; dadosDAS: boolean; cobranca: boolean; documentos: boolean; }
 interface RepresentanteLegal { codigo: number; codigoPessoa: number; nome: string; cpf: string; dataContfy?: string; codigoEndereco?: number; tipoEnd?: string; logradouro?: string; numrero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string; cep?: string; }
+interface PessoaCnae { codigo: number; codigoPessoa: number; descricao: string; }
 interface DadosEmissao { codigo: number; codigoPessoa: number; usuario: string; senha: string; prefeitura: string; urlPrefeitura?: string; codigoPrefeitura?: string; excluido?: boolean; }
 interface DadosDAS { codigo: number; codigoPessoa: number; cnpj: string; cpf: string; codigoContribuite: string; mesApuracao?: number; anoApuracao?: number; valorTributado?: string; excluido?: boolean; }
 interface AnexoContribuinte { codigo: number; codigoDadosDeDAS: number; menu: string; anexo: string; excluido?: boolean; }
@@ -207,12 +208,8 @@ interface CobrancaAdicionalForm {
               <nz-form-control><input nz-input [(ngModel)]="pessoa.incricaoMunicipal" /></nz-form-control></nz-form-item>
             <nz-form-item class="flex1"><nz-form-label>CCM (Cadastro de Contribuintes Mobiliários)</nz-form-label>
               <nz-form-control><input nz-input [(ngModel)]="pessoa.ccm" placeholder="Opcional" /></nz-form-control></nz-form-item>
-            <nz-form-item class="flex1"><nz-form-label>CNAE</nz-form-label>
-              <nz-form-control><input nz-input [(ngModel)]="pessoa.cnae" /></nz-form-control></nz-form-item>
           </div>
           <div class="form-row">
-            <nz-form-item class="flex3"><nz-form-label>Atividade</nz-form-label>
-              <nz-form-control><input nz-input [(ngModel)]="pessoa.descricaoAtividade" /></nz-form-control></nz-form-item>
             <nz-form-item class="flex1"><nz-form-label>WhatsApp / Telegram</nz-form-label>
               <nz-form-control><input nz-input [(ngModel)]="pessoa.numeroWhats" placeholder="5511900000000" /></nz-form-control></nz-form-item>
             <nz-form-item class="flex1"><nz-form-label>Data Cadastro</nz-form-label>
@@ -257,6 +254,42 @@ interface CobrancaAdicionalForm {
               </nz-form-control>
             </nz-form-item>
           </div>
+
+          <nz-divider nzText="Atividades (CNAE)" nzOrientation="left"></nz-divider>
+          <nz-alert
+            *ngIf="cnaes.length === 0 && (pessoa.cnae?.trim() || pessoa.descricaoAtividade?.trim())"
+            nzType="info"
+            nzShowIcon
+            style="margin-bottom:12px"
+            nzMessage="Cadastro antigo"
+            [nzDescription]="'CNAE: ' + (pessoa.cnae || '—') + ' · Atividade: ' + (pessoa.descricaoAtividade || '—') + '. Inclua na lista abaixo para manter várias atividades.'">
+          </nz-alert>
+          <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+            <button nz-button nzType="primary" class="toolbar-edit" (click)="abrirNovoCnae()">
+              <i nz-icon nzType="plus"></i> Nova atividade / CNAE
+            </button>
+          </div>
+          <nz-table [nzData]="cnaes" nzBordered nzSize="middle" [nzShowPagination]="false" [nzLoading]="carregandoCnaes">
+            <thead><tr>
+              <th>Descrição (código CNAE e atividade)</th>
+              <th nzWidth="110px" nzAlign="center" class="col-acoes">Ação</th>
+            </tr></thead>
+            <tbody>
+              <tr *ngFor="let c of cnaes">
+                <td style="white-space:pre-wrap">{{ c.descricao }}</td>
+                <td nzAlign="center" class="col-acoes">
+                  <button nz-button nzSize="small" nzType="primary" (click)="editarCnae(c)" style="margin-right:6px"><i nz-icon nzType="edit"></i></button>
+                  <button nz-button nzDanger nzSize="small" nz-popconfirm nzPopconfirmTitle="Remover esta atividade / CNAE?"
+                    [nzLoading]="excluindoCnae.has(c.codigo)" (nzOnConfirm)="excluirCnae(c)">
+                    <i nz-icon nzType="delete"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="!carregandoCnaes && cnaes.length === 0">
+                <td colspan="2" style="text-align:center;padding:24px;color:rgba(0,0,0,.45)">Nenhuma atividade cadastrada.</td>
+              </tr>
+            </tbody>
+          </nz-table>
 
           <nz-divider nzText="Configurações" nzOrientation="left"></nz-divider>
           <div class="flags-row">
@@ -938,6 +971,30 @@ interface CobrancaAdicionalForm {
   </ng-template>
 </nz-modal>
 
+<!-- MODAL: Atividade / CNAE -->
+<nz-modal [(nzVisible)]="cnaeVisible"
+  [nzTitle]="cnaeSelecionado?.codigo ? 'Editar atividade / CNAE' : 'Nova atividade / CNAE'"
+  [nzWidth]="560" [nzFooter]="ftCnae" (nzOnCancel)="cnaeVisible=false">
+  <ng-container *nzModalContent>
+    <nz-form-item>
+      <nz-form-label nzRequired>Atividade (CNAE)</nz-form-label>
+      <nz-form-control>
+        <textarea
+          nz-input
+          [(ngModel)]="cnaeForm.descricao"
+          rows="4"
+          maxlength="4000"
+          placeholder="Ex.: 6201-5/01 — Desenvolvimento de programas de computador sob encomenda"></textarea>
+        <div class="observacao-counter">{{ (cnaeForm.descricao || '').length }}/4000</div>
+      </nz-form-control>
+    </nz-form-item>
+  </ng-container>
+  <ng-template #ftCnae>
+    <button nz-button (click)="cnaeVisible=false" [disabled]="salvandoCnae">Fechar</button>
+    <button nz-button nzType="primary" [nzLoading]="salvandoCnae" (click)="salvarCnae()">Salvar</button>
+  </ng-template>
+</nz-modal>
+
 <!-- MODAL: Representante Legal -->
 <nz-modal [(nzVisible)]="repVisible" [nzTitle]="repSelecionado?.codigo ? 'Editar Representante' : 'Novo Representante'"
   [nzWidth]="680" [nzFooter]="ftRep" (nzOnCancel)="repVisible=false">
@@ -1191,6 +1248,8 @@ export class ClienteEditarComponent implements OnInit {
   endereco: EnderecoData = {};
   validacao: ValidacaoPessoa | null = null;
   representantes: RepresentanteLegal[] = [];
+  cnaes: PessoaCnae[] = [];
+  carregandoCnaes = false;
   emissoes: DadosEmissao[] = [];
   dadosDasList: DadosDAS[] = [];
   prefeituras: Prefeitura[] = [];
@@ -1299,6 +1358,11 @@ export class ClienteEditarComponent implements OnInit {
   excluindoRep = new Set<number>();
   repSelecionado: RepresentanteLegal | null = null;
   repForm: Partial<RepresentanteLegal> = {};
+  cnaeVisible = false;
+  salvandoCnae = false;
+  excluindoCnae = new Set<number>();
+  cnaeSelecionado: PessoaCnae | null = null;
+  cnaeForm: Partial<PessoaCnae> = {};
 
   // Emissão NF
   emissaoVisible = false; salvandoEmissao = false;
@@ -1408,6 +1472,7 @@ export class ClienteEditarComponent implements OnInit {
         ? (r.cobrAdic as any[]).map(item => this.mapCobrancaAdicional(item)).sort((a, b) => (b.anoReferencia - a.anoReferencia) || (b.mesReferencia - a.mesReferencia))
         : [];
       this.carregarRepresentantes();
+      this.carregarCnaes();
       this.carregarEmissoes();
       this.carregarDAS();
     }, error: () => { this.loading = false; this.cdr.markForCheck(); }});
@@ -1421,6 +1486,113 @@ export class ClienteEditarComponent implements OnInit {
         this.emissoes = lista.map(item => this.mapEmissao(item));
         this.cdr.markForCheck();
       });
+  }
+
+  carregarCnaes() {
+    this.carregandoCnaes = true;
+    this.cdr.markForCheck();
+    this.http.get<any>(`${this.api}/PessoaCnae?CodigoPessoa=${this.codigoPessoa}`, { headers: this.h })
+      .pipe(timeout(8000), catchError(() => of([])))
+      .subscribe({
+        next: (r) => {
+          const lista = Array.isArray(r) ? r : (r?.data ?? []);
+          this.cnaes = lista.map((item: any) => this.mapCnae(item));
+          this.carregandoCnaes = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.cnaes = [];
+          this.carregandoCnaes = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private mapCnae(raw: any): PessoaCnae {
+    return {
+      codigo: raw?.codigo ?? raw?.Codigo ?? 0,
+      codigoPessoa: raw?.codigoPessoa ?? raw?.CodigoPessoa ?? this.codigoPessoa,
+      descricao: (raw?.descricao ?? raw?.Descricao ?? '').trim()
+    };
+  }
+
+  abrirNovoCnae() {
+    this.cnaeSelecionado = null;
+    this.cnaeForm = { codigoPessoa: this.codigoPessoa, descricao: '' };
+    this.cnaeVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  editarCnae(c: PessoaCnae) {
+    this.cnaeSelecionado = c;
+    this.cnaeForm = { ...c };
+    this.cnaeVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  salvarCnae() {
+    const descricao = (this.cnaeForm.descricao || '').trim();
+    if (!descricao) {
+      this.message.warning('Informe a atividade / CNAE.');
+      return;
+    }
+    this.salvandoCnae = true;
+    this.cdr.markForCheck();
+    const payload = {
+      codigo: this.cnaeForm.codigo || 0,
+      codigoPessoa: this.codigoPessoa,
+      descricao,
+      excluido: false
+    };
+    const obs = this.cnaeSelecionado?.codigo
+      ? this.http.put(`${this.api}/PessoaCnae`, payload, { headers: this.h })
+      : this.http.post(`${this.api}/PessoaCnae`, payload, { headers: this.h });
+    obs.subscribe({
+      next: () => {
+        this.message.success('Atividade salva!');
+        this.salvandoCnae = false;
+        this.cnaeVisible = false;
+        this.carregarCnaes();
+        this.syncCnaeLegadoNaPessoa();
+      },
+      error: (e) => {
+        const msg = typeof e?.error === 'string' ? e.error : (e?.error?.message || `Erro ao salvar (${e.status})`);
+        this.message.error(msg);
+        this.salvandoCnae = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  excluirCnae(c: PessoaCnae) {
+    if (!c.codigo || this.excluindoCnae.has(c.codigo)) return;
+    this.excluindoCnae.add(c.codigo);
+    this.cdr.markForCheck();
+    this.http.delete<boolean>(`${this.api}/PessoaCnae?codigo=${c.codigo}`, { headers: this.h }).subscribe({
+      next: () => {
+        this.cnaes = this.cnaes.filter(x => x.codigo !== c.codigo);
+        this.excluindoCnae.delete(c.codigo);
+        this.message.success('Atividade removida.');
+        this.syncCnaeLegadoNaPessoa();
+        this.cdr.markForCheck();
+      },
+      error: (e) => {
+        const msg = typeof e?.error === 'string' ? e.error : (e?.error?.message || `Erro ao excluir (${e.status})`);
+        this.message.error(msg);
+        this.excluindoCnae.delete(c.codigo);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /** Mantém campos legados na Pessoa alinhados à primeira atividade da lista (telas que ainda leem CNAE único). */
+  private syncCnaeLegadoNaPessoa() {
+    const primeiro = this.cnaes[0]?.descricao?.trim();
+    if (primeiro) {
+      this.pessoa.descricaoAtividade = primeiro;
+      const code = primeiro.match(/\d{4,5}[-/]?\d/);
+      if (code) this.pessoa.cnae = code[0];
+    }
   }
 
   carregarRepresentantes() {
