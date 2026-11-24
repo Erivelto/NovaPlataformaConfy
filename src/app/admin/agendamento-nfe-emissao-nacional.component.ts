@@ -253,7 +253,7 @@ interface FormularioEmissao {
             <div nz-col [nzSpan]="24" [nzXs]="24">
               <nz-form-item>
                 <nz-form-label nzRequired>Código tributação municipal (cTribMun)</nz-form-label>
-                <nz-form-control [nzExtra]="cTribMunAjudaExtra">
+                <nz-form-control [nzExtra]="cTribMunExtraCompleto">
                   <nz-select
                     class="ctribmun-select"
                     [(ngModel)]="cTribMunSelecionado"
@@ -329,8 +329,8 @@ interface FormularioEmissao {
             <dt>Prestador</dt><dd>{{ form?.prestador?.razao }} ({{ form?.prestador?.documento }})</dd>
             <dt>IM</dt><dd>{{ imWizardResumo }}</dd>
             <dt>Tomador</dt><dd>{{ form?.tomador?.razao }} ({{ form?.tomador?.documento }})</dd>
-            <dt>LC116</dt><dd>{{ rotuloLc116Resumo }}</dd>
-            <dt>cTribMun</dt><dd>{{ codigoTribMunResumo }}</dd>
+            <dt>LC116 (cTribNac)</dt><dd>{{ rotuloLc116Resumo }}<span *ngIf="wizard.codigoLc116" class="mono-tag"> · {{ wizard.codigoLc116 }}</span></dd>
+            <dt>cTribMun (3 díg.)</dt><dd>{{ codigoTribMunResumo }}<span class="hint-resumo"> — complemento municipal; o código de 6 dígitos vai só em cTribNac acima.</span></dd>
             <dt>NBS</dt><dd>{{ rotuloNbsResumo }}</dd>
             <dt>Valor</dt><dd>R$ {{ wizard.valorServico | number:'1.2-2' }} · ISS {{ wizard.aliquotaIss }}% = R$ {{ issCalculado | number:'1.2-2' }}</dd>
             <dt>Descrição</dt><dd class="desc">{{ wizard.descricaoServico || '—' }}</dd>
@@ -376,6 +376,8 @@ interface FormularioEmissao {
     .resumo dt { color: rgba(0,0,0,.55); margin: 0; }
     .resumo dd { margin: 0; font-weight: 500; }
     .resumo .desc { font-weight: 400; white-space: pre-wrap; }
+    .resumo .hint-resumo { font-weight: 400; font-size: 12px; color: rgba(0,0,0,.45); }
+    .resumo .mono-tag { font-weight: 400; font-family: ui-monospace, monospace; font-size: 12px; color: rgba(0,0,0,.65); }
     .hint-im { font-size: 12px; color: rgba(0,0,0,.55); margin-top: 6px; line-height: 1.45; max-width: 640px; }
     :host ::ng-deep .lc116-select.ant-select, :host ::ng-deep .nbs-select.ant-select, :host ::ng-deep .ctribmun-select.ant-select { width: 100%; max-width: 100%; }
     :host ::ng-deep .lc116-select .ant-select-selector, :host ::ng-deep .nbs-select .ant-select-selector, :host ::ng-deep .ctribmun-select .ant-select-selector { min-height: 40px; }
@@ -422,6 +424,10 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     if (!this.lc116CodigoSelecionado) return 'Selecione primeiro o LC116 nacional';
     if (this.cTribMunNzOptions.length <= 1) return 'Nenhum desdobro listado para este LC116';
     return 'Selecione o código complementar municipal (3 dígitos)';
+  }
+
+  get cTribMunExtraCompleto(): string {
+    return 'Na DPS: LC116 vira cTribNac (6 dígitos, ex. 170201); esta lista envia só cTribMun (3 dígitos, ex. 201). ' + this.cTribMunAjudaExtra;
   }
 
   get cTribMunAjudaExtra(): string {
@@ -601,6 +607,16 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       const d = this.apenasDigitos(valor).slice(-3).padStart(3, '0');
       this.wizard.codigoTributacaoMunicipal = d;
       this.cTribMunSelecionado = d;
+      const lcAtual = this.lc116CodigoSelecionado || this.apenasDigitos(this.wizard.codigoLc116);
+      if (lcAtual) {
+        const hit = opcoesCTribMunPorLc116Nacional(lcAtual).find(o => o.value === d);
+        const tribNac = this.apenasDigitos(hit?.codigoNacional ?? '').slice(0, 6);
+        if (tribNac.length === 6 && tribNac !== this.apenasDigitos(this.wizard.codigoLc116).slice(0, 6)) {
+          this.wizard.codigoLc116 = tribNac;
+          this.lc116CodigoSelecionado = tribNac;
+          this.aplicarFiltroNbsAposLc116();
+        }
+      }
     }
     this.cdr.markForCheck();
   }
