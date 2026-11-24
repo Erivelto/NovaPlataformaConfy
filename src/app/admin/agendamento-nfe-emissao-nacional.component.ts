@@ -31,6 +31,9 @@ import {
 } from './lc116-ctribmun-opcoes';
 import { descricaoNbsReforma, nbsRotuloReformaCompleto } from './nbs-reforma-catalogo';
 
+/** Padrão atual: emissão somente com cTribNac (LC116), sem cTribMun na DPS. */
+const ENVIAR_CTRIBMUN_NA_DPS = false;
+
 interface NfseWizard {
   etapaAtual: number;
   preencherInfoIbsCbs: boolean;
@@ -250,7 +253,7 @@ interface FormularioEmissao {
                 </nz-form-control>
               </nz-form-item>
             </div>
-            <div nz-col [nzSpan]="24" [nzXs]="24">
+            <div nz-col [nzSpan]="24" [nzXs]="24" *ngIf="enviarCTribMunNaDps">
               <nz-form-item>
                 <nz-form-label nzRequired>Código tributação municipal (cTribMun)</nz-form-label>
                 <nz-form-control [nzExtra]="cTribMunExtraCompleto">
@@ -267,6 +270,12 @@ interface FormularioEmissao {
                   </nz-select>
                 </nz-form-control>
               </nz-form-item>
+            </div>
+            <div nz-col [nzSpan]="24" *ngIf="!enviarCTribMunNaDps">
+              <nz-alert nzType="info" nzShowIcon
+                nzMessage="Complemento municipal (cTribMun) não será enviado"
+                nzDescription="Configuração atual: a DPS leva apenas o LC116 (cTribNac, 6 dígitos), como na emissão manual.">
+              </nz-alert>
             </div>
             <div nz-col [nzSpan]="24" [nzXs]="24">
               <nz-form-item>
@@ -330,7 +339,7 @@ interface FormularioEmissao {
             <dt>IM</dt><dd>{{ imWizardResumo }}</dd>
             <dt>Tomador</dt><dd>{{ form?.tomador?.razao }} ({{ form?.tomador?.documento }})</dd>
             <dt>LC116 (cTribNac)</dt><dd>{{ rotuloLc116Resumo }}<span *ngIf="wizard.codigoLc116" class="mono-tag"> · {{ wizard.codigoLc116 }}</span></dd>
-            <dt>cTribMun (3 díg.)</dt><dd>{{ codigoTribMunResumo }}<span class="hint-resumo"> — complemento municipal; o código de 6 dígitos vai só em cTribNac acima.</span></dd>
+            <dt>cTribMun (3 díg.)</dt><dd>{{ enviarCTribMunNaDps ? codigoTribMunResumo : 'Não enviar (padrão)' }}</dd>
             <dt>NBS</dt><dd>{{ rotuloNbsResumo }}</dd>
             <dt>Valor</dt><dd>R$ {{ wizard.valorServico | number:'1.2-2' }} · ISS {{ wizard.aliquotaIss }}% = R$ {{ issCalculado | number:'1.2-2' }}</dd>
             <dt>Descrição</dt><dd class="desc">{{ wizard.descricaoServico || '—' }}</dd>
@@ -384,6 +393,7 @@ interface FormularioEmissao {
   `]
 })
 export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
+  readonly enviarCTribMunNaDps = ENVIAR_CTRIBMUN_NA_DPS;
   private readonly api = environment.apiUrl;
 
   loading = true;
@@ -594,7 +604,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       this.lc116CodigoSelecionado = six.length === 6 ? six : null;
     }
     this.aplicarFiltroNbsAposLc116();
-    this.aplicarCTribMunSugerido();
+    this.aplicarPoliticaCTribMun();
     this.cdr.markForCheck();
   }
 
@@ -621,6 +631,16 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
+  private aplicarPoliticaCTribMun(): void {
+    if (!this.wizard) return;
+    if (!this.enviarCTribMunNaDps) {
+      this.wizard.codigoTributacaoMunicipal = '';
+      this.cTribMunSelecionado = CTRIBMUN_OMITIR;
+      return;
+    }
+    this.aplicarCTribMunSugerido();
+  }
+
   private aplicarCTribMunSugerido(): void {
     if (!this.wizard || !this.lc116CodigoSelecionado) {
       this.cTribMunSelecionado = null;
@@ -644,6 +664,10 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
 
   private syncCTribMunFromWizard(): void {
     if (!this.wizard) return;
+    if (!this.enviarCTribMunNaDps) {
+      this.aplicarPoliticaCTribMun();
+      return;
+    }
     const d = this.apenasDigitos(this.wizard.codigoTributacaoMunicipal);
     const lc = this.apenasDigitos(this.wizard.codigoLc116).slice(0, 6);
     const opcoes = lc.length === 6 ? opcoesCTribMunPorLc116Nacional(lc) : [];
@@ -657,10 +681,10 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       this.wizard.codigoTributacaoMunicipal = '';
     }
     if (!this.apenasDigitos(this.wizard.codigoTributacaoMunicipal).length && this.lc116CodigoSelecionado) {
-      this.aplicarCTribMunSugerido();
+      this.aplicarPoliticaCTribMun();
       return;
     }
-    this.cTribMunSelecionado = null;
+    this.aplicarPoliticaCTribMun();
   }
 
   onNbsSelect(codigo: string | null): void {
@@ -760,16 +784,20 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
         this.message.warning('Selecione o item LC116 nacional (6 dígitos).');
         return false;
       }
-      if (!this.cTribMunSelecionado) {
-        this.message.warning('Selecione o código tributação municipal (cTribMun) ou opção sem complemento.');
-        return false;
-      }
-      if (this.cTribMunSelecionado !== CTRIBMUN_OMITIR) {
-        const ct = this.apenasDigitos(this.wizard.codigoTributacaoMunicipal);
-        if (ct.length !== 3) {
-          this.message.warning('O cTribMun deve ter 3 dígitos.');
+      if (this.enviarCTribMunNaDps) {
+        if (!this.cTribMunSelecionado) {
+          this.message.warning('Selecione o código tributação municipal (cTribMun) ou opção sem complemento.');
           return false;
         }
+        if (this.cTribMunSelecionado !== CTRIBMUN_OMITIR) {
+          const ct = this.apenasDigitos(this.wizard.codigoTributacaoMunicipal);
+          if (ct.length !== 3) {
+            this.message.warning('O cTribMun deve ter 3 dígitos.');
+            return false;
+          }
+        }
+      } else {
+        this.wizard.codigoTributacaoMunicipal = '';
       }
       const nbs = this.apenasDigitos(this.wizard.codigoServicoNbs);
       if (nbs && !codigoNbsPermitidoParaLc116(lc, this.wizard.codigoServicoNbs)) {
@@ -798,12 +826,14 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     this.step = 2;
     if (!this.validarPasso()) { this.step = prev; return; }
     this.step = prev;
+    const tribOk = !this.enviarCTribMunNaDps || !!this.cTribMunSelecionado;
     if (this.apenasDigitos(this.wizard.codigoLc116).length !== 6
-      || !this.cTribMunSelecionado
+      || !tribOk
       || !(Number(this.wizard.valorServico) > 0)) {
-      this.message.warning('Revise LC116, cTribMun e valores antes de emitir.');
+      this.message.warning('Revise LC116, valores e demais campos antes de emitir.');
       return;
     }
+    this.aplicarPoliticaCTribMun();
     this.emitindo = true;
     this.syncEtapa();
     const body = { wizard: this.toApiWizard() };
@@ -875,10 +905,12 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       ehCompraGovernamental: w.ehCompraGovernamental,
       codigoServicoNbs: w.codigoServicoNbs,
       codigoLc116: this.apenasDigitos(w.codigoLc116).slice(0, 6),
-      codigoTributacaoMunicipal: (() => {
-        const d = this.apenasDigitos(w.codigoTributacaoMunicipal);
-        return d.length === 3 ? d : '';
-      })(),
+      codigoTributacaoMunicipal: this.enviarCTribMunNaDps
+        ? (() => {
+            const d = this.apenasDigitos(w.codigoTributacaoMunicipal);
+            return d.length === 3 ? d : '';
+          })()
+        : '',
       inscricaoMunicipal: this.apenasDigitos(w.inscricaoMunicipal),
       descricaoServico: w.descricaoServico,
       valorServico: Number(w.valorServico) || 0,
