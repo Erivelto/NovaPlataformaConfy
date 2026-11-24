@@ -63,8 +63,20 @@ interface FormularioEmissao {
   codigoCorpoEmissaoNota: number;
   statusAgendamento: string;
   wizard: NfseWizard;
-  prestador?: { codigoPessoa: number; documento: string; razao: string; nomeFantasia: string; inscricaoMunicipal: string };
-  tomador?: { codigo: number; documento: string; razao: string; email: string; cidade: string; uf: string; cep: string };
+  prestador?: { codigoPessoa: number; documento: string; razao: string; nomeFantasia: string; inscricaoMunicipal: string; codigoIbgeMunicipio: string };
+  tomador?: {
+    codigo: number;
+    documento: string;
+    razao: string;
+    email: string;
+    logradouro: string;
+    numeroLogradouro: string;
+    complemento: string;
+    bairro: string;
+    cidade: string;
+    uf: string;
+    cep: string;
+  };
   tpAmb: number;
   ambienteLabel: string;
 }
@@ -168,6 +180,19 @@ interface FormularioEmissao {
             </div>
             <div nz-col [nzSpan]="8" [nzXs]="24"><label class="lbl">CNPJ</label><div class="ro">{{ form?.prestador?.documento || '—' }}</div></div>
             <div nz-col [nzSpan]="16" [nzXs]="24"><label class="lbl">Razão social</label><div class="ro">{{ form?.prestador?.razao || '—' }}</div></div>
+            <div nz-col [nzSpan]="8" [nzXs]="24">
+              <label class="lbl">IBGE município emissor (cLocEmi)</label>
+              <div class="ro mono-tag">{{ ibgePrestadorResumo }}</div>
+            </div>
+            <div nz-col [nzSpan]="24" *ngIf="ibgePrestadorInvalido">
+              <nz-alert nzType="error" nzShowIcon
+                nzMessage="Município emissor (IBGE) inválido ou ausente"
+                nzDescription="Informe o código IBGE de 7 dígitos do município do MEI/empresa conforme o cadastro nacional do CNPJ (evita SEFIN E0041).">
+              </nz-alert>
+              <a *ngIf="form?.prestador?.codigoPessoa" nz-button nzType="link" [routerLink]="linkEditarCliente" style="padding-left:0;margin-top:4px">
+                Abrir cadastro do cliente e salvar IBGE
+              </a>
+            </div>
             <div nz-col [nzSpan]="24" *ngIf="enviarImPrestadorNaDps">
               <nz-form-item>
                 <nz-form-label [nzRequired]="form?.tpAmb === 1">Inscrição municipal (IM)</nz-form-label>
@@ -206,8 +231,11 @@ interface FormularioEmissao {
             </div>
             <div nz-col [nzSpan]="8" [nzXs]="24"><label class="lbl">CPF/CNPJ</label><div class="ro">{{ form?.tomador?.documento || '—' }}</div></div>
             <div nz-col [nzSpan]="16" [nzXs]="24"><label class="lbl">Nome / Razão social</label><div class="ro">{{ form?.tomador?.razao || '—' }}</div></div>
-            <div nz-col [nzSpan]="8" [nzXs]="24"><label class="lbl">Cidade / UF</label><div class="ro">{{ form?.tomador?.cidade || '—' }} / {{ form?.tomador?.uf || '—' }}</div></div>
-            <div nz-col [nzSpan]="8" [nzXs]="24"><label class="lbl">CEP</label><div class="ro">{{ form?.tomador?.cep || '—' }}</div></div>
+            <div nz-col [nzSpan]="24">
+              <label class="lbl">Endereço (vai na DPS / DANFSe)</label>
+              <div class="ro">{{ enderecoTomadorResumo }}</div>
+              <div class="hint-im" *ngIf="tomadorEnderecoIncompleto">Para tomador CNPJ, complete logradouro e CEP no agendamento (obrigatório no sistema nacional).</div>
+            </div>
             <div nz-col [nzSpan]="8" [nzXs]="24"><label class="lbl">E-mail</label><div class="ro">{{ form?.tomador?.email || '—' }}</div></div>
           </div>
         </nz-card>
@@ -342,8 +370,10 @@ interface FormularioEmissao {
           <dl class="resumo">
             <dt>Competência</dt><dd>{{ wizard.dataCompetencia || '—' }}</dd>
             <dt>Prestador</dt><dd>{{ form?.prestador?.razao }} ({{ form?.prestador?.documento }})</dd>
+            <dt>IBGE emissor</dt><dd>{{ ibgePrestadorResumo }}</dd>
             <dt>IM</dt><dd>{{ imWizardResumo }}</dd>
             <dt>Tomador</dt><dd>{{ form?.tomador?.razao }} ({{ form?.tomador?.documento }})</dd>
+            <dt>Endereço tomador</dt><dd>{{ enderecoTomadorResumo }}</dd>
             <dt>LC116 (cTribNac)</dt><dd>{{ rotuloLc116Resumo }}<span *ngIf="wizard.codigoLc116" class="mono-tag"> · {{ wizard.codigoLc116 }}</span></dd>
             <dt>cTribMun (3 díg.)</dt><dd>{{ enviarCTribMunNaDps ? codigoTribMunResumo : 'Não enviar (padrão)' }}</dd>
             <dt>NBS</dt><dd>{{ rotuloNbsResumo }}</dd>
@@ -505,6 +535,41 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
   get imWizardResumo(): string {
     const d = this.apenasDigitos(this.wizard?.inscricaoMunicipal ?? '');
     return d || '—';
+  }
+
+  get ibgePrestadorResumo(): string {
+    const d = this.apenasDigitos(this.form?.prestador?.codigoIbgeMunicipio ?? '');
+    return d.length === 7 ? d : '— (não cadastrado)';
+  }
+
+  get ibgePrestadorInvalido(): boolean {
+    return this.apenasDigitos(this.form?.prestador?.codigoIbgeMunicipio ?? '').length !== 7;
+  }
+
+  get linkEditarCliente(): (string | number)[] {
+    const id = this.form?.prestador?.codigoPessoa;
+    return id ? ['/administrativo/cliente', id, 'editar'] : ['/administrativo/clientes'];
+  }
+
+  get enderecoTomadorResumo(): string {
+    const t = this.form?.tomador;
+    if (!t) return '—';
+    const partes: string[] = [];
+    const log = [t.logradouro, t.numeroLogradouro].filter(v => !!(v || '').trim()).join(', ');
+    if (log) partes.push(log);
+    if (t.complemento?.trim()) partes.push(t.complemento.trim());
+    if (t.bairro?.trim()) partes.push(t.bairro.trim());
+    const mun = [t.cidade, t.uf].filter(v => !!(v || '').trim()).join('/');
+    if (mun) partes.push(mun);
+    if (t.cep?.trim()) partes.push(`CEP ${t.cep.trim()}`);
+    return partes.length ? partes.join(' · ') : '—';
+  }
+
+  get tomadorEnderecoIncompleto(): boolean {
+    const doc = this.apenasDigitos(this.form?.tomador?.documento ?? '');
+    const cep = this.apenasDigitos(this.form?.tomador?.cep ?? '');
+    const log = (this.form?.tomador?.logradouro ?? '').trim();
+    return doc.length === 14 && (cep.length !== 8 || !log);
   }
 
   get destinatarioSim(): boolean {
@@ -784,6 +849,14 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
           return false;
         }
       }
+      if (this.ibgePrestadorInvalido) {
+        this.message.warning('Cadastre o IBGE de 7 dígitos do município emissor no cadastro do cliente (evita SEFIN E0041).');
+        return false;
+      }
+      if (this.tomadorEnderecoIncompleto) {
+        this.message.warning('Complete logradouro e CEP do tomador no agendamento (obrigatório para CNPJ na NFS-e nacional).');
+        return false;
+      }
     }
     if (this.step === 1) {
       const lc = this.apenasDigitos(this.wizard.codigoLc116).slice(0, 6);
@@ -834,6 +907,14 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
     if (!this.validarPasso()) { this.step = prev; return; }
     this.step = prev;
     const tribOk = !this.enviarCTribMunNaDps || !!this.cTribMunSelecionado;
+    if (this.ibgePrestadorInvalido) {
+      this.message.warning('Cadastre o IBGE do município emissor no cliente antes de emitir (SEFIN E0041).');
+      return;
+    }
+    if (this.tomadorEnderecoIncompleto) {
+      this.message.warning('Complete o endereço do tomador no agendamento antes de emitir.');
+      return;
+    }
     if (this.apenasDigitos(this.wizard.codigoLc116).length !== 6
       || !tribOk
       || !(Number(this.wizard.valorServico) > 0)) {
@@ -947,13 +1028,18 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
         documento: String(prest['documento'] ?? prest['Documento'] ?? ''),
         razao: String(prest['razao'] ?? prest['Razao'] ?? ''),
         nomeFantasia: String(prest['nomeFantasia'] ?? prest['NomeFantasia'] ?? ''),
-        inscricaoMunicipal: String(prest['inscricaoMunicipal'] ?? prest['InscricaoMunicipal'] ?? '')
+        inscricaoMunicipal: String(prest['inscricaoMunicipal'] ?? prest['InscricaoMunicipal'] ?? ''),
+        codigoIbgeMunicipio: String(prest['codigoIbgeMunicipio'] ?? prest['CodigoIbgeMunicipio'] ?? '')
       } : undefined,
       tomador: tom ? {
         codigo: Number(tom['codigo'] ?? tom['Codigo']),
         documento: String(tom['documento'] ?? tom['Documento'] ?? ''),
         razao: String(tom['razao'] ?? tom['Razao'] ?? ''),
         email: String(tom['email'] ?? tom['Email'] ?? ''),
+        logradouro: String(tom['logradouro'] ?? tom['Logradouro'] ?? ''),
+        numeroLogradouro: String(tom['numeroLogradouro'] ?? tom['NumeroLogradouro'] ?? ''),
+        complemento: String(tom['complemento'] ?? tom['Complemento'] ?? ''),
+        bairro: String(tom['bairro'] ?? tom['Bairro'] ?? ''),
         cidade: String(tom['cidade'] ?? tom['Cidade'] ?? ''),
         uf: String(tom['uf'] ?? tom['UF'] ?? tom['Uf'] ?? ''),
         cep: String(tom['cep'] ?? tom['CEP'] ?? tom['Cep'] ?? '')

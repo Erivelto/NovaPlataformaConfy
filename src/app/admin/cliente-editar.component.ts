@@ -209,6 +209,24 @@ interface CobrancaAdicionalForm {
             <nz-form-item class="flex1"><nz-form-label>CCM (Cadastro de Contribuintes Mobiliários)</nz-form-label>
               <nz-form-control><input nz-input [(ngModel)]="pessoa.ccm" placeholder="Opcional" /></nz-form-control></nz-form-item>
           </div>
+          <div class="form-row nfse-ibge-row" *ngIf="!somenteLeitura || nfseNacionalIbge">
+            <nz-form-item class="flex1">
+              <nz-form-label>IBGE município emissor (NFS-e nacional)</nz-form-label>
+              <nz-form-control>
+                <input
+                  nz-input
+                  [(ngModel)]="nfseNacionalIbge"
+                  maxlength="7"
+                  inputmode="numeric"
+                  placeholder="7 dígitos — município do MEI/CNPJ na Receita"
+                  [disabled]="somenteLeitura" />
+                <div class="nfse-ibge-hint">Usado em cLocEmi e no Id da DPS. Deve coincidir com o município do emitente no cadastro nacional (evita SEFIN E0041).</div>
+              </nz-form-control>
+            </nz-form-item>
+            <button *ngIf="!somenteLeitura" nz-button nzType="primary" [nzLoading]="salvandoNfseIbge" (click)="salvarNfseNacionalIbge()" style="align-self:flex-end;margin-bottom:24px">
+              Salvar IBGE
+            </button>
+          </div>
           <div class="form-row">
             <nz-form-item class="flex1"><nz-form-label>WhatsApp / Telegram</nz-form-label>
               <nz-form-control><input nz-input [(ngModel)]="pessoa.numeroWhats" placeholder="5511900000000" /></nz-form-control></nz-form-item>
@@ -1179,6 +1197,8 @@ interface CobrancaAdicionalForm {
     .user-plat-email { font-size:1.15rem;font-weight:700;color:#1890ff; }
     .form-section { padding: 8px 4px; }
     .observacao-counter { margin-top: 4px; font-size: .75rem; color: rgba(0,0,0,.45); text-align: right; }
+    .nfse-ibge-hint { margin-top: 4px; font-size: .75rem; color: rgba(0,0,0,.45); line-height: 1.4; }
+    .nfse-ibge-row { align-items: flex-end; gap: 12px; }
     .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 0; align-items: flex-start; }
     .form-row nz-form-item { margin-bottom: 14px; display: flex; flex-direction: column; }
     .flex1 { flex: 1; min-width: 160px; }
@@ -1250,6 +1270,8 @@ export class ClienteEditarComponent implements OnInit {
   representantes: RepresentanteLegal[] = [];
   cnaes: PessoaCnae[] = [];
   carregandoCnaes = false;
+  nfseNacionalIbge = '';
+  salvandoNfseIbge = false;
   emissoes: DadosEmissao[] = [];
   dadosDasList: DadosDAS[] = [];
   prefeituras: Prefeitura[] = [];
@@ -1474,6 +1496,7 @@ export class ClienteEditarComponent implements OnInit {
       this.carregarRepresentantes();
       this.carregarCnaes();
       this.carregarEmissoes();
+      this.carregarNfseNacionalIbge();
       this.carregarDAS();
     }, error: () => { this.loading = false; this.cdr.markForCheck(); }});
   }
@@ -1484,6 +1507,41 @@ export class ClienteEditarComponent implements OnInit {
       .subscribe(r => {
         const lista = Array.isArray(r) ? r : [];
         this.emissoes = lista.map(item => this.mapEmissao(item));
+        this.cdr.markForCheck();
+      });
+  }
+
+  carregarNfseNacionalIbge() {
+    this.http.get<Record<string, unknown>>(`${this.api}/PessoaNfseNacional/${this.codigoPessoa}`, { headers: this.h })
+      .pipe(timeout(8000), catchError(() => of(null)))
+      .subscribe(r => {
+        const ibge = String(r?.['codigoIbgeMunicipio'] ?? r?.['CodigoIbgeMunicipio'] ?? '').replace(/\D/g, '');
+        this.nfseNacionalIbge = ibge.length <= 7 ? ibge : ibge.slice(0, 7);
+        this.cdr.markForCheck();
+      });
+  }
+
+  salvarNfseNacionalIbge() {
+    const ibge = (this.nfseNacionalIbge || '').replace(/\D/g, '');
+    if (ibge.length !== 7) {
+      this.message.warning('Informe o código IBGE com 7 dígitos.');
+      return;
+    }
+    this.salvandoNfseIbge = true;
+    this.cdr.markForCheck();
+    this.http.put(`${this.api}/PessoaNfseNacional/${this.codigoPessoa}/ibge`, { codigoIbgeMunicipio: ibge }, { headers: this.h })
+      .pipe(timeout(15000), catchError(err => {
+        const msg = (err as { error?: string | { message?: string } })?.error;
+        const texto = typeof msg === 'string' ? msg : (msg as { message?: string })?.message;
+        this.message.error(texto || 'Não foi possível salvar o IBGE.');
+        return of(null);
+      }))
+      .subscribe(r => {
+        this.salvandoNfseIbge = false;
+        if (r) {
+          this.nfseNacionalIbge = ibge;
+          this.message.success('IBGE do município emissor salvo.');
+        }
         this.cdr.markForCheck();
       });
   }
