@@ -33,6 +33,8 @@ import { descricaoNbsReforma, nbsRotuloReformaCompleto } from './nbs-reforma-cat
 
 /** Padrão atual: emissão somente com cTribNac (LC116), sem cTribMun na DPS. */
 const ENVIAR_CTRIBMUN_NA_DPS = false;
+/** IM na DPS só quando o CNC do município exige (evita SEFIN E0120 em SP sem cadastro complementar). */
+const ENVIAR_IM_PRESTADOR_NA_DPS = false;
 
 interface NfseWizard {
   etapaAtual: number;
@@ -166,7 +168,7 @@ interface FormularioEmissao {
             </div>
             <div nz-col [nzSpan]="8" [nzXs]="24"><label class="lbl">CNPJ</label><div class="ro">{{ form?.prestador?.documento || '—' }}</div></div>
             <div nz-col [nzSpan]="16" [nzXs]="24"><label class="lbl">Razão social</label><div class="ro">{{ form?.prestador?.razao || '—' }}</div></div>
-            <div nz-col [nzSpan]="24">
+            <div nz-col [nzSpan]="24" *ngIf="enviarImPrestadorNaDps">
               <nz-form-item>
                 <nz-form-label [nzRequired]="form?.tpAmb === 1">Inscrição municipal (IM)</nz-form-label>
                 <nz-form-control>
@@ -178,12 +180,16 @@ interface FormularioEmissao {
                     placeholder="Número da CCM / IM na Prefeitura de São Paulo"
                     style="max-width: 320px" />
                   <div class="hint-im">
-                    Obrigatória em produção (IM na DPS). Cadastro do cliente:
-                    <strong>{{ imCadastroResumo }}</strong>.
-                    Deve coincidir com o CNC (município 3550308 + CNPJ + IM).
+                    Enviada na DPS quando habilitado. Cadastro do cliente: <strong>{{ imCadastroResumo }}</strong>.
                   </div>
                 </nz-form-control>
               </nz-form-item>
+            </div>
+            <div nz-col [nzSpan]="24" *ngIf="!enviarImPrestadorNaDps">
+              <nz-alert nzType="info" nzShowIcon
+                nzMessage="IM do prestador não será enviada na DPS"
+                [nzDescription]="'IM no cadastro: ' + imCadastroResumo + ' (mantida só internamente; evita E0120 quando o CNC não tem complemento).'">
+              </nz-alert>
             </div>
           </div>
         </nz-card>
@@ -394,6 +400,7 @@ interface FormularioEmissao {
 })
 export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
   readonly enviarCTribMunNaDps = ENVIAR_CTRIBMUN_NA_DPS;
+  readonly enviarImPrestadorNaDps = ENVIAR_IM_PRESTADOR_NA_DPS;
   private readonly api = environment.apiUrl;
 
   loading = true;
@@ -770,7 +777,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
         this.message.warning('Informe série e número da DPS.');
         return false;
       }
-      if (this.form?.tpAmb === 1) {
+      if (this.enviarImPrestadorNaDps && this.form?.tpAmb === 1) {
         const im = this.apenasDigitos(this.wizard.inscricaoMunicipal);
         if (!im || /^0+$/.test(im)) {
           this.message.warning('Informe a Inscrição Municipal real do prestador (campo IM).');
@@ -834,6 +841,9 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       return;
     }
     this.aplicarPoliticaCTribMun();
+    if (!this.enviarImPrestadorNaDps && this.wizard) {
+      this.wizard.inscricaoMunicipal = '';
+    }
     this.emitindo = true;
     this.syncEtapa();
     const body = { wizard: this.toApiWizard() };
@@ -911,7 +921,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
             return d.length === 3 ? d : '';
           })()
         : '',
-      inscricaoMunicipal: this.apenasDigitos(w.inscricaoMunicipal),
+      inscricaoMunicipal: this.enviarImPrestadorNaDps ? this.apenasDigitos(w.inscricaoMunicipal) : '',
       descricaoServico: w.descricaoServico,
       valorServico: Number(w.valorServico) || 0,
       aliquotaIss: Number(w.aliquotaIss) || 0
