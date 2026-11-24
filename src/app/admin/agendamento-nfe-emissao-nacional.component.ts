@@ -622,12 +622,6 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       this.wizard.codigoTributacaoMunicipal = opcoes[0].value;
       return;
     }
-    const padrao = ctribMunDosUltimosTresDigitos(this.lc116CodigoSelecionado);
-    if (padrao && opcoes.some(o => o.value === padrao)) {
-      this.cTribMunSelecionado = padrao;
-      this.wizard.codigoTributacaoMunicipal = padrao;
-      return;
-    }
     this.cTribMunSelecionado = null;
     this.wizard.codigoTributacaoMunicipal = '';
   }
