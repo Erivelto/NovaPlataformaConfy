@@ -701,7 +701,7 @@ export class NovaSolicitacaoNfeComponent {
     const payload = {
       CodigoPessoa: this.codigoPessoa,
       CodigoTomador: this.wizardForm.codigoTomador ?? 0,
-      CodigoServico: '',
+      CodigoServico: (this.wizardForm.codigoPrefeitura || '').slice(0, MAX_CODIGO_PREFEITURA),
       Descricao: this.wizardForm.descricao,
       Valor: this.wizardForm.valor?.toFixed(2).replace('.', ',') ?? '0,00',
       DataPrimeiraEmissao: d.toISOString(),
@@ -709,7 +709,7 @@ export class NovaSolicitacaoNfeComponent {
       CodigoEmissaoNota: 0,
       Status: 'C',
       exterior: this.wizardForm.exterior,
-      CodigoPrefeitura: (this.wizardForm.codigoPrefeitura || '').slice(0, MAX_CODIGO_PREFEITURA)
+      CodigoPrefeitura: ''
     };
     this.http.post(`${this.apiBase}/CorpoEmissaoNota`, payload, { headers: this.headers }).subscribe({
       next: () => {

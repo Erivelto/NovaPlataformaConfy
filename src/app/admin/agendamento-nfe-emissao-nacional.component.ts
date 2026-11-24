@@ -635,12 +635,18 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
   private syncCTribMunFromWizard(): void {
     if (!this.wizard) return;
     const d = this.apenasDigitos(this.wizard.codigoTributacaoMunicipal);
+    const lc = this.apenasDigitos(this.wizard.codigoLc116).slice(0, 6);
+    const opcoes = lc.length === 6 ? opcoesCTribMunPorLc116Nacional(lc) : [];
     if (d.length === 3) {
-      this.cTribMunSelecionado = d;
-      this.wizard.codigoTributacaoMunicipal = d;
-      return;
+      const valido = opcoes.length === 0 || opcoes.some(o => o.value === d);
+      if (valido) {
+        this.cTribMunSelecionado = d;
+        this.wizard.codigoTributacaoMunicipal = d;
+        return;
+      }
+      this.wizard.codigoTributacaoMunicipal = '';
     }
-    if (!d.length && this.lc116CodigoSelecionado) {
+    if (!this.apenasDigitos(this.wizard.codigoTributacaoMunicipal).length && this.lc116CodigoSelecionado) {
       this.aplicarCTribMunSugerido();
       return;
     }
@@ -861,7 +867,7 @@ export class AgendamentoNfeEmissaoNacionalComponent implements OnInit {
       codigoLc116: this.apenasDigitos(w.codigoLc116).slice(0, 6),
       codigoTributacaoMunicipal: (() => {
         const d = this.apenasDigitos(w.codigoTributacaoMunicipal);
-        return d.length === 3 ? d : d.length > 0 ? d.slice(-3).padStart(3, '0') : '';
+        return d.length === 3 ? d : '';
       })(),
       inscricaoMunicipal: this.apenasDigitos(w.inscricaoMunicipal),
       descricaoServico: w.descricaoServico,

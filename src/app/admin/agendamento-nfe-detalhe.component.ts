@@ -137,6 +137,7 @@ interface DadosEmissaoNota {
               <div nz-col [nzSpan]="6" [nzXs]="24"><label class="fld-label">Usuário</label><div class="fld-value">{{ dadosEmissao?.usuario || '—' }}</div></div>
               <div nz-col [nzSpan]="6" [nzXs]="24"><label class="fld-label">Senha</label><div class="fld-value">{{ dadosEmissao?.senha || '—' }}</div></div>
               <div nz-col [nzSpan]="6" [nzXs]="24"><label class="fld-label">Código Prefeitura</label><div class="fld-value">{{ corpo.codigoPrefeitura || '—' }}</div></div>
+              <div nz-col [nzSpan]="24" *ngIf="corpo.codigoServico"><label class="fld-label">Atividade (CNAE) solicitada</label><div class="fld-value fld-block">{{ corpo.codigoServico }}</div></div>
               <div nz-col [nzSpan]="24"><label class="fld-label">Descrição</label><div class="fld-value fld-block">{{ corpo.descricao || '—' }}</div></div>
               <div nz-col [nzSpan]="12" [nzXs]="24"><label class="fld-label">Data</label><div class="fld-value">{{ formatarData(corpo.dataPrimeiraEmissao) }}</div></div>
               <div nz-col [nzSpan]="12" [nzXs]="24"><label class="fld-label">Valor</label><div class="fld-value">{{ corpo.valor || '—' }}</div></div>
