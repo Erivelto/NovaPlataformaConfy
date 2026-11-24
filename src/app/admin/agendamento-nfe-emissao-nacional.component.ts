@@ -187,7 +187,7 @@ interface FormularioEmissao {
             <div nz-col [nzSpan]="24" *ngIf="ibgePrestadorInvalido">
               <nz-alert nzType="error" nzShowIcon
                 nzMessage="Município emissor (IBGE) inválido ou ausente"
-                nzDescription="Informe o código IBGE de 7 dígitos do município do MEI/empresa conforme o cadastro nacional do CNPJ (evita SEFIN E0041).">
+                nzDescription="Cadastre o IBGE em Dados cadastrais do cliente (campo NFS-e nacional) ou complete CEP, cidade e UF do endereço — a API tenta resolver pelo ViaCEP/IBGE. O código deve ser o do MEI/empresa na Receita (evita SEFIN E0041).">
               </nz-alert>
               <a *ngIf="form?.prestador?.codigoPessoa" nz-button nzType="link" [routerLink]="linkEditarCliente" style="padding-left:0;margin-top:4px">
                 Abrir cadastro do cliente e salvar IBGE
