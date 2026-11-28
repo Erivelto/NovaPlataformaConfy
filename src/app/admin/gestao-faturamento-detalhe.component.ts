@@ -1019,6 +1019,7 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
       notasIgnoradasContfy?: number;
       cancelamentosAplicados?: number;
       erroDetalhe?: string;
+      versaoPipeline?: string;
     }>(
       `${this.api}/NfseNacional/captura/adn/pessoa/${this.codigoPessoa}`,
       {},
@@ -1036,6 +1037,7 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
         const vinculadas = res.notasVinculadas ?? 0;
         this.message.success(
           (res.mensagem || 'Consulta concluída.')
+          + (res.versaoPipeline ? ` [${res.versaoPipeline}]` : '')
           + (res.documentosNovos != null ? ` XML: ${res.documentosNovos}.` : '')
           + (importadas > 0 ? ` Novas na NotaFiscal: ${importadas}.` : '')
           + (vinculadas > 0 ? ` Já existentes: ${vinculadas}.` : '')
@@ -1046,6 +1048,7 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
         const detalhe = (res.erroDetalhe || '').trim();
         this.message.warning(
           (res.mensagem || 'Consulta sem novos documentos.')
+          + (res.versaoPipeline ? ` [${res.versaoPipeline}]` : '')
           + (detalhe ? ` Detalhe: ${detalhe.slice(0, 280)}${detalhe.length > 280 ? '…' : ''}` : '')
         );
       }
