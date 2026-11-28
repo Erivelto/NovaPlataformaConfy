@@ -1018,6 +1018,7 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
       notasVinculadas?: number;
       notasIgnoradasContfy?: number;
       cancelamentosAplicados?: number;
+      erroDetalhe?: string;
     }>(
       `${this.api}/NfseNacional/captura/adn/pessoa/${this.codigoPessoa}`,
       {},
@@ -1042,7 +1043,11 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
         this.carregarAnexos();
         this.carregarNotas();
       } else {
-        this.message.warning(res.mensagem || 'Consulta sem novos documentos.');
+        const detalhe = (res.erroDetalhe || '').trim();
+        this.message.warning(
+          (res.mensagem || 'Consulta sem novos documentos.')
+          + (detalhe ? ` Detalhe: ${detalhe.slice(0, 280)}${detalhe.length > 280 ? '…' : ''}` : '')
+        );
       }
       this.cdr.markForCheck();
     });
