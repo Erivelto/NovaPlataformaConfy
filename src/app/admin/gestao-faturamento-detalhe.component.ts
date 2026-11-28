@@ -150,7 +150,7 @@ interface PessoaUploadNotas {
               <i nz-icon nzType="search"></i> Buscar
             </button>
             <button nz-button nzType="default" [nzLoading]="capturandoAdn" (click)="sincronizarCapturaAdn()">
-              <i nz-icon nzType="sync"></i> Captura ADN (NSU)
+              <i nz-icon nzType="cloud-download"></i> Consultar NFS-e (ADN)
             </button>
           </div>
         </div>
@@ -1009,12 +1009,21 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
   sincronizarCapturaAdn(): void {
     this.capturandoAdn = true;
     this.cdr.markForCheck();
-    this.http.post<{ sucesso?: boolean; mensagem?: string; documentosNovos?: number; ultimoNsu?: number }>(
+    this.http.post<{
+      sucesso?: boolean;
+      mensagem?: string;
+      documentosNovos?: number;
+      ultimoNsu?: number;
+      notasImportadas?: number;
+      notasVinculadas?: number;
+      notasIgnoradasContfy?: number;
+      cancelamentosAplicados?: number;
+    }>(
       `${this.api}/NfseNacional/captura/adn/pessoa/${this.codigoPessoa}`,
       {},
       { headers: this.headers }
     ).pipe(timeout(300000), catchError(err => {
-      this.message.error(err?.error?.mensagem || 'Falha na captura ADN.');
+      this.message.error(err?.error?.mensagem || 'Falha na consulta NFS-e (ADN).');
       this.capturandoAdn = false;
       this.cdr.markForCheck();
       return of(null);
@@ -1022,13 +1031,18 @@ export class GestaoFaturamentoDetalheComponent implements OnInit {
       this.capturandoAdn = false;
       if (!res) return;
       if (res.sucesso) {
+        const importadas = res.notasImportadas ?? 0;
+        const vinculadas = res.notasVinculadas ?? 0;
         this.message.success(
-          (res.mensagem || 'Captura concluída.')
-          + (res.documentosNovos != null ? ` Documentos: ${res.documentosNovos}.` : '')
+          (res.mensagem || 'Consulta concluída.')
+          + (res.documentosNovos != null ? ` XML: ${res.documentosNovos}.` : '')
+          + (importadas > 0 ? ` Novas na NotaFiscal: ${importadas}.` : '')
+          + (vinculadas > 0 ? ` Já existentes: ${vinculadas}.` : '')
         );
         this.carregarAnexos();
+        this.carregarNotas();
       } else {
-        this.message.warning(res.mensagem || 'Captura sem novos documentos.');
+        this.message.warning(res.mensagem || 'Consulta sem novos documentos.');
       }
       this.cdr.markForCheck();
     });
